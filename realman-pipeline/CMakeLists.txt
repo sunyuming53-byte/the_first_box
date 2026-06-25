@@ -15,9 +15,18 @@ if(NOT REALMAN_SDK)
     message(FATAL_ERROR "REALMAN_SDK not set. Pass -DREALMAN_SDK=/path/to/RM_API2/C")
 endif()
 
+# SDK library path — override with -DREALMAN_SDK_LIB if needed
+if(NOT DEFINED REALMAN_SDK_LIB)
+    file(GLOB RM_SDK_LIB_CANDIDATES "${REALMAN_SDK}/linux/linux_x86_c_v*/libapi_c.so")
+    list(GET RM_SDK_LIB_CANDIDATES 0 REALMAN_SDK_LIB)
+endif()
+if(NOT REALMAN_SDK_LIB)
+    message(FATAL_ERROR "Could not find libapi_c.so under ${REALMAN_SDK}/linux/")
+endif()
+
 add_library(rm_api SHARED IMPORTED)
 set_target_properties(rm_api PROPERTIES
-    IMPORTED_LOCATION "${REALMAN_SDK}/linux/linux_x86_c_vv1.1.5/libapi_c.so"
+    IMPORTED_LOCATION "${REALMAN_SDK_LIB}"
     INTERFACE_INCLUDE_DIRECTORIES "${REALMAN_SDK}/include"
 )
 
@@ -30,12 +39,12 @@ target_include_directories(realman-pipeline PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
 )
-target_link_libraries(realman-pipeline PUBLIC
-    rclcpp::rclcpp
-    rm_api
-    pthread
-)
+find_package(Threads REQUIRED)
 ament_target_dependencies(realman-pipeline rclcpp)
+target_link_libraries(realman-pipeline PUBLIC
+    rm_api
+    Threads::Threads
+)
 
 add_executable(hello_arm examples/hello_arm.cpp)
 target_link_libraries(hello_arm realman-pipeline)
