@@ -32,28 +32,25 @@ set_target_properties(rm_api PROPERTIES
 
 add_library(realman-pipeline SHARED
     src/arm.cpp
-    src/arm_node.cpp
     src/error.cpp
+    # src/arm_node.cpp  # TODO: Task 6
 )
 target_include_directories(realman-pipeline PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
 )
 find_package(Threads REQUIRED)
+target_link_libraries(realman-pipeline rm_api Threads::Threads)
 ament_target_dependencies(realman-pipeline rclcpp)
-target_link_libraries(realman-pipeline PUBLIC
-    rm_api
-    Threads::Threads
-)
 
-add_executable(hello_arm examples/hello_arm.cpp)
-target_link_libraries(hello_arm realman-pipeline)
+# add_executable(hello_arm examples/hello_arm.cpp)
+# target_link_libraries(hello_arm realman-pipeline)
 
-add_executable(external_trigger examples/external_trigger.cpp)
-target_link_libraries(external_trigger realman-pipeline)
+# add_executable(external_trigger examples/external_trigger.cpp)
+# target_link_libraries(external_trigger realman-pipeline)
 
-add_executable(arm_node examples/arm_node.cpp)
-target_link_libraries(arm_node realman-pipeline)
+# add_executable(arm_node examples/arm_node.cpp)
+# target_link_libraries(arm_node realman-pipeline)
 
 install(TARGETS realman-pipeline
     LIBRARY DESTINATION lib

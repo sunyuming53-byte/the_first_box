@@ -3,7 +3,7 @@
   <name>realman-pipeline</name>
   <version>0.1.0</version>
   <description>ROS2 C++ pipeline library for RealMan robot arms</description>
-  <maintainer email="dev@realman-pipeline">RealMan Pipeline Team</maintainer>
+  <maintainer email="dev@realman-pipeline.com">RealMan Pipeline Team</maintainer>
   <license>MIT</license>
   <buildtool_depend>ament_cmake</buildtool_depend>
   <depend>rclcpp</depend>
