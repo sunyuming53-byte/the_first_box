@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project(realman_driver VERSION 0.1.0 LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(ament_cmake REQUIRED)
@@ -59,9 +59,17 @@ add_executable(gripper_test examples/gripper_test.cpp)
 target_link_libraries(gripper_test realman_driver)
 
 install(TARGETS realman_driver
+    EXPORT realman_driver_targets
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
 )
+install(EXPORT realman_driver_targets
+    FILE realman_driverTargets.cmake
+    DESTINATION share/realman_driver/cmake
+)
 install(DIRECTORY include/ DESTINATION include)
+
+ament_export_targets(realman_driver_targets HAS_LIBRARY_TARGET)
+ament_export_include_directories(include)
 
 ament_package()

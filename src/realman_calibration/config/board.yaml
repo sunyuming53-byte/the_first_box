@@ -1,0 +1,7 @@
+# Calibration board parameters
+# XX: number of inner corners along the long edge (long_side_grids - 1)
+# YY: number of inner corners along the short edge (short_side_grids - 1)
+# L:  square side length in meters
+XX: 11
+YY: 8
+L: 0.03
