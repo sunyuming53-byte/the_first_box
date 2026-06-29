@@ -5,7 +5,7 @@
 #include <opencv2/core/persistence.hpp>
 
 #include <cmath>
-#include <format>
+#include "realman_calibration/format_polyfill.hpp"
 #include <string>
 
 namespace rm::calib {
@@ -90,11 +90,11 @@ HandEyeTransform::HandEyeTransform(cv::Mat T, HandEyeMode mode)
 {}
 
 auto HandEyeTransform::load(const std::filesystem::path& yaml_path)
-    -> std::expected<HandEyeTransform, std::string>
+    -> Result<HandEyeTransform>
 {
     cv::FileStorage fs(yaml_path.string(), cv::FileStorage::READ);
     if (!fs.isOpened()) {
-        return std::unexpected(
+        return Unexpected<std::string>(
             std::format("Cannot open hand-eye result file: {}", yaml_path.string()));
     }
 
@@ -106,14 +106,14 @@ auto HandEyeTransform::load(const std::filesystem::path& yaml_path)
     fs["mode"]               >> mode_str;
 
     if (R.empty() || t.empty()) {
-        return std::unexpected("YAML missing rotation_matrix or translation_vector");
+        return Unexpected<std::string>("YAML missing rotation_matrix or translation_vector");
     }
 
     HandEyeMode mode = HandEyeMode::EyeInHand;
     if (mode_str == "eye_to_hand") {
         mode = HandEyeMode::EyeToHand;
     } else if (mode_str != "eye_in_hand") {
-        return std::unexpected(
+        return Unexpected<std::string>(
             std::format("Unknown mode '{}' in YAML (expected 'eye_in_hand' or 'eye_to_hand')",
                         mode_str));
     }

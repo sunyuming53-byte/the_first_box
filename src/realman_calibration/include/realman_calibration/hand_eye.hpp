@@ -1,7 +1,7 @@
 #pragma once
 
 #include "pose_proc.hpp"
-#include <expected>
+#include "expected_polyfill.hpp"
 #include <filesystem>
 #include <opencv2/core/mat.hpp>
 #include <span>
@@ -37,7 +37,7 @@ public:
                               std::span<const cv::Mat> t_tool,
                               std::span<const cv::Mat> rvecs,
                               std::span<const cv::Mat> tvecs)
-        -> std::expected<HandEyeResult, std::string>;
+        -> Result<HandEyeResult>;
 
 private:
     HandEyeMode mode_;

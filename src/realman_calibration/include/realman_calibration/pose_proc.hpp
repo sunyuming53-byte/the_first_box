@@ -1,7 +1,7 @@
 #pragma once
 
 #include <array>
-#include <expected>
+#include "expected_polyfill.hpp"
 #include <opencv2/core/mat.hpp>
 #include <span>
 #include <string>
@@ -34,7 +34,7 @@ public:
     explicit PoseProcessor(HandEyeMode mode);
 
     [[nodiscard]] auto process(std::span<const std::array<double, 6>> poses)
-        -> std::expected<PoseProcResult, std::string>;
+        -> Result<PoseProcResult>;
 
 private:
     HandEyeMode mode_;

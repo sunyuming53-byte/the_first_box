@@ -5,7 +5,7 @@
 #include <opencv2/core/persistence.hpp>
 
 #include <cmath>
-#include <format>
+#include "realman_calibration/format_polyfill.hpp"
 #include <span>
 
 namespace rm::calib {
@@ -94,10 +94,10 @@ auto HandEyeSolver::solve(std::span<const cv::Mat> R_tool,
                            std::span<const cv::Mat> t_tool,
                            std::span<const cv::Mat> rvecs,
                            std::span<const cv::Mat> tvecs)
-    -> std::expected<HandEyeResult, std::string>
+    -> Result<HandEyeResult>
 {
     if (R_tool.size() < 3) {
-        return std::unexpected(
+        return Unexpected<std::string>(
             std::format("Need at least 3 relative motions (got {})", R_tool.size()));
     }
 
@@ -105,7 +105,7 @@ auto HandEyeSolver::solve(std::span<const cv::Mat> R_tool,
     auto R_cam = rvecs_to_R(rvecs);
 
     if (R_cam.size() != R_tool.size()) {
-        return std::unexpected(
+        return Unexpected<std::string>(
             std::format("Mismatched data sizes: {} tool motions vs {} camera views",
                         R_tool.size(), R_cam.size()));
     }

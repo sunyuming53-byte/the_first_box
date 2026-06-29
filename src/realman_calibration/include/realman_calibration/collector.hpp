@@ -2,7 +2,7 @@
 
 #include "realman_vision/camera/types.hpp"
 #include <array>
-#include <expected>
+#include "expected_polyfill.hpp"
 #include <filesystem>
 #include <memory>
 #include <opencv2/core/types.hpp>
@@ -40,7 +40,7 @@ public:
 
     /// Run the interactive capture loop.  Blocks until enough valid
     /// images are collected or an unrecoverable error occurs.
-    [[nodiscard]] auto run() -> std::expected<CalibSession, std::string>;
+    [[nodiscard]] auto run() -> Result<CalibSession>;
 
 private:
     class Impl;

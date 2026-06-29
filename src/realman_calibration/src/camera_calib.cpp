@@ -5,7 +5,7 @@
 
 #include <array>
 #include <cmath>
-#include <format>
+#include "realman_calibration/format_polyfill.hpp"
 #include <vector>
 
 namespace rm::calib {
@@ -18,7 +18,7 @@ CameraCalibrator::CameraCalibrator(const CameraCalibInput& input)
     : input_{input}
 {}
 
-auto CameraCalibrator::compute() -> std::expected<CameraCalibResult, std::string> {
+auto CameraCalibrator::compute() -> Result<CameraCalibResult> {
     // ── build 3D object points for one chessboard pose ──
     std::vector<cv::Point3f> obj;
     obj.reserve(input_.board_size.width * input_.board_size.height);
@@ -56,7 +56,7 @@ auto CameraCalibrator::compute() -> std::expected<CameraCalibResult, std::string
 
     // ── require at least 3 valid images ──
     if (object_points.size() < 3) {
-        return std::unexpected(
+        return Unexpected<std::string>(
             std::format("Need at least 3 valid calibration images (got {})",
                         object_points.size()));
     }

@@ -10,7 +10,7 @@
 
 #include <algorithm>
 #include <cmath>
-#include <format>
+#include "realman_calibration/format_polyfill.hpp"
 #include <iostream>
 #include <span>
 
@@ -60,7 +60,7 @@ public:
           output_dir_{cfg.output_dir}
     {}
 
-    [[nodiscard]] auto run() -> std::expected<CalibSession, std::string> {
+    [[nodiscard]] auto run() -> Result<CalibSession> {
         namespace fs = std::filesystem;
         fs::create_directories(output_dir_);
 
@@ -74,7 +74,7 @@ public:
         while (true) {
             auto frame_opt = cam_.next();
             if (!frame_opt.has_value()) {
-                return std::unexpected("Camera stream ended unexpectedly");
+                return Unexpected<std::string>("Camera stream ended unexpectedly");
             }
 
             auto& frame = *frame_opt;
@@ -182,7 +182,7 @@ CalibDataCollector::CalibDataCollector(const CalibDataConfig& cfg)
 
 CalibDataCollector::~CalibDataCollector() = default;
 
-auto CalibDataCollector::run() -> std::expected<CalibSession, std::string> {
+auto CalibDataCollector::run() -> Result<CalibSession> {
     return impl_->run();
 }
 

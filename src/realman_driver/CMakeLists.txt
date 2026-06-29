@@ -31,9 +31,9 @@ ament_target_dependencies(realman_driver rclcpp)
 # add_executable(external_trigger examples/external_trigger.cpp)
 # target_link_libraries(external_trigger realman_driver)
 
-add_executable(arm_node examples/arm_node.cpp)
-target_link_libraries(arm_node realman_driver)
-ament_target_dependencies(arm_node std_srvs)
+# add_executable(arm_node examples/arm_node.cpp)
+# target_link_libraries(arm_node realman_driver)
+# ament_target_dependencies(arm_node std_srvs)
 
 add_executable(gripper_test examples/gripper_test.cpp)
 target_link_libraries(gripper_test realman_driver)

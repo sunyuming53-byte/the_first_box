@@ -1,8 +1,8 @@
 #pragma once
 
 #include "pose_proc.hpp"
+#include "expected_polyfill.hpp"
 #include <array>
-#include <expected>
 #include <filesystem>
 #include <opencv2/core/mat.hpp>
 #include <string>
@@ -23,7 +23,7 @@ public:
     /// Load a calibrated transform from a YAML file written by
     /// HandEyeResult::save_yaml.
     [[nodiscard]] static auto load(const std::filesystem::path& yaml_path)
-        -> std::expected<HandEyeTransform, std::string>;
+        -> Result<HandEyeTransform>;
 
     /// Transform a 3D point from camera frame to robot base frame.
     ///

@@ -1,7 +1,7 @@
 #include <realman_calibration/camera_calib.hpp>
 
 #include <filesystem>
-#include <format>
+#include "realman_calibration/format_polyfill.hpp"
 #include <iostream>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>

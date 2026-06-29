@@ -1,7 +1,7 @@
 #include "realman_calibration/pose_proc.hpp"
 
 #include <cmath>
-#include <format>
+#include "realman_calibration/format_polyfill.hpp"
 #include <span>
 
 namespace rm::calib {
@@ -80,10 +80,10 @@ namespace {
 PoseProcessor::PoseProcessor(HandEyeMode mode) : mode_{mode} {}
 
 auto PoseProcessor::process(std::span<const std::array<double, 6>> poses)
-    -> std::expected<PoseProcResult, std::string>
+    -> Result<PoseProcResult>
 {
     if (poses.size() < 2) {
-        return std::unexpected(
+        return Unexpected<std::string>(
             std::format("Need at least 2 poses (got {})", poses.size()));
     }
 

@@ -20,7 +20,7 @@
 #include <std_srvs/srv/trigger.hpp>
 
 #include <filesystem>
-#include <format>
+#include "realman_calibration/format_polyfill.hpp"
 #include <mutex>
 #include <opencv2/imgcodecs.hpp>
 #include <string>
@@ -211,7 +211,7 @@ private:
     }
 
     // ── State ──────────────────────────────────────────────────────────
-    rm::Arm             arm_{rm::ArmConfig{.arm_ip = "192.168.1.18"}};
+    rm::Arm             arm_{rm::ArmConfig{.ip = "192.168.1.18"}};
     CalibDataConfig     cfg_;
     HandEyeMode         mode_{HandEyeMode::EyeInHand};
     std::mutex          mtx_;

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <expected>
+#include "expected_polyfill.hpp"
 #include <opencv2/core/mat.hpp>
 #include <opencv2/core/types.hpp>
 #include <string>
@@ -32,7 +32,7 @@ class CameraCalibrator {
 public:
     explicit CameraCalibrator(const CameraCalibInput& input);
 
-    [[nodiscard]] auto compute() -> std::expected<CameraCalibResult, std::string>;
+    [[nodiscard]] auto compute() -> Result<CameraCalibResult>;
 
 private:
     CameraCalibInput input_;
