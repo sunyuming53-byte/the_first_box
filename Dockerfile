@@ -58,13 +58,15 @@ RUN --mount=type=bind,source=src,target=/tmp/src,readonly \
     rm -rf /var/lib/apt/lists/*
 
 # oh-my-zsh + powerlevel10k + plugins (as root; copied to ubuntu user in develop stage)
-RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended \
+RUN sh -c "$(curl -fsSL --retry 5 --retry-delay 10 https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended \
     && git clone --depth=1 https://github.com/romkatv/powerlevel10k.git \
         ${ZSH_CUSTOM:-/root/.oh-my-zsh/custom}/themes/powerlevel10k \
     && git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting.git \
         ${ZSH_CUSTOM:-/root/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting \
     && git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions.git \
-        ${ZSH_CUSTOM:-/root/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
+        ${ZSH_CUSTOM:-/root/.oh-my-zsh/custom}/plugins/zsh-autosuggestions \
+    && test -f /root/.oh-my-zsh/oh-my-zsh.sh \
+    || (echo "ERROR: oh-my-zsh install failed (curl timeout?)" >&2 && false)
 
 # Make SDK discoverable by CMake find_package(RealManSDK)
 ENV REALMAN_SDK=/opt/realman-sdk
@@ -103,13 +105,15 @@ RUN --mount=type=bind,source=src,target=/tmp/src,readonly \
     rm -rf /var/lib/apt/lists/*
 
 # oh-my-zsh + powerlevel10k + plugins for root (runtime container)
-RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended \
+RUN sh -c "$(curl -fsSL --retry 5 --retry-delay 10 https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended \
     && git clone --depth=1 https://github.com/romkatv/powerlevel10k.git \
         ${ZSH_CUSTOM:-/root/.oh-my-zsh/custom}/themes/powerlevel10k \
     && git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting.git \
         ${ZSH_CUSTOM:-/root/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting \
     && git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions.git \
-        ${ZSH_CUSTOM:-/root/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
+        ${ZSH_CUSTOM:-/root/.oh-my-zsh/custom}/plugins/zsh-autosuggestions \
+    && test -f /root/.oh-my-zsh/oh-my-zsh.sh \
+    || (echo "ERROR: oh-my-zsh install failed (curl timeout?)" >&2 && false)
 
 ENV REALMAN_SDK=/opt/realman-sdk
 
