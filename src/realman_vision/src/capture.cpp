@@ -3,8 +3,9 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <chrono>
-#include <format>
 #include <fstream>
+#include <iomanip>
+#include <sstream>
 #include <string>
 
 namespace rm::vision {
@@ -63,7 +64,7 @@ auto FrameCapture::draw_overlay(const camera::CameraFrame& frame,
     }
 
     // ── frame counter ──
-    auto count_str = std::format("{}/{}", saved_count, total_required);
+    auto count_str = std::to_string(saved_count) + "/" + std::to_string(total_required);
     cv::putText(display, count_str, cv::Point(20, 40),
                 cv::FONT_HERSHEY_SIMPLEX, 1.0,
                 cv::Scalar(0, 255, 255), 2);
@@ -83,14 +84,22 @@ void FrameCapture::save(const camera::CameraFrame& frame, int index) {
     // ── colour image ──
     auto img_dir = cfg_.output_dir / "images";
     fs::create_directories(img_dir);
-    auto img_path = img_dir / std::format("{:05d}.jpg", index);
+    auto img_path = img_dir / ([](int n) {
+        std::ostringstream ss;
+        ss << std::setfill('0') << std::setw(5) << n << ".jpg";
+        return ss.str();
+    }(index));
     cv::imwrite(img_path.string(), frame.color);
 
     // ── depth image (16-bit PNG) ──
     if (cfg_.save_depth && !frame.depth.empty()) {
         auto depth_dir = cfg_.output_dir / "depth";
         fs::create_directories(depth_dir);
-        auto depth_path = depth_dir / std::format("{:05d}.png", index);
+        auto depth_path = depth_dir / ([](int n) {
+            std::ostringstream ss;
+            ss << std::setfill('0') << std::setw(5) << n << ".png";
+            return ss.str();
+        }(index));
         cv::imwrite(depth_path.string(), frame.depth);
     }
 }
@@ -111,10 +120,12 @@ void FrameCapture::save_with_pose(const camera::CameraFrame& frame,
         file << "timestamp,tx,ty,tz,rx,ry,rz\n";
     }
 
-    file << std::format("{},{:.6f},{:.6f},{:.6f},{:.6f},{:.6f},{:.6f}\n",
-                        timestamp_ms(),
-                        pose.tx, pose.ty, pose.tz,
-                        pose.rx, pose.ry, pose.rz);
+    std::ostringstream ss;
+    ss << timestamp_ms() << ","
+       << std::fixed << std::setprecision(6)
+       << pose.tx << "," << pose.ty << "," << pose.tz << ","
+       << pose.rx << "," << pose.ry << "," << pose.rz << "\n";
+    file << ss.str();
 }
 
 } // namespace rm::vision

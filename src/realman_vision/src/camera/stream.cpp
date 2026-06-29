@@ -2,7 +2,6 @@
 #include <librealsense2/rs.hpp>
 #include <opencv2/core.hpp>
 #include <cstring>
-#include <format>
 
 namespace rm::vision::camera {
 
