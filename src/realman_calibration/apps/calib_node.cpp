@@ -19,15 +19,21 @@
 
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <rclcpp/rclcpp.hpp>
+#include <sensor_msgs/msg/image.hpp>
+#include <std_msgs/msg/string.hpp>
 #include <std_srvs/srv/trigger.hpp>
 #include <tf2/LinearMath/Matrix3x3.h>
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2_ros/static_transform_broadcaster.h>
+#include <visualization_msgs/msg/marker.hpp>
 
 #include <filesystem>
 #include "realman_calibration/format_polyfill.hpp"
 #include <mutex>
+#include <opencv2/highgui.hpp>
 #include <opencv2/imgcodecs.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/calib3d.hpp>
 #include <string>
 
 namespace rm::calib {
@@ -67,6 +73,11 @@ public:
             cfg_.arm_ip.c_str(), mode_str.c_str(),
             cfg_.board_size.width, cfg_.board_size.height,
             cfg_.square_size_m, cfg_.output_dir.string().c_str());
+
+        // ── Monitoring publishers ──────────────────────────────────────
+        img_pub_        = create_publisher<sensor_msgs::msg::Image>("~/camera_image", 10);
+        corners_pub_    = create_publisher<visualization_msgs::msg::Marker>("~/detected_corners", 10);
+        arm_state_pub_  = create_publisher<std_msgs::msg::String>("~/arm_state", 10);
 
         setupServices();
         tf_broadcaster_ = std::make_shared<tf2_ros::StaticTransformBroadcaster>(this);
@@ -140,6 +151,75 @@ private:
             }
         }
         return images;
+    }
+
+    /// Publish monitoring topics from the collected session data.
+    /// Called during active collection (after collector finishes, while
+    /// still in the collection phase of the pipeline).
+    void publishMonitoringData(const CalibSession& session) {
+        auto images = loadSessionImages();
+        if (images.empty()) return;
+
+        for (size_t i = 0; i < images.size(); ++i) {
+            // ── camera_image ──
+            auto img_msg = std::make_unique<sensor_msgs::msg::Image>();
+            img_msg->header.stamp    = this->now();
+            img_msg->header.frame_id = "camera_frame";
+            img_msg->height          = images[i].rows;
+            img_msg->width           = images[i].cols;
+            img_msg->encoding        = "mono8";
+            img_msg->is_bigendian    = false;
+            img_msg->step            = static_cast<unsigned int>(images[i].cols);
+            img_msg->data.assign(images[i].data, images[i].data + images[i].rows * images[i].cols);
+            img_pub_->publish(std::move(img_msg));
+
+            // ── arm_state ──
+            if (i < session.arm_poses.size()) {
+                const auto& pose = session.arm_poses[i];
+                auto state_msg = std::make_unique<std_msgs::msg::String>();
+                state_msg->data = std::format("pose[{}]: tx={:.4f} ty={:.4f} tz={:.4f} rx={:.4f} ry={:.4f} rz={:.4f}",
+                                              i, pose[0], pose[1], pose[2], pose[3], pose[4], pose[5]);
+                arm_state_pub_->publish(std::move(state_msg));
+
+                // ── detected_corners ──
+                // Detect chessboard corners on the image
+                std::vector<cv::Point2f> corners;
+                bool found = cv::findChessboardCorners(images[i], cfg_.board_size, corners);
+
+                auto marker = std::make_unique<visualization_msgs::msg::Marker>();
+                marker->header.stamp    = this->now();
+                marker->header.frame_id = "camera_frame";
+                marker->ns     = "detected_corners";
+                marker->id     = static_cast<int>(i);
+                marker->type   = visualization_msgs::msg::Marker::SPHERE_LIST;
+                marker->action = visualization_msgs::msg::Marker::ADD;
+                marker->scale.x = 2.0;
+                marker->scale.y = 2.0;
+                marker->scale.z = 2.0;
+                marker->color.r = 1.0f;
+                marker->color.g = 0.0f;
+                marker->color.b = 0.0f;
+                marker->color.a = 1.0f;
+                marker->lifetime = rclcpp::Duration::from_seconds(60.0);
+
+                if (found) {
+                    for (const auto& pt : corners) {
+                        geometry_msgs::msg::Point p;
+                        p.x = pt.x;
+                        p.y = pt.y;
+                        p.z = 0.0;
+                        marker->points.push_back(p);
+                    }
+                    RCLCPP_DEBUG(get_logger(),
+                        "Published %zu detected corners for image %zu", corners.size(), i);
+                }
+                corners_pub_->publish(std::move(marker));
+            }
+
+            rclcpp::sleep_for(std::chrono::milliseconds(20));
+        }
+        RCLCPP_INFO(get_logger(),
+            "Published monitoring data: %zu images, %zu poses", images.size(), session.arm_poses.size());
     }
 
     /// Stage 2: Camera intrinsic calibration only.
@@ -234,10 +314,15 @@ private:
     auto runPipeline() -> std::string {
         // Stage 1: Collect
         RCLCPP_INFO(get_logger(), "Stage 1: collecting calibration data...");
+        collecting_ = true;
         CalibDataCollector collector(cfg_);
         auto session = collector.run();
+        collecting_ = false;
         if (!session)
             return std::format("collect failed: {}", session.error());
+
+        // Publish monitoring topics from collected data
+        publishMonitoringData(*session);
 
         // Store arm poses for hand-eye stage
         last_arm_poses_ = session->arm_poses;
@@ -262,9 +347,15 @@ private:
     CalibDataConfig     cfg_;
     HandEyeMode         mode_{HandEyeMode::EyeInHand};
     std::mutex          mtx_;
+    bool                collecting_{false};
 
     // TF broadcaster for hand-eye result
     std::shared_ptr<tf2_ros::StaticTransformBroadcaster> tf_broadcaster_;
+
+    // Monitoring publishers (active only during collection phase)
+    rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr          img_pub_;
+    rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr  corners_pub_;
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr            arm_state_pub_;
 
     // Cached results for staged execution
     std::vector<cv::Mat>              last_cam_rvecs_;

@@ -69,3 +69,16 @@ target_link_libraries(tf_integration_test
     ${OpenCV_LIBS}
 )
 target_link_options(tf_integration_test PRIVATE "LINKER:--disable-new-dtags")
+
+# ── E2E pipeline test: Charuco images → camera calib → poses → hand-eye → YAML ──
+ament_add_gtest(e2e_pipeline_test test_main.cpp e2e_pipeline_test.cpp)
+target_include_directories(e2e_pipeline_test PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include
+)
+target_link_libraries(e2e_pipeline_test
+    realman_calibration
+    synthetic_board
+    synthetic_poses
+    ${OpenCV_LIBS}
+)
+target_link_options(e2e_pipeline_test PRIVATE "LINKER:--disable-new-dtags")

@@ -9,9 +9,12 @@ find_package(OpenCV REQUIRED COMPONENTS core calib3d highgui imgproc imgcodecs o
 find_package(realsense2 REQUIRED)
 find_package(realman_vision REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(visualization_msgs REQUIRED)
 
 # ── RealMan SDK ──
 list(APPEND CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../cmake")
@@ -65,7 +68,7 @@ target_link_libraries(run_pipeline realman_calibration)
 
 add_executable(calib_node apps/calib_node.cpp)
 target_link_libraries(calib_node realman_calibration)
-ament_target_dependencies(calib_node rclcpp std_srvs tf2_ros geometry_msgs)
+ament_target_dependencies(calib_node rclcpp sensor_msgs std_msgs std_srvs tf2_ros geometry_msgs visualization_msgs)
 
 # ── Install ──
 install(TARGETS realman_calibration

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "realman/types.hpp"
 #include "realman_vision/camera/types.hpp"
 #include <array>
 #include "expected_polyfill.hpp"
@@ -38,9 +39,18 @@ public:
     CalibDataCollector(const CalibDataCollector&) = delete;
     auto operator=(const CalibDataCollector&) -> CalibDataCollector& = delete;
 
-    /// Run the interactive capture loop.  Blocks until enough valid
-    /// images are collected or an unrecoverable error occurs.
-    [[nodiscard]] auto run() -> Result<CalibSession>;
+    /// Run the calibration data collection loop.
+    ///
+    /// If @p waypoints is non-empty: auto-collection mode — moves the arm
+    /// through each waypoint, auto-captures on board detection, and stops
+    /// when enough images with sufficient rotation diversity are collected
+    /// or all waypoints are exhausted.  Unreachable waypoints are silently
+    /// skipped.
+    ///
+    /// If @p waypoints is empty: interactive mode — displays live preview
+    /// and waits for the user to press 's' to save each frame.
+    [[nodiscard]] auto run(std::vector<rm::JointPosition> waypoints = {})
+        -> Result<CalibSession>;
 
 private:
     class Impl;
