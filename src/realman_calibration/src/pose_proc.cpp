@@ -108,12 +108,11 @@ auto PoseProcessor::process(std::span<const std::array<double, 6>> poses)
     }
     case HandEyeMode::EyeToHand: {
         // poses are T_end2base
-        // base2end_i = inv(T_end2base_i)
-        // A_i = base2end_{i+1} * inv(base2end_i)
+        // A_i = T_{i+1} * inv(T_i)
         for (auto i = 0uz; i < N - 1; ++i) {
-            auto base2end_i   = pose_to_homogeneous(poses[i]).inv();     // inv(T_i)
-            auto base2end_i1  = pose_to_homogeneous(poses[i + 1]).inv(); // inv(T_{i+1})
-            auto A = base2end_i1 * base2end_i.inv();                     // inv(T_{i+1}) * T_i
+            auto T_i  = pose_to_homogeneous(poses[i]);
+            auto T_i1 = pose_to_homogeneous(poses[i + 1]);
+            auto A = T_i1 * T_i.inv();
             auto [R, t] = extract_R_t(A);
             result.R_motions.push_back(std::move(R));
             result.t_motions.push_back(std::move(t));
