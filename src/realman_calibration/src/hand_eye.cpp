@@ -15,6 +15,49 @@ namespace rm::calib {
 // ──────────────────────────────────────────────────────────────
 namespace {
 
+/// Map method enum to OpenCV flag.
+[[nodiscard]] auto method_to_cv_flag(HandEyeMethod m) -> cv::HandEyeCalibrationMethod {
+    switch (m) {
+    case HandEyeMethod::Tsai:       return cv::CALIB_HAND_EYE_TSAI;
+    case HandEyeMethod::Park:       return cv::CALIB_HAND_EYE_PARK;
+    case HandEyeMethod::Horaud:     return cv::CALIB_HAND_EYE_HORAUD;
+    case HandEyeMethod::Daniilidis: return cv::CALIB_HAND_EYE_DANIILIDIS;
+    default:                        return cv::CALIB_HAND_EYE_TSAI;
+    }
+}
+
+/// Map method enum to display string.
+[[nodiscard]] auto method_to_string(HandEyeMethod m) -> const char* {
+    switch (m) {
+    case HandEyeMethod::Tsai:       return "Tsai";
+    case HandEyeMethod::Park:       return "Park";
+    case HandEyeMethod::Horaud:     return "Horaud";
+    case HandEyeMethod::Daniilidis: return "Daniilidis";
+    case HandEyeMethod::Auto:       return "Auto";
+    }
+    return "Unknown";
+}
+
+/// Compute condition number of the stacked rotation system.
+/// Stacks all R_tool matrices (each 3×3) into a 3N×3 matrix and
+/// returns max_sv / min_sv from SVD.  Returns 0.0 if fewer than 4 pairs.
+[[nodiscard]] auto compute_condition_number(std::span<const cv::Mat> R_tool) -> double {
+    if (R_tool.size() < 4) return 0.0;
+
+    const auto N = static_cast<int>(R_tool.size());
+    cv::Mat stacked(3 * N, 3, CV_64F);
+    for (int i = 0; i < N; ++i) {
+        R_tool[i].copyTo(stacked(cv::Rect(0, 3 * i, 3, 3)));
+    }
+
+    cv::Mat w;
+    cv::SVD::compute(stacked, w);
+    const double max_sv = w.at<double>(0, 0);
+    const double min_sv = w.at<double>(2, 0);  // 3 singular values for 3×N matrix
+    if (min_sv < 1e-15) return 0.0;
+    return max_sv / min_sv;
+}
+
 /// Convert Rodrigues vectors to 3×3 rotation matrices.
 [[nodiscard]] auto rvecs_to_R(std::span<const cv::Mat> rvecs) -> std::vector<cv::Mat> {
     std::vector<cv::Mat> R_mats;
@@ -93,7 +136,8 @@ HandEyeSolver::HandEyeSolver(HandEyeMode mode) : mode_{mode} {}
 auto HandEyeSolver::solve(std::span<const cv::Mat> R_tool,
                            std::span<const cv::Mat> t_tool,
                            std::span<const cv::Mat> rvecs,
-                           std::span<const cv::Mat> tvecs)
+                           std::span<const cv::Mat> tvecs,
+                           HandEyeMethod method)
     -> Result<HandEyeResult>
 {
     if (R_tool.size() < 3) {
@@ -110,48 +154,72 @@ auto HandEyeSolver::solve(std::span<const cv::Mat> R_tool,
                         R_tool.size(), R_cam.size()));
     }
 
-    cv::Mat R_result, t_result;
+    const double cond_num = compute_condition_number(R_tool);
 
-    switch (mode_) {
-    case HandEyeMode::EyeInHand: {
-        // Eye-in-hand: R_tool = end-effector motions, R_cam = pattern-in-camera
-        // calibrateHandEye(R_gripper2base, t_gripper2base, R_target2cam, t_target2cam,
-        //                  R_cam2gripper, t_cam2gripper, method)
-        std::vector<cv::Mat> R_tool_vec(R_tool.begin(), R_tool.end());
-        std::vector<cv::Mat> t_tool_vec(t_tool.begin(), t_tool.end());
-        std::vector<cv::Mat> R_cam_vec(R_cam.begin(), R_cam.end());
-        std::vector<cv::Mat> tvecs_vec(tvecs.begin(), tvecs.end());
-        cv::calibrateHandEye(R_tool_vec, t_tool_vec,
-                             R_cam_vec, tvecs_vec,
-                             R_result, t_result,
-                             cv::CALIB_HAND_EYE_TSAI);
-        break;
-    }
-    case HandEyeMode::EyeToHand: {
-        // Eye-to-hand: R_cam = pattern motions (as gripper2base),
-        //              R_tool = base2end motions (as target2cam)
-        std::vector<cv::Mat> R_cam_vec2(R_cam.begin(), R_cam.end());
-        std::vector<cv::Mat> tvecs_vec2(tvecs.begin(), tvecs.end());
-        std::vector<cv::Mat> R_tool_vec2(R_tool.begin(), R_tool.end());
-        std::vector<cv::Mat> t_tool_vec2(t_tool.begin(), t_tool.end());
-        cv::calibrateHandEye(R_cam_vec2, tvecs_vec2,
-                             R_tool_vec2, t_tool_vec2,
-                             R_result, t_result,
-                             cv::CALIB_HAND_EYE_TSAI);
-        break;
-    }
-    }
+    const std::array<HandEyeMethod, 4> all_methods = {
+        HandEyeMethod::Tsai,
+        HandEyeMethod::Park,
+        HandEyeMethod::Horaud,
+        HandEyeMethod::Daniilidis,
+    };
 
-    // Compute reprojection error
-    double err = compute_reproj_error(R_tool, t_tool, R_cam, tvecs,
-                                       R_result, t_result, mode_);
+    cv::Mat best_R, best_t;
+    double best_reproj = std::numeric_limits<double>::max();
+    HandEyeMethod best_method = HandEyeMethod::Tsai;
+
+    auto try_method = [&](HandEyeMethod m) -> bool {
+        cv::Mat R_m, t_m;
+        const auto cv_flag = method_to_cv_flag(m);
+
+        switch (mode_) {
+        case HandEyeMode::EyeInHand: {
+            std::vector<cv::Mat> R_tool_vec(R_tool.begin(), R_tool.end());
+            std::vector<cv::Mat> t_tool_vec(t_tool.begin(), t_tool.end());
+            std::vector<cv::Mat> R_cam_vec(R_cam.begin(), R_cam.end());
+            std::vector<cv::Mat> tvecs_vec(tvecs.begin(), tvecs.end());
+            cv::calibrateHandEye(R_tool_vec, t_tool_vec,
+                                 R_cam_vec, tvecs_vec,
+                                 R_m, t_m, cv_flag);
+            break;
+        }
+        case HandEyeMode::EyeToHand: {
+            std::vector<cv::Mat> R_cam_vec(R_cam.begin(), R_cam.end());
+            std::vector<cv::Mat> tvecs_vec(tvecs.begin(), tvecs.end());
+            std::vector<cv::Mat> R_tool_vec(R_tool.begin(), R_tool.end());
+            std::vector<cv::Mat> t_tool_vec(t_tool.begin(), t_tool.end());
+            cv::calibrateHandEye(R_cam_vec, tvecs_vec,
+                                 R_tool_vec, t_tool_vec,
+                                 R_m, t_m, cv_flag);
+            break;
+        }
+        }
+
+        const double err = compute_reproj_error(R_tool, t_tool, R_cam, tvecs,
+                                                 R_m, t_m, mode_);
+
+        if (err < best_reproj) {
+            best_reproj = err;
+            best_R = R_m;
+            best_t = t_m;
+            best_method = m;
+        }
+        return true;
+    };
+
+    if (method == HandEyeMethod::Auto) {
+        for (auto m : all_methods) { try_method(m); }
+    } else {
+        try_method(method);
+    }
 
     return HandEyeResult{
-        .R             = R_result,
-        .t             = t_result,
-        .mode          = mode_,
-        .reproj_error  = err,
-        .method        = "Tsai",
+        .R                = best_R,
+        .t                = best_t,
+        .mode             = mode_,
+        .reproj_error     = best_reproj,
+        .method           = method_to_string(best_method),
+        .condition_number = cond_num,
+        .used_method      = best_method,
     };
 }
 
@@ -169,6 +237,7 @@ void HandEyeResult::save_yaml(const std::filesystem::path& path) const {
     fs << "translation_vector" << t;
     fs << "reprojection_error" << reproj_error;
     fs << "method" << method;
+    fs << "condition_number" << condition_number;
 
     fs.release();
 }

@@ -10,6 +10,15 @@
 
 namespace rm::calib {
 
+/// Hand-eye calibration method.
+enum class HandEyeMethod {
+    Tsai,
+    Park,
+    Horaud,
+    Daniilidis,
+    Auto,  // run all four, select by condition number (primary) then reproj error (tiebreak)
+};
+
 /// Result of a hand-eye calibration solve.
 struct HandEyeResult {
     cv::Mat R;                     // 3×3, CV_64F  — camera→end-effector (or camera→base)
@@ -17,6 +26,8 @@ struct HandEyeResult {
     HandEyeMode mode;
     double reproj_error{0.0};
     std::string method;
+    double condition_number{0.0};
+    HandEyeMethod used_method{HandEyeMethod::Auto};
 
     /// Persist result as a YAML file via cv::FileStorage.
     void save_yaml(const std::filesystem::path& path) const;
@@ -33,10 +44,12 @@ public:
     /// @param t_tool   Relative translation vectors from PoseProcessor (A_i)
     /// @param rvecs    Per-image rotation vectors from CameraCalibrator
     /// @param tvecs    Per-image translation vectors from CameraCalibrator
+    /// @param method   Hand-eye method (default Auto: run all four, pick best)
     [[nodiscard]] auto solve(std::span<const cv::Mat> R_tool,
                               std::span<const cv::Mat> t_tool,
                               std::span<const cv::Mat> rvecs,
-                              std::span<const cv::Mat> tvecs)
+                              std::span<const cv::Mat> tvecs,
+                              HandEyeMethod method = HandEyeMethod::Auto)
         -> Result<HandEyeResult>;
 
 private:

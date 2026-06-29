@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(ament_cmake REQUIRED)
-find_package(OpenCV REQUIRED COMPONENTS core calib3d highgui imgproc imgcodecs)
+find_package(OpenCV REQUIRED COMPONENTS core calib3d highgui imgproc imgcodecs aruco)
 find_package(realsense2 REQUIRED)
 find_package(realman_vision REQUIRED)
 find_package(rclcpp REQUIRED)

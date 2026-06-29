@@ -1,5 +1,6 @@
 #include "realman_calibration/camera_calib.hpp"
 
+#include <opencv2/aruco/charuco.hpp>
 #include <opencv2/calib3d.hpp>
 #include <opencv2/imgproc.hpp>
 
@@ -19,78 +20,175 @@ CameraCalibrator::CameraCalibrator(const CameraCalibInput& input)
 {}
 
 auto CameraCalibrator::compute() -> Result<CameraCalibResult> {
-    // ── build 3D object points for one chessboard pose ──
-    std::vector<cv::Point3f> obj;
-    obj.reserve(input_.board_size.width * input_.board_size.height);
-    for (int r = 0; r < input_.board_size.height; ++r) {
-        for (int c = 0; c < input_.board_size.width; ++c) {
-            obj.emplace_back(static_cast<float>(c) * input_.square_size_m,
-                             static_cast<float>(r) * input_.square_size_m,
-                             0.0f);
+    if (input_.board_type == BoardType::Chessboard) {
+        // ── build 3D object points for one chessboard pose ──
+        std::vector<cv::Point3f> obj;
+        obj.reserve(input_.board_size.width * input_.board_size.height);
+        for (int r = 0; r < input_.board_size.height; ++r) {
+            for (int c = 0; c < input_.board_size.width; ++c) {
+                obj.emplace_back(static_cast<float>(c) * input_.square_size_m,
+                                 static_cast<float>(r) * input_.square_size_m,
+                                 0.0f);
+            }
         }
+
+        std::vector<std::vector<cv::Point3f>> object_points;
+        std::vector<std::vector<cv::Point2f>> image_points;
+        cv::Size image_size;
+
+        // ── detect corners on each image ──
+        for (const auto& img : input_.images) {
+            if (img.empty() || img.type() != CV_8UC1) continue;
+
+            image_size = img.size();
+
+            std::vector<cv::Point2f> corners;
+            bool found = cv::findChessboardCorners(img, input_.board_size, corners);
+
+            if (!found) continue;             // silently skip
+
+            cv::cornerSubPix(img, corners, cv::Size(5, 5),
+                             cv::Size(-1, -1),
+                             cv::TermCriteria(cv::TermCriteria::EPS | cv::TermCriteria::COUNT,
+                                              30, 0.1));
+
+            object_points.push_back(obj);
+            image_points.push_back(corners);
+        }
+
+        // ── require at least 3 valid images ──
+        if (object_points.size() < 3) {
+            return Unexpected<std::string>(
+                std::format("Need at least 3 valid calibration images (got {})",
+                            object_points.size()));
+        }
+
+        // ── calibrate ──
+        cv::Mat K, dist;
+        std::vector<cv::Mat> rvecs, tvecs;
+
+        cv::calibrateCamera(object_points, image_points, image_size,
+                            K, dist, rvecs, tvecs);
+
+        // ── compute reprojection error ──
+        double total_error = 0.0;
+        int total_points = 0;
+
+        for (auto i = 0uz; i < object_points.size(); ++i) {
+            std::vector<cv::Point2f> projected;
+            cv::projectPoints(object_points[i], rvecs[i], tvecs[i], K, dist, projected);
+
+            auto err = cv::norm(image_points[i], projected, cv::NORM_L2);
+            total_error += err * err;
+            total_points += static_cast<int>(object_points[i].size());
+        }
+
+        double reproj_error = std::sqrt(total_error / static_cast<double>(total_points));
+
+        return CameraCalibResult{
+            .K            = K,
+            .dist         = dist,
+            .rvecs        = std::move(rvecs),
+            .tvecs        = std::move(tvecs),
+            .reproj_error = reproj_error,
+            .images_used  = static_cast<int>(object_points.size()),
+        };
     }
 
-    std::vector<std::vector<cv::Point3f>> object_points;
-    std::vector<std::vector<cv::Point2f>> image_points;
-    cv::Size image_size;
+    if (input_.board_type == BoardType::Charuco) {
+        // ── create Charuco board ──
+        cv::Ptr<cv::aruco::CharucoBoard> board = cv::aruco::CharucoBoard::create(
+            input_.board_size.width,
+            input_.board_size.height,
+            input_.square_size_m,
+            input_.marker_size_m,
+            cv::aruco::getPredefinedDictionary(input_.dictionary_id));
 
-    // ── detect corners on each image ──
-    for (const auto& img : input_.images) {
-        if (img.empty() || img.type() != CV_8UC1) continue;
+        cv::Ptr<cv::aruco::Dictionary> dict =
+            cv::aruco::getPredefinedDictionary(input_.dictionary_id);
 
-        image_size = img.size();
+        std::vector<std::vector<cv::Point2f>> all_charuco_corners;
+        std::vector<std::vector<int>> all_charuco_ids;
+        cv::Size image_size;
 
-        std::vector<cv::Point2f> corners;
-        bool found = cv::findChessboardCorners(img, input_.board_size, corners);
+        // ── detect Charuco corners on each image ──
+        for (const auto& img : input_.images) {
+            if (img.empty() || img.type() != CV_8UC1) continue;
 
-        if (!found) continue;             // silently skip
+            image_size = img.size();
 
-        cv::cornerSubPix(img, corners, cv::Size(5, 5),
-                         cv::Size(-1, -1),
-                         cv::TermCriteria(cv::TermCriteria::EPS | cv::TermCriteria::COUNT,
-                                          30, 0.1));
+            std::vector<int> marker_ids;
+            std::vector<std::vector<cv::Point2f>> marker_corners;
+            cv::aruco::detectMarkers(img, dict, marker_corners, marker_ids);
 
-        object_points.push_back(obj);
-        image_points.push_back(corners);
+            if (marker_ids.empty()) continue;
+
+            std::vector<cv::Point2f> charuco_corners;
+            std::vector<int> charuco_ids;
+            cv::aruco::interpolateCornersCharuco(
+                marker_corners, marker_ids, img, board,
+                charuco_corners, charuco_ids);
+
+            if (charuco_ids.size() < 4) continue;
+
+            all_charuco_corners.push_back(std::move(charuco_corners));
+            all_charuco_ids.push_back(std::move(charuco_ids));
+        }
+
+        // ── require at least 3 valid images ──
+        if (all_charuco_corners.size() < 3) {
+            return Unexpected<std::string>(
+                std::format("Need at least 3 valid calibration images (got {})",
+                            all_charuco_corners.size()));
+        }
+
+        // ── calibrate ──
+        cv::Mat K, dist;
+        std::vector<cv::Mat> rvecs, tvecs;
+
+        cv::aruco::calibrateCameraCharuco(
+            all_charuco_corners, all_charuco_ids, board, image_size,
+            K, dist, rvecs, tvecs);
+
+        // ── compute reprojection error ──
+        int corners_x = input_.board_size.width - 1;
+        int corners_y = input_.board_size.height - 1;
+        double total_error = 0.0;
+        int total_points = 0;
+
+        for (auto i = 0uz; i < all_charuco_corners.size(); ++i) {
+            std::vector<cv::Point3f> current_obj_points;
+            current_obj_points.reserve(all_charuco_ids[i].size());
+            for (int id : all_charuco_ids[i]) {
+                int row = id / corners_x;
+                int col = id % corners_x;
+                current_obj_points.emplace_back(
+                    static_cast<float>(col) * input_.square_size_m,
+                    static_cast<float>(row) * input_.square_size_m,
+                    0.0f);
+            }
+
+            std::vector<cv::Point2f> projected;
+            cv::projectPoints(current_obj_points, rvecs[i], tvecs[i], K, dist, projected);
+
+            auto err = cv::norm(all_charuco_corners[i], projected, cv::NORM_L2);
+            total_error += err * err;
+            total_points += static_cast<int>(current_obj_points.size());
+        }
+
+        double reproj_error = std::sqrt(total_error / static_cast<double>(total_points));
+
+        return CameraCalibResult{
+            .K            = K,
+            .dist         = dist,
+            .rvecs        = std::move(rvecs),
+            .tvecs        = std::move(tvecs),
+            .reproj_error = reproj_error,
+            .images_used  = static_cast<int>(all_charuco_corners.size()),
+        };
     }
 
-    // ── require at least 3 valid images ──
-    if (object_points.size() < 3) {
-        return Unexpected<std::string>(
-            std::format("Need at least 3 valid calibration images (got {})",
-                        object_points.size()));
-    }
-
-    // ── calibrate ──
-    cv::Mat K, dist;
-    std::vector<cv::Mat> rvecs, tvecs;
-
-    cv::calibrateCamera(object_points, image_points, image_size,
-                        K, dist, rvecs, tvecs);
-
-    // ── compute reprojection error ──
-    double total_error = 0.0;
-    int total_points = 0;
-
-    for (auto i = 0uz; i < object_points.size(); ++i) {
-        std::vector<cv::Point2f> projected;
-        cv::projectPoints(object_points[i], rvecs[i], tvecs[i], K, dist, projected);
-
-        auto err = cv::norm(image_points[i], projected, cv::NORM_L2);
-        total_error += err * err;
-        total_points += static_cast<int>(object_points[i].size());
-    }
-
-    double reproj_error = std::sqrt(total_error / static_cast<double>(total_points));
-
-    return CameraCalibResult{
-        .K            = K,
-        .dist         = dist,
-        .rvecs        = std::move(rvecs),
-        .tvecs        = std::move(tvecs),
-        .reproj_error = reproj_error,
-        .images_used  = static_cast<int>(object_points.size()),
-    };
+    return Unexpected<std::string>("Unknown board type");
 }
 
 } // namespace rm::calib

@@ -283,7 +283,12 @@ TEST(HandEyeSolverTest, EyeInHandHappy) {
     EXPECT_EQ(result->R.cols, 3);
     EXPECT_EQ(result->t.rows, 3);
     EXPECT_EQ(result->t.cols, 1);
-    EXPECT_EQ(result->method, "Tsai");
+    EXPECT_TRUE(result->method == "Tsai" || result->method == "Park" ||
+                result->method == "Horaud" || result->method == "Daniilidis");
+    EXPECT_NE(result->used_method, HandEyeMethod::Auto)
+        << "used_method should be a concrete method, not Auto";
+    EXPECT_GT(result->condition_number, 0.0)
+        << "condition_number should be > 0 for well-conditioned data";
     EXPECT_EQ(result->mode, HandEyeMode::EyeInHand);
 
     // R should be a valid rotation matrix
@@ -314,7 +319,11 @@ TEST(HandEyeSolverTest, EyeToHandHappy) {
     EXPECT_EQ(result->R.cols, 3);
     EXPECT_EQ(result->t.rows, 3);
     EXPECT_EQ(result->t.cols, 1);
-    EXPECT_EQ(result->method, "Tsai");
+    EXPECT_TRUE(result->method == "Tsai" || result->method == "Park" ||
+                result->method == "Horaud" || result->method == "Daniilidis");
+    EXPECT_NE(result->used_method, HandEyeMethod::Auto)
+        << "used_method should be a concrete method, not Auto";
+    EXPECT_GT(result->condition_number, 0.0);
     EXPECT_EQ(result->mode, HandEyeMode::EyeToHand);
 
     EXPECT_NEAR(cv::determinant(result->R), 1.0, 1e-6);
