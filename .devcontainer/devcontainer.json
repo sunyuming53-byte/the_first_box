@@ -31,7 +31,7 @@
 	},
 
 	// Build workspace after container creation
-	"postCreateCommand": ". /opt/ros/humble/setup.bash && colcon build --symlink-install",
+	"postCreateCommand": "bash -c 'source /opt/ros/humble/setup.bash && colcon build --symlink-install'",
 
 	// Ports commonly used for ROS2 / arm communication
 	"forwardPorts": [
