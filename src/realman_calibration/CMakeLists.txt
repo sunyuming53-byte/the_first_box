@@ -76,4 +76,8 @@ install(TARGETS collect_data calibrate_camera process_poses compute_hand_eye run
 install(DIRECTORY include/ DESTINATION include)
 install(DIRECTORY config/ DESTINATION share/${PROJECT_NAME}/config)
 
+if(BUILD_TESTING)
+  add_subdirectory(test)
+endif()
+
 ament_package()
