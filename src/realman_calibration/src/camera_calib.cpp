@@ -146,34 +146,49 @@ auto CameraCalibrator::compute() -> Result<CameraCalibResult> {
         cv::Mat K, dist;
         std::vector<cv::Mat> rvecs, tvecs;
 
-        cv::aruco::calibrateCameraCharuco(
-            all_charuco_corners, all_charuco_ids, board, image_size,
-            K, dist, rvecs, tvecs);
+        // Compute 3D object points from corner IDs using board geometry.
+        // CharucoBoard corners are row-major: corners_x = squaresX - 1.
+        int corners_per_row = input_.board_size.width - 1;
+        std::vector<std::vector<cv::Point3f>> all_obj_pts;
+        std::vector<std::vector<cv::Point2f>> all_img_pts;
+        for (size_t i = 0; i < all_charuco_corners.size(); ++i) {
+            std::vector<cv::Point3f> obj_pts;
+            obj_pts.reserve(all_charuco_ids[i].size());
+            for (int id : all_charuco_ids[i]) {
+                int row = id / corners_per_row;
+                int col = id % corners_per_row;
+                obj_pts.emplace_back(
+                    static_cast<float>(col + 1) * input_.square_size_m,
+                    static_cast<float>(row + 1) * input_.square_size_m,
+                    0.0f);
+            }
+            all_obj_pts.push_back(std::move(obj_pts));
+            all_img_pts.push_back(all_charuco_corners[i]);
+        }
+
+        int flags = cv::CALIB_FIX_ASPECT_RATIO;
+        // Provide a reasonable initial K guess: fx=fy=max(image dim), cx=w/2, cy=h/2
+        K = (cv::Mat_<double>(3, 3) <<
+             static_cast<double>(std::max(image_size.width, image_size.height)),
+             0.0, static_cast<double>(image_size.width) / 2.0,
+             0.0, static_cast<double>(std::max(image_size.width, image_size.height)),
+             static_cast<double>(image_size.height) / 2.0,
+             0.0, 0.0, 1.0);
+        flags |= cv::CALIB_USE_INTRINSIC_GUESS;
+        cv::calibrateCamera(all_obj_pts, all_img_pts, image_size,
+                            K, dist, rvecs, tvecs, flags);
 
         // ── compute reprojection error ──
-        int corners_x = input_.board_size.width - 1;
-        int corners_y = input_.board_size.height - 1;
         double total_error = 0.0;
         int total_points = 0;
 
         for (auto i = 0uz; i < all_charuco_corners.size(); ++i) {
-            std::vector<cv::Point3f> current_obj_points;
-            current_obj_points.reserve(all_charuco_ids[i].size());
-            for (int id : all_charuco_ids[i]) {
-                int row = id / corners_x;
-                int col = id % corners_x;
-                current_obj_points.emplace_back(
-                    static_cast<float>(col) * input_.square_size_m,
-                    static_cast<float>(row) * input_.square_size_m,
-                    0.0f);
-            }
-
             std::vector<cv::Point2f> projected;
-            cv::projectPoints(current_obj_points, rvecs[i], tvecs[i], K, dist, projected);
+            cv::projectPoints(all_obj_pts[i], rvecs[i], tvecs[i], K, dist, projected);
 
             auto err = cv::norm(all_charuco_corners[i], projected, cv::NORM_L2);
             total_error += err * err;
-            total_points += static_cast<int>(current_obj_points.size());
+            total_points += static_cast<int>(all_obj_pts[i].size());
         }
 
         double reproj_error = std::sqrt(total_error / static_cast<double>(total_points));

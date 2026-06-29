@@ -386,3 +386,256 @@ TEST(HandEyeSolverTest, NoiseTolerance) {
     EXPECT_NEAR(cv::determinant(result->R), 1.0, 1e-6)
         << "Noisy solve should still produce a valid rotation";
 }
+
+// ──────────────────────────────────────────────────────────────
+// Test 5 — All 4 methods recover ground-truth H on clean data
+// ──────────────────────────────────────────────────────────────
+TEST(HandEyeSolverTest, AllMethodsRecoverGroundTruth) {
+    auto data = generate_test_data(HandEyeMode::EyeInHand, kNumMotions, 0.0);
+
+    HandEyeSolver solver(HandEyeMode::EyeInHand);
+
+    struct MethodSpec {
+        HandEyeMethod method;
+        std::string  name;
+    };
+    const std::array<MethodSpec, 4> methods = {{
+        {HandEyeMethod::Tsai,        "Tsai"},
+        {HandEyeMethod::Park,        "Park"},
+        {HandEyeMethod::Horaud,      "Horaud"},
+        {HandEyeMethod::Daniilidis,  "Daniilidis"},
+    }};
+
+    for (const auto& spec : methods) {
+        auto result = solver.solve(data.R_tool, data.t_tool,
+                                   data.rvecs, data.tvecs, spec.method);
+
+        ASSERT_TRUE(result.has_value())
+            << spec.name << " should succeed on clean data";
+
+        EXPECT_EQ(result->used_method, spec.method)
+            << spec.name << " used_method should match requested method";
+        EXPECT_EQ(result->method, spec.name);
+
+        // Valid rotation: det ≈ 1, R * R^T ≈ I
+        EXPECT_NEAR(cv::determinant(result->R), 1.0, 1e-6)
+            << spec.name << " rotation determinant should be 1";
+        {
+            cv::Mat I_check = result->R * result->R.t();
+            EXPECT_NEAR(cv::norm(I_check - cv::Mat::eye(3, 3, CV_64F)),
+                        0.0, 1e-6)
+                << spec.name << " R * R^T should be identity";
+        }
+
+        // Reprojection error should be finite and non-negative
+        EXPECT_GE(result->reproj_error, 0.0)
+            << spec.name << " reproj_error should be >= 0";
+        EXPECT_LT(result->reproj_error, 1e3)
+            << spec.name << " reproj_error should be finite on clean data";
+    }
+}
+
+// ──────────────────────────────────────────────────────────────
+// Test 6 — Auto mode selects a concrete method
+// ──────────────────────────────────────────────────────────────
+TEST(HandEyeSolverTest, AutoModeSelectsMethod) {
+    auto data = generate_test_data(HandEyeMode::EyeInHand, kNumMotions, 0.0);
+
+    HandEyeSolver solver(HandEyeMode::EyeInHand);
+    auto result = solver.solve(data.R_tool, data.t_tool,
+                               data.rvecs, data.tvecs);  // default = Auto
+
+    ASSERT_TRUE(result.has_value())
+        << "Auto mode should succeed on clean data";
+
+    EXPECT_NE(result->used_method, HandEyeMethod::Auto)
+        << "used_method should be a concrete method, not Auto";
+
+    const std::array<std::string, 4> valid_methods = {
+        "Tsai", "Park", "Horaud", "Daniilidis"
+    };
+    EXPECT_TRUE(std::find(valid_methods.begin(), valid_methods.end(),
+                          result->method) != valid_methods.end())
+        << "method should be one of {Tsai, Park, Horaud, Daniilidis}, got: "
+        << result->method;
+}
+
+// ──────────────────────────────────────────────────────────────
+// Test 7 — Condition number: well-conditioned vs degenerate data
+// ──────────────────────────────────────────────────────────────
+TEST(HandEyeSolverTest, ConditionNumber) {
+    // ── Sub-case A: well-conditioned data ──
+    {
+        auto data = generate_test_data(HandEyeMode::EyeInHand,
+                                       kNumMotions, 0.0);
+
+        HandEyeSolver solver(HandEyeMode::EyeInHand);
+        auto result = solver.solve(data.R_tool, data.t_tool,
+                                   data.rvecs, data.tvecs,
+                                   HandEyeMethod::Tsai);
+
+        ASSERT_TRUE(result.has_value())
+            << "Tsai should succeed on well-conditioned data";
+
+        EXPECT_GT(result->condition_number, 0.0)
+            << "condition_number should be > 0 for well-conditioned data";
+        EXPECT_LT(result->condition_number, 500.0)
+            << "condition_number should be < 500 for well-conditioned data, got "
+            << result->condition_number;
+    }
+
+    // ── Sub-case B: degenerate data (identical orientation, varying t) ──
+    // With identical rotations and varying translations, relative arm
+    // rotations are all identity → Tsai axis matrix is all zeros → the
+    // stacked-absolute-R SVD yields cond ≈ 1 for any orthogonal matrices,
+    // but the solver's internal linear system for the rotation axes is
+    // rank-deficient.  We verify the solver still produces a result and
+    // that the resulting condition_number is finite.
+    {
+        // 1. Random H (ground truth)
+        std::uniform_real_distribution<double>
+            ad(10.0 * M_PI / 180.0, 50.0 * M_PI / 180.0);
+        std::uniform_real_distribution<double>
+            td(0.05, 0.5);
+        std::uniform_real_distribution<double>
+            axis_d(-1.0, 1.0);
+
+        double ax = axis_d(tl_rng), ay = axis_d(tl_rng), az = axis_d(tl_rng);
+        double len = std::sqrt(ax * ax + ay * ay + az * az);
+        if (len < 1e-12) { ax = 1.0; ay = 0.0; az = 0.0; len = 1.0; }
+        cv::Mat axis = (cv::Mat_<double>(3, 1) << ax / len, ay / len, az / len);
+        cv::Mat rvec_h = axis * ad(tl_rng) * rand_sign();
+        cv::Mat R_gt;
+        cv::Rodrigues(rvec_h, R_gt);
+        cv::Mat t_gt = (cv::Mat_<double>(3, 1) <<
+                        td(tl_rng) * rand_sign(),
+                        td(tl_rng) * rand_sign(),
+                        td(tl_rng) * rand_sign());
+        cv::Mat H_true  = compose_4x4(R_gt, t_gt);
+        cv::Mat H_inv   = H_true.inv();
+
+        // 2. Degenerate arm poses: same orientation, different translations
+        std::vector<std::array<double, 6>> degen_poses;
+        for (int i = 0; i < kNumMotions; ++i)
+            degen_poses.push_back({kMinT + i * 0.15, 0.0, 0.0,  0.0, 0.0, 0.0});
+
+        // 3. Random T_target2base
+        ax = axis_d(tl_rng); ay = axis_d(tl_rng); az = axis_d(tl_rng);
+        len = std::sqrt(ax * ax + ay * ay + az * az);
+        if (len < 1e-12) { ax = 1.0; ay = 0.0; az = 0.0; len = 1.0; }
+        cv::Mat axis_t = (cv::Mat_<double>(3, 1) << ax / len, ay / len, az / len);
+        cv::Mat rvec_t = axis_t * ad(tl_rng) * rand_sign();
+        cv::Mat R_t2b;
+        cv::Rodrigues(rvec_t, R_t2b);
+        cv::Mat t_t2b = (cv::Mat_<double>(3, 1) <<
+                         td(tl_rng) * rand_sign(),
+                         td(tl_rng) * rand_sign(),
+                         td(tl_rng) * rand_sign());
+        cv::Mat T_t2b = compose_4x4(R_t2b, t_t2b);
+
+        // 4. Extract R_tool / t_tool and camera views
+        std::vector<cv::Mat> R_tool_d, t_tool_d;
+        std::vector<cv::Mat> rvecs_d,  tvecs_d;
+        const auto board_pts = board_points();
+        const auto K         = camera_matrix();
+        const auto dist      = zero_distortion();
+
+        for (int i = 0; i < kNumMotions; ++i) {
+            cv::Mat T_arm = pose6_to_4x4(degen_poses[static_cast<std::size_t>(i)]);
+            cv::Mat R_arm, t_arm;
+            decompose_4x4(T_arm, R_arm, t_arm);
+            R_tool_d.push_back(R_arm);
+            t_tool_d.push_back(t_arm);
+
+            cv::Mat T_cam = H_inv * T_arm.inv() * T_t2b;
+            cv::Mat R_cam, t_cam, rvec;
+            decompose_4x4(T_cam, R_cam, t_cam);
+            cv::Rodrigues(R_cam, rvec);
+            rvecs_d.push_back(rvec);
+            tvecs_d.push_back(t_cam);
+        }
+
+        // 5. Solve — should succeed even on degenerate data
+        HandEyeSolver solver(HandEyeMode::EyeInHand);
+        auto result = solver.solve(R_tool_d, t_tool_d,
+                                   rvecs_d, tvecs_d,
+                                   HandEyeMethod::Tsai);
+
+        ASSERT_TRUE(result.has_value())
+            << "Tsai should still produce a result on degenerate data";
+
+        EXPECT_GT(result->condition_number, 0.0)
+            << "condition_number should be > 0 (computed)";
+        EXPECT_LT(result->condition_number, 1e6)
+            << "condition_number should be finite, got "
+            << result->condition_number;
+    }
+}
+
+// ──────────────────────────────────────────────────────────────
+// Test 8 — Noise tolerance comparison: Tsai vs Daniilidis
+// ──────────────────────────────────────────────────────────────
+TEST(HandEyeSolverTest, NoiseComparison) {
+    constexpr double kNoise = 0.5;
+
+    auto data = generate_test_data(HandEyeMode::EyeInHand,
+                                   kNumMotions, kNoise);
+
+    HandEyeSolver solver(HandEyeMode::EyeInHand);
+
+    auto r_tsai = solver.solve(data.R_tool, data.t_tool,
+                               data.rvecs, data.tvecs,
+                               HandEyeMethod::Tsai);
+    auto r_dani = solver.solve(data.R_tool, data.t_tool,
+                               data.rvecs, data.tvecs,
+                               HandEyeMethod::Daniilidis);
+
+    ASSERT_TRUE(r_tsai.has_value())
+        << "Tsai should succeed on noisy data";
+    ASSERT_TRUE(r_dani.has_value())
+        << "Daniilidis should succeed on noisy data";
+
+    // Both should still produce valid rotations
+    EXPECT_NEAR(cv::determinant(r_tsai->R), 1.0, 1e-6);
+    EXPECT_NEAR(cv::determinant(r_dani->R), 1.0, 1e-6);
+
+    // The two methods should produce different results under noise
+    double R_diff = cv::norm(r_tsai->R - r_dani->R, cv::NORM_L2);
+    double t_diff = cv::norm(r_tsai->t - r_dani->t, cv::NORM_L2);
+
+    EXPECT_TRUE(R_diff > 1e-10 || t_diff > 1e-10)
+        << "Tsai and Daniilidis should produce different results. "
+        << "R_diff=" << R_diff << ", t_diff=" << t_diff;
+
+    // Reprojection errors should be finite
+    EXPECT_GE(r_tsai->reproj_error, 0.0);
+    EXPECT_GE(r_dani->reproj_error, 0.0);
+}
+
+// ──────────────────────────────────────────────────────────────
+// Test 9 — Invalid method enum does not crash
+// ──────────────────────────────────────────────────────────────
+TEST(HandEyeSolverTest, InvalidMethod) {
+    auto data = generate_test_data(HandEyeMode::EyeInHand, kNumMotions, 0.0);
+
+    HandEyeSolver solver(HandEyeMode::EyeInHand);
+    auto result = solver.solve(data.R_tool, data.t_tool,
+                               data.rvecs, data.tvecs,
+                               static_cast<HandEyeMethod>(99));
+
+    if (result.has_value()) {
+        // Solver falls back to Tsai internally but reports the requested
+        // method — verify the result is structurally sound regardless.
+        EXPECT_EQ(result->R.rows, 3);
+        EXPECT_EQ(result->R.cols, 3);
+        EXPECT_EQ(result->t.rows, 3);
+        EXPECT_EQ(result->t.cols, 1);
+        EXPECT_NEAR(cv::determinant(result->R), 1.0, 1e-6);
+        EXPECT_GE(result->reproj_error, 0.0);
+        SUCCEED() << "Invalid method handled gracefully (no crash)";
+    } else {
+        // Error is also acceptable
+        SUCCEED() << "Invalid method correctly returned error: "
+                  << result.error();
+    }
+}

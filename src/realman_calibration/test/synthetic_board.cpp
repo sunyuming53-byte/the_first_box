@@ -195,8 +195,14 @@ std::vector<cv::Mat> generate_charuco_images(int count,
   cv::Mat board_color;
   cv::aruco::drawPlanarBoard(board, board_px, board_color, /*margin=*/0,
                               /*borderBits=*/1);
+  // OpenCV 4.x drawPlanarBoard outputs a grayscale image directly;
+  // only convert if it came back as BGR (3-channel).
   cv::Mat board_gray;
-  cv::cvtColor(board_color, board_gray, cv::COLOR_BGR2GRAY);
+  if (board_color.channels() == 3) {
+      cv::cvtColor(board_color, board_gray, cv::COLOR_BGR2GRAY);
+  } else {
+      board_gray = board_color;
+  }
 
   // ── physical corners of the board (Z=0 plane) ──
   std::vector<cv::Point3f> corners_3d = {
