@@ -29,38 +29,59 @@ colcon build
 
 # 3. Source and run an example
 source install/setup.bash
-ros2 run realman_driver hello_arm   # (when example executables are enabled)
+ros2 run realman_driver arm_node
+ros2 run realman_driver gripper_test
 ```
 
 ## Project Structure
 
 ```
-realman/                        # ROS2 workspace root
+realman/                         # ROS2 workspace root
 ├── src/
-│   └── realman_driver/          # ROS2 package — C++ arm driver library
-│       ├── include/realman/    # Public headers
-│       │   ├── arm.hpp         #   rm::Arm — main control interface
-│       │   ├── types.hpp       #   JointPosition, CartesianPose, ArmConfig, etc.
-│       │   ├── error.hpp       #   rm::ArmError exception
-│       │   └── arm_node.hpp    #   rm::ArmNode — ROS2 node wrapper
-│       ├── src/                # Implementation
-│       │   ├── arm.cpp         #   PIMPL + worker thread + RM_API2 calls
-│       │   ├── error.cpp       #   Error formatting
-│       │   └── arm_node.cpp    #   Node with stop service
-│       ├── examples/           # Usage examples
-│       │   ├── hello_arm.cpp
-│       │   ├── external_trigger.cpp
-│       │   └── arm_node.cpp
+│   ├── realman_driver/          # ROS2 package — C++ arm driver library
+│   │   ├── include/realman/    # Public headers
+│   │   │   ├── arm.hpp         #   rm::Arm — main control interface
+│   │   │   ├── types.hpp       #   JointPosition, CartesianPose, ArmConfig, etc.
+│   │   │   ├── error.hpp       #   rm::ArmError exception
+│   │   │   └── arm_node.hpp    #   rm::ArmNode — ROS2 node wrapper
+│   │   ├── src/                # Implementation
+│   │   │   ├── arm.cpp         #   PIMPL + worker thread + RM_API2 calls
+│   │   │   ├── error.cpp       #   Error formatting
+│   │   │   └── arm_node.cpp    #   Node with stop service
+│   │   ├── examples/           # Usage examples
+│   │   │   ├── hello_arm.cpp
+│   │   │   ├── external_trigger.cpp
+│   │   │   ├── arm_node.cpp
+│   │   │   └── gripper_test.cpp
+│   │   ├── CMakeLists.txt
+│   │   └── package.xml
+│   └── realman_calibration/    # ROS2 package — hand-eye calibration
+│       ├── include/
+│       ├── src/
+│       ├── apps/               # Calibration node executables
 │       ├── CMakeLists.txt
 │       └── package.xml
+├── cmake/
+│   └── RealManSDKConfig.cmake   # CMake find module for libapi_c.so
+├── scripts/                     # Deployment scripts
+│   ├── deploy-remote           #   Sync + restart services on robot
+│   ├── sync-remote             #   Rsync /ws/install to runtime container
+│   ├── ssh-remote              #   SSH into runtime container
+│   ├── entrypoint-dev.sh       #   Develop container entrypoint
+│   ├── entrypoint-runtime.sh   #   Runtime container entrypoint
+│   └── supervisord.conf        #   Supervisor config (runtime)
+├── .devcontainer/
+│   └── devcontainer.json       # VS Code dev container config
+├── .dockerignore
+├── Dockerfile                   # Multi-stage build (develop + runtime)
 ├── third_party/
-│   └── RM_API2/                # Git submodule — official RealMan SDK
-│       └── C/                  # C SDK (headers + shared libs)
-├── docs/                       # Project documentation
-├── knowledge-base/             # Notes & references
-├── build/                      # colcon build output (git-ignored)
-├── install/                    # colcon install output (git-ignored)
-└── log/                        # colcon build logs (git-ignored)
+│   └── RM_API2/                 # Git submodule — official RealMan SDK
+│       └── C/                   # C SDK (headers + shared libs)
+├── docs/                        # Project documentation
+├── knowledge-base/              # Notes & references
+├── build/                       # colcon build output (git-ignored)
+├── install/                     # colcon install output (git-ignored)
+└── log/                         # colcon build logs (git-ignored)
 ```
 
 ## Architecture
@@ -88,19 +109,49 @@ Two usage modes:
 
 ## Building
 
-A standard `colcon build` is all you need. The CMakeLists.txt auto-discovers
-the SDK at `third_party/RM_API2/C`.
+The SDK is discovered at `/opt/realman-sdk` (or `$REALMAN_SDK`) via
+`find_package(RealManSDK REQUIRED)` backed by `cmake/RealManSDKConfig.cmake`.
+The Docker build copies SDK files from the submodule to this location.
 
 ```bash
 source /opt/ros/humble/setup.bash
 colcon build
 ```
 
-If you placed the SDK elsewhere, override with:
+Override SDK path:
 
 ```bash
-colcon build --cmake-args -DREALMAN_SDK=/custom/path/to/RM_API2/C
+colcon build --cmake-args -DREALMAN_SDK=/opt/realman-sdk
 ```
+
+## Docker & Dev Container
+
+The project includes a multi-stage Dockerfile and VS Code dev container config.
+
+```bash
+# Build and run development container (GUI tools, RViz, build tools)
+docker build . --target realman-develop -t realman:develop
+docker run -it --network host --device /dev \
+    -v $(pwd)/src:/ws/src -v /tmp/.X11-unix:/tmp/.X11-unix -e DISPLAY \
+    realman:develop
+
+# Or open in VS Code: "Reopen in Container" → uses .devcontainer/devcontainer.json
+```
+
+**VS Code Dev Container** (`.devcontainer/devcontainer.json`):
+- Sets up X11 forwarding, host networking, ROS2 environment
+- Auto-builds workspace on creation (`colcon build --symlink-install`)
+- Includes C/C++, CMake, ROS2, Python extensions
+
+**Deploy to robot** from develop container:
+```bash
+sync-remote <robot-ip>      # rsync /ws/install to runtime container
+deploy-remote <robot-ip>    # sync + restart ROS2 nodes
+ssh-remote <robot-ip>       # SSH into the runtime container
+```
+
+The runtime container (`realman-runtime` stage) runs on the robot MiniPC
+with supervisor + sshd, receiving built artifacts via rsync.
 
 ## Updating the SDK
 

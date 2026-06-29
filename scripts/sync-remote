@@ -1,0 +1,16 @@
+#!/bin/bash
+# Usage: sync-remote <ip>
+# Rsync the built workspace (/ws/install) to the runtime container on the robot.
+set -e
+
+if [ $# -lt 1 ]; then
+    echo "Usage: sync-remote <robot-ip>"
+    exit 1
+fi
+
+echo "Syncing /ws/install → $1:/ws/install ..."
+rsync -avz --delete \
+    -e "ssh -p 2022 -o StrictHostKeyChecking=no" \
+    /ws/install/ "root@$1:/ws/install/"
+
+echo "Sync complete."

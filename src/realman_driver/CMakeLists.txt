@@ -7,31 +7,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 
-# RealMan SDK path — defaults to workspace third_party/RM_API2/C
-if(NOT DEFINED REALMAN_SDK)
-    set(REALMAN_SDK "$ENV{REALMAN_SDK}")
-endif()
-if(NOT REALMAN_SDK)
-    set(REALMAN_SDK "${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/RM_API2/C")
-endif()
-if(NOT EXISTS "${REALMAN_SDK}")
-    message(FATAL_ERROR "REALMAN_SDK not found at ${REALMAN_SDK}. Pass -DREALMAN_SDK=/path/to/RM_API2/C")
-endif()
-
-# SDK library path — override with -DREALMAN_SDK_LIB if needed
-if(NOT DEFINED REALMAN_SDK_LIB)
-    file(GLOB RM_SDK_LIB_CANDIDATES "${REALMAN_SDK}/linux/linux_x86_c_v*/libapi_c.so")
-    list(GET RM_SDK_LIB_CANDIDATES 0 REALMAN_SDK_LIB)
-endif()
-if(NOT REALMAN_SDK_LIB)
-    message(FATAL_ERROR "Could not find libapi_c.so under ${REALMAN_SDK}/linux/")
-endif()
-
-add_library(rm_api SHARED IMPORTED)
-set_target_properties(rm_api PROPERTIES
-    IMPORTED_LOCATION "${REALMAN_SDK_LIB}"
-    INTERFACE_INCLUDE_DIRECTORIES "${REALMAN_SDK}/include"
-)
+# RealMan SDK — discovered via find_package (Config at /opt/realman-sdk/ or cmake/)
+list(CMAKE_PREFIX_PATH APPEND "${CMAKE_CURRENT_SOURCE_DIR}/../../cmake")
+find_package(RealManSDK REQUIRED)
 
 add_library(realman_driver SHARED
     src/arm.cpp
@@ -43,7 +21,7 @@ target_include_directories(realman_driver PUBLIC
     $<INSTALL_INTERFACE:include>
 )
 find_package(Threads REQUIRED)
-target_link_libraries(realman_driver rm_api Threads::Threads)
+target_link_libraries(realman_driver RealManSDK::RealManSDK Threads::Threads)
 ament_target_dependencies(realman_driver rclcpp)
 
 # add_executable(hello_arm examples/hello_arm.cpp)
@@ -52,8 +30,8 @@ ament_target_dependencies(realman_driver rclcpp)
 # add_executable(external_trigger examples/external_trigger.cpp)
 # target_link_libraries(external_trigger realman_driver)
 
-# add_executable(arm_node examples/arm_node.cpp)
-# target_link_libraries(arm_node realman_driver)
+add_executable(arm_node examples/arm_node.cpp)
+target_link_libraries(arm_node realman_driver)
 
 add_executable(gripper_test examples/gripper_test.cpp)
 target_link_libraries(gripper_test realman_driver)

@@ -5,5 +5,9 @@ log/
 *.so
 .codegraph/
 .playwright-mcp/
+.omo/
+.vscode/
+__pycache__/
+*.pyc
 *.yml
 lark_auth_qr.png

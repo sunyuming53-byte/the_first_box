@@ -1,0 +1,22 @@
+#!/bin/bash
+# Usage: deploy-remote <ip>
+# Sync built artifacts to the robot, then restart services.
+set -e
+
+if [ $# -lt 1 ]; then
+    echo "Usage: deploy-remote <robot-ip>"
+    exit 1
+fi
+
+echo "=== Deploying to $1 ==="
+
+# Sync artifacts
+rsync -avz --delete \
+    -e "ssh -p 2022 -o StrictHostKeyChecking=no" \
+    /ws/install/ "root@$1:/ws/install/"
+
+# Restart ROS2 nodes
+ssh -p 2022 -o StrictHostKeyChecking=no "root@$1" \
+    "supervisorctl restart arm_node calib_node"
+
+echo "=== Deploy complete ==="

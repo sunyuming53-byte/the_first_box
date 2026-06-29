@@ -8,23 +8,12 @@ find_package(ament_cmake REQUIRED)
 find_package(OpenCV REQUIRED COMPONENTS core calib3d highgui imgproc imgcodecs)
 find_package(realsense2 REQUIRED)
 find_package(realman_vision REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(std_srvs REQUIRED)
 
-# ── RealMan SDK & driver (manual discovery, bypasses ament target import issues) ──
-# SDK: discover via same convention as realman_driver
-set(REALMAN_SDK "${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/RM_API2/C")
-if(NOT EXISTS "${REALMAN_SDK}")
-    message(FATAL_ERROR "REALMAN_SDK not found at ${REALMAN_SDK}")
-endif()
-file(GLOB RM_SDK_LIB_CANDIDATES "${REALMAN_SDK}/linux/linux_x86_c_v*/libapi_c.so")
-list(GET RM_SDK_LIB_CANDIDATES 0 REALMAN_SDK_LIB)
-if(NOT REALMAN_SDK_LIB)
-    message(FATAL_ERROR "Could not find libapi_c.so under ${REALMAN_SDK}/linux/")
-endif()
-add_library(rm_api SHARED IMPORTED)
-set_target_properties(rm_api PROPERTIES
-    IMPORTED_LOCATION "${REALMAN_SDK_LIB}"
-    INTERFACE_INCLUDE_DIRECTORIES "${REALMAN_SDK}/include"
-)
+# ── RealMan SDK ──
+list(CMAKE_PREFIX_PATH APPEND "${CMAKE_CURRENT_SOURCE_DIR}/../../cmake")
+find_package(RealManSDK REQUIRED)
 
 # Find the built realman_driver library
 find_package(realman_driver REQUIRED)
@@ -52,7 +41,7 @@ target_include_directories(realman_calibration PUBLIC
 target_link_libraries(realman_calibration PUBLIC
     realman_vision::realman_vision
     ${REALMAN_DRIVER_LIB}
-    rm_api
+    RealManSDK::RealManSDK
     ${OpenCV_LIBS}
 )
 
@@ -72,12 +61,16 @@ target_link_libraries(compute_hand_eye realman_calibration)
 add_executable(run_pipeline apps/run_pipeline.cpp)
 target_link_libraries(run_pipeline realman_calibration)
 
+add_executable(calib_node apps/calib_node.cpp)
+target_link_libraries(calib_node realman_calibration)
+ament_target_dependencies(calib_node rclcpp std_srvs)
+
 # ── Install ──
 install(TARGETS realman_calibration
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
 )
-install(TARGETS collect_data calibrate_camera process_poses compute_hand_eye run_pipeline
+install(TARGETS collect_data calibrate_camera process_poses compute_hand_eye run_pipeline calib_node
     RUNTIME DESTINATION lib/${PROJECT_NAME}
 )
 install(DIRECTORY include/ DESTINATION include)

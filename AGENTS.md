@@ -7,11 +7,16 @@ source /opt/ros/humble/setup.bash
 colcon build
 ```
 
-Override SDK path: `colcon build --cmake-args -DREALMAN_SDK=/path/to/RM_API2/C`
+Override SDK path:
+```bash
+colcon build --cmake-args -DREALMAN_SDK=/opt/realman-sdk
+```
 
-The CMakeLists.txt auto-discovers `libapi_c.so` via `file(GLOB ...)` inside
-`third_party/RM_API2/C/linux/`. If the SDK version changes and the glob path
-breaks, update the glob pattern in `CMakeLists.txt`.
+The SDK is expected at `/opt/realman-sdk` (or `$REALMAN_SDK` env var),
+with `include/` and `lib/libapi_c.so` underneath. Discovery happens via
+`find_package(RealManSDK REQUIRED)` backed by `cmake/RealManSDKConfig.cmake`.
+The Dockerfile copies the SDK from the submodule to `/opt/realman-sdk/` at
+build time.
 
 ## Architecture
 
@@ -48,12 +53,19 @@ These methods throw `rm::ArmError("not implemented in V1")`:
 
 If a user asks about these, they need implementation — don't assume they work.
 
-## Examples are disabled in CMakeLists.txt
+## Example executables
 
-The example executables (`hello_arm`, `external_trigger`, `arm_node`) are commented
-out. `arm_node.cpp` (the implementation) is also commented out. Uncomment in
-`CMakeLists.txt` to build them. Do NOT modify `package.xml` to declare these as
-dependencies unless they are actually built.
+`arm_node` and `gripper_test` are built. `hello_arm` and `external_trigger`
+are commented out — uncomment in `CMakeLists.txt` to build them.
+`arm_node.cpp` (the implementation, not the example) is also commented out.
+Do NOT modify `package.xml` to declare these as dependencies unless they are
+actually built.
+
+## C++ standard
+
+The project uses **C++23**. The ROS2 Humble base image ships GCC 11 which
+has partial C++23 support — avoid features that require GCC 12+ (e.g.,
+`std::expected`, `std::ranges::to`).
 
 ## SDK submodule
 
