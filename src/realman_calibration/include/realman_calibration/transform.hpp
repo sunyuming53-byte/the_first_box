@@ -43,6 +43,9 @@ public:
 
     [[nodiscard]] auto mode() const -> HandEyeMode { return mode_; }
 
+    /// Raw access to the 4×4 homogeneous matrix (CV_64F).
+    [[nodiscard]] auto matrix() const -> const cv::Mat& { return T_; }
+
 private:
     HandEyeTransform(cv::Mat T, HandEyeMode mode);
 

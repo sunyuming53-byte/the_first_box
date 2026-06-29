@@ -7,6 +7,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_srvs REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
 
 # RealMan SDK — discovered via find_package (Config at /opt/realman-sdk/ or cmake/)
 list(APPEND CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../cmake")
@@ -15,7 +18,7 @@ find_package(RealManSDK REQUIRED)
 add_library(realman_driver SHARED
     src/arm.cpp
     src/error.cpp
-    # src/arm_node.cpp  # TODO: Task 6
+    src/arm_node.cpp
 )
 target_include_directories(realman_driver PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -23,7 +26,7 @@ target_include_directories(realman_driver PUBLIC
 )
 find_package(Threads REQUIRED)
 target_link_libraries(realman_driver RealManSDK::RealManSDK Threads::Threads)
-ament_target_dependencies(realman_driver rclcpp)
+ament_target_dependencies(realman_driver rclcpp std_srvs tf2_ros geometry_msgs sensor_msgs)
 
 # add_executable(hello_arm examples/hello_arm.cpp)
 # target_link_libraries(hello_arm realman_driver)
@@ -31,9 +34,13 @@ ament_target_dependencies(realman_driver rclcpp)
 # add_executable(external_trigger examples/external_trigger.cpp)
 # target_link_libraries(external_trigger realman_driver)
 
-# add_executable(arm_node examples/arm_node.cpp)
-# target_link_libraries(arm_node realman_driver)
-# ament_target_dependencies(arm_node std_srvs)
+add_executable(arm_node examples/arm_node.cpp)
+target_link_libraries(arm_node realman_driver)
+ament_target_dependencies(arm_node rclcpp std_srvs tf2_ros geometry_msgs sensor_msgs)
+
+install(TARGETS arm_node
+    DESTINATION lib/${PROJECT_NAME}
+)
 
 add_executable(gripper_test examples/gripper_test.cpp)
 target_link_libraries(gripper_test realman_driver)

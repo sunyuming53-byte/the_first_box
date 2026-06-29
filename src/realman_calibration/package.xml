@@ -10,6 +10,8 @@
   <depend>realman_driver</depend>
   <depend>rclcpp</depend>
   <depend>std_srvs</depend>
+  <depend>tf2_ros</depend>
+  <depend>geometry_msgs</depend>
   <export>
     <build_type>ament_cmake</build_type>
   </export>

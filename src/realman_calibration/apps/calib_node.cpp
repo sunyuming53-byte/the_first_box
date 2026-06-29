@@ -12,12 +12,17 @@
 #include <realman_calibration/collector.hpp>
 #include <realman_calibration/hand_eye.hpp>
 #include <realman_calibration/pose_proc.hpp>
+#include <realman_calibration/transform.hpp>
 
 #include <realman/arm.hpp>
 #include <realman/types.hpp>
 
+#include <geometry_msgs/msg/transform_stamped.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <std_srvs/srv/trigger.hpp>
+#include <tf2/LinearMath/Matrix3x3.h>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2_ros/static_transform_broadcaster.h>
 
 #include <filesystem>
 #include "realman_calibration/format_polyfill.hpp"
@@ -39,6 +44,8 @@ public:
         declare_parameter("board_w", 11);
         declare_parameter("board_h", 8);
         declare_parameter("square_size_m", 0.030);
+        declare_parameter("parent_frame_id", "base_link");
+        declare_parameter("child_frame_id", "camera_link");
 
         // Parse hand-eye mode
         auto mode_str = get_parameter("mode").as_string();
@@ -62,6 +69,7 @@ public:
             cfg_.square_size_m, cfg_.output_dir.string().c_str());
 
         setupServices();
+        tf_broadcaster_ = std::make_shared<tf2_ros::StaticTransformBroadcaster>(this);
     }
 
 private:
@@ -179,6 +187,45 @@ private:
         auto result_path = cfg_.output_dir / "calibration_result.yaml";
         he->save_yaml(result_path);
 
+        // Broadcast hand-eye transform as static TF (fire-and-forget)
+        auto loaded = HandEyeTransform::load(result_path);
+        if (loaded) {
+            cv::Mat T = loaded->matrix();
+            cv::Mat R = T(cv::Rect(0, 0, 3, 3));
+            double tx = T.at<double>(0, 3);
+            double ty = T.at<double>(1, 3);
+            double tz = T.at<double>(2, 3);
+
+            // T_ is child→parent; invert to get parent→child for TF
+            cv::Mat R_inv = R.t();
+            cv::Mat t_col = (cv::Mat_<double>(3, 1) << tx, ty, tz);
+            cv::Mat t_inv = -R_inv * t_col;
+
+            tf2::Matrix3x3 rot(
+                R_inv.at<double>(0, 0), R_inv.at<double>(0, 1), R_inv.at<double>(0, 2),
+                R_inv.at<double>(1, 0), R_inv.at<double>(1, 1), R_inv.at<double>(1, 2),
+                R_inv.at<double>(2, 0), R_inv.at<double>(2, 1), R_inv.at<double>(2, 2));
+            tf2::Quaternion q;
+            rot.getRotation(q);
+
+            geometry_msgs::msg::TransformStamped tf;
+            tf.header.stamp       = this->now();
+            tf.header.frame_id    = get_parameter("parent_frame_id").as_string();
+            tf.child_frame_id     = get_parameter("child_frame_id").as_string();
+            tf.transform.translation.x = t_inv.at<double>(0);
+            tf.transform.translation.y = t_inv.at<double>(1);
+            tf.transform.translation.z = t_inv.at<double>(2);
+            tf.transform.rotation.x    = q.x();
+            tf.transform.rotation.y    = q.y();
+            tf.transform.rotation.z    = q.z();
+            tf.transform.rotation.w    = q.w();
+
+            tf_broadcaster_->sendTransform(tf);
+            RCLCPP_INFO(get_logger(),
+                "Broadcasted static TF: %s → %s", tf.header.frame_id.c_str(),
+                tf.child_frame_id.c_str());
+        }
+
         return std::format("hand-eye OK — method={} reproj={:.4f} px → {}",
                            he->method, he->reproj_error, result_path.string());
     }
@@ -215,6 +262,9 @@ private:
     CalibDataConfig     cfg_;
     HandEyeMode         mode_{HandEyeMode::EyeInHand};
     std::mutex          mtx_;
+
+    // TF broadcaster for hand-eye result
+    std::shared_ptr<tf2_ros::StaticTransformBroadcaster> tf_broadcaster_;
 
     // Cached results for staged execution
     std::vector<cv::Mat>              last_cam_rvecs_;
