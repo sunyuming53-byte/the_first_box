@@ -58,6 +58,9 @@ public:
     void enableForceControl(const std::array<double, 6>& params);
     void disableForceControl();
 
+    // ── Connection ──
+    bool isConnected() const;
+
     // ── Callback ──
     void onMotionComplete(MotionCallback cb);
 

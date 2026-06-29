@@ -1,0 +1,51 @@
+# services:
+#   develop   — build + debug environment with GUI and /dev passthrough
+#   runtime   — headless deployment with auto-starting arm_node + calib_node
+#
+# Usage:
+#   docker compose up develop    # interactive dev shell
+#   docker compose up runtime -d # deploy to robot
+
+services:
+  develop:
+    image: realman:develop
+    build:
+      context: .
+      target: realman-develop
+    user: "1000:1000"
+    privileged: true
+    network_mode: host
+    volumes:
+      - /dev:/dev
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - ./src:/ws/src
+      - type: volume
+        source: build-cache
+        target: /ws/build
+      - type: volume
+        source: install-cache
+        target: /ws/install
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-}
+      - QT_X11_NO_MITSHM=1
+    stdin_open: true
+    tty: true
+
+  runtime:
+    image: realman:runtime
+    build:
+      context: .
+      target: realman-runtime
+    privileged: true
+    network_mode: host
+    volumes:
+      - /dev:/dev
+      - type: volume
+        source: install-cache
+        target: /ws/install
+    restart: unless-stopped
+
+volumes:
+  build-cache:
+  install-cache:

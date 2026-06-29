@@ -66,6 +66,7 @@ public:
     void enableForceControl(const std::array<double, 6>& params);
     void disableForceControl();
     void onMotionComplete(Arm::MotionCallback cb);
+    bool isConnected() const;
 
 private:
     void workerLoop();
@@ -152,6 +153,15 @@ void Arm::Impl::workerLoop() {
 
 void Arm::Impl::moveJ(const JointPosition& target, SpeedRatio speed,
                       bool blocking, int tc) {
+    // Reject values that look like degrees (joint range is ±π rad ≈ ±180°)
+    for (size_t i = 0; i < target.radians.size(); ++i) {
+        if (std::abs(target.radians[i]) > 2.0 * M_PI) {
+            throw ArmError(-1,
+                "Joint " + std::to_string(i) + " value " + std::to_string(target.radians[i])
+                + " looks like degrees. This API expects radians (max ±π).");
+        }
+    }
+
     // Convert radians to degrees
     std::vector<float> joints_deg;
     for (double r : target.radians) {
@@ -560,6 +570,14 @@ ArmState Arm::Impl::state() const {
 }
 
 // ──────────────────────────────────────────────
+//  isConnected — check arm handle validity
+// ──────────────────────────────────────────────
+
+bool Arm::Impl::isConnected() const {
+    return handle_ != nullptr;
+}
+
+// ──────────────────────────────────────────────
 //  V1 stubs — not implemented
 // ──────────────────────────────────────────────
 
@@ -662,6 +680,10 @@ CartesianPose Arm::toolPose() const {
 
 ArmState Arm::state() const {
     return impl_->state();
+}
+
+bool Arm::isConnected() const {
+    return impl_->isConnected();
 }
 
 void Arm::moveJ_CANFD(const JointPosition& target, int mode) {
