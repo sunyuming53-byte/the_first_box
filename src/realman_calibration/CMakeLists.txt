@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(ament_cmake REQUIRED)
-find_package(OpenCV REQUIRED COMPONENTS core calib3d highgui imgproc imgcodecs aruco)
+find_package(OpenCV REQUIRED COMPONENTS core calib3d highgui imgproc imgcodecs objdetect aruco)
 find_package(realsense2 REQUIRED)
 find_package(realman_vision REQUIRED)
 find_package(rclcpp REQUIRED)
@@ -75,6 +75,7 @@ install(TARGETS realman_calibration
 install(TARGETS collect_data calibrate_camera process_poses compute_hand_eye run_pipeline calib_node
     RUNTIME DESTINATION lib/${PROJECT_NAME}
 )
+install(DIRECTORY launch/ DESTINATION share/${PROJECT_NAME}/launch)
 install(DIRECTORY include/ DESTINATION include)
 install(DIRECTORY config/ DESTINATION share/${PROJECT_NAME}/config)
 

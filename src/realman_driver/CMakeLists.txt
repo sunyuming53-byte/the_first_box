@@ -54,6 +54,7 @@ install(EXPORT realman_driver_targets
     FILE realman_driverTargets.cmake
     DESTINATION share/realman_driver/cmake
 )
+install(DIRECTORY launch/ DESTINATION share/${PROJECT_NAME}/launch)
 install(DIRECTORY include/ DESTINATION include)
 
 ament_export_targets(realman_driver_targets HAS_LIBRARY_TARGET)
