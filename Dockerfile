@@ -45,15 +45,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     zsh curl git \
     && rm -rf /var/lib/apt/lists/*
 
-# oh-my-zsh + powerlevel10k + plugins (as root; copied to ubuntu user in develop stage)
-RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended \
-    && git clone --depth=1 https://github.com/romkatv/powerlevel10k.git \
-        ${ZSH_CUSTOM:-/root/.oh-my-zsh/custom}/themes/powerlevel10k \
-    && git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting.git \
-        ${ZSH_CUSTOM:-/root/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting \
-    && git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions.git \
-        ${ZSH_CUSTOM:-/root/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
-
 # RealMan SDK
 COPY cmake/RealManSDKConfig.cmake   /opt/realman-sdk/
 COPY third_party/RM_API2/C/include  /opt/realman-sdk/include/
@@ -65,6 +56,15 @@ RUN --mount=type=bind,source=src,target=/tmp/src,readonly \
     rosdep update && \
     rosdep install --from-paths /tmp/src --ignore-src -r -y && \
     rm -rf /var/lib/apt/lists/*
+
+# oh-my-zsh + powerlevel10k + plugins (as root; copied to ubuntu user in develop stage)
+RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended \
+    && git clone --depth=1 https://github.com/romkatv/powerlevel10k.git \
+        ${ZSH_CUSTOM:-/root/.oh-my-zsh/custom}/themes/powerlevel10k \
+    && git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting.git \
+        ${ZSH_CUSTOM:-/root/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting \
+    && git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions.git \
+        ${ZSH_CUSTOM:-/root/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
 
 # Make SDK discoverable by CMake find_package(RealManSDK)
 ENV REALMAN_SDK=/opt/realman-sdk
@@ -92,15 +92,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     zsh curl git \
     && rm -rf /var/lib/apt/lists/*
 
-# oh-my-zsh + powerlevel10k + plugins for root (runtime container)
-RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended \
-    && git clone --depth=1 https://github.com/romkatv/powerlevel10k.git \
-        ${ZSH_CUSTOM:-/root/.oh-my-zsh/custom}/themes/powerlevel10k \
-    && git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting.git \
-        ${ZSH_CUSTOM:-/root/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting \
-    && git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions.git \
-        ${ZSH_CUSTOM:-/root/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
-
 COPY cmake/RealManSDKConfig.cmake   /opt/realman-sdk/
 COPY third_party/RM_API2/C/include  /opt/realman-sdk/include/
 COPY third_party/RM_API2/C/linux/linux_x86_c_vv1.1.5/libapi_c.so /opt/realman-sdk/lib/libapi_c.so
@@ -110,6 +101,15 @@ RUN --mount=type=bind,source=src,target=/tmp/src,readonly \
     rosdep update && \
     rosdep install --from-paths /tmp/src --ignore-src -r -y && \
     rm -rf /var/lib/apt/lists/*
+
+# oh-my-zsh + powerlevel10k + plugins for root (runtime container)
+RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended \
+    && git clone --depth=1 https://github.com/romkatv/powerlevel10k.git \
+        ${ZSH_CUSTOM:-/root/.oh-my-zsh/custom}/themes/powerlevel10k \
+    && git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting.git \
+        ${ZSH_CUSTOM:-/root/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting \
+    && git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions.git \
+        ${ZSH_CUSTOM:-/root/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
 
 ENV REALMAN_SDK=/opt/realman-sdk
 

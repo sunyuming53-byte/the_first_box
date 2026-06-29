@@ -1,12 +1,16 @@
 // RealMan ROS2 Humble Development Container
 // Requires: Docker, VS Code Dev Containers extension, X11 server (for RViz/GUI)
+//
+// Build the image first (one-time):
+//   docker build . --target realman-develop -t realman:develop
+// Then "Reopen in Container" — VS Code will use the pre-built image.
 {
 	"name": "RealMan ROS2 Humble",
-	"build": {
-		"context": "..",
-		"dockerfile": "../Dockerfile",
-		"target": "realman-develop"
-	},
+	"image": "realman:develop",
+
+	// Mount workspace to /ws (matches Dockerfile WORKDIR)
+	"workspaceFolder": "/ws",
+	"workspaceMount": "source=${localWorkspaceFolder},target=/ws,type=bind,consistency=cached",
 
 	// Run with host networking for ROS2 DDS discovery and hardware access
 	"runArgs": [
