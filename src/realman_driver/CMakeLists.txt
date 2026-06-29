@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(std_srvs REQUIRED)
 
 # RealMan SDK — discovered via find_package (Config at /opt/realman-sdk/ or cmake/)
 list(APPEND CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../cmake")
@@ -32,6 +33,7 @@ ament_target_dependencies(realman_driver rclcpp)
 
 add_executable(arm_node examples/arm_node.cpp)
 target_link_libraries(arm_node realman_driver)
+ament_target_dependencies(arm_node std_srvs)
 
 add_executable(gripper_test examples/gripper_test.cpp)
 target_link_libraries(gripper_test realman_driver)
