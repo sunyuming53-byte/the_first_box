@@ -13,4 +13,4 @@ echo "  SDK:         /opt/realman-sdk"
 echo "  SSH key:     ~/.ssh/id_rsa  (deploy with: deploy-remote <robot-ip>)"
 echo ""
 
-exec bash "$@"
+exec zsh "$@"

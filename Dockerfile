@@ -42,7 +42,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends gnupg2 && \
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libopencv-dev \
     librealsense2-dev \
+    zsh curl git \
     && rm -rf /var/lib/apt/lists/*
+
+# oh-my-zsh + powerlevel10k + plugins (as root; copied to ubuntu user in develop stage)
+RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended \
+    && git clone --depth=1 https://github.com/romkatv/powerlevel10k.git \
+        ${ZSH_CUSTOM:-/root/.oh-my-zsh/custom}/themes/powerlevel10k \
+    && git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting.git \
+        ${ZSH_CUSTOM:-/root/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting \
+    && git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions.git \
+        ${ZSH_CUSTOM:-/root/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
 
 # RealMan SDK
 COPY cmake/RealManSDKConfig.cmake   /opt/realman-sdk/
@@ -79,7 +89,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends gnupg2 && \
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libopencv-dev \
     librealsense2-dev \
+    zsh curl git \
     && rm -rf /var/lib/apt/lists/*
+
+# oh-my-zsh + powerlevel10k + plugins for root (runtime container)
+RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended \
+    && git clone --depth=1 https://github.com/romkatv/powerlevel10k.git \
+        ${ZSH_CUSTOM:-/root/.oh-my-zsh/custom}/themes/powerlevel10k \
+    && git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting.git \
+        ${ZSH_CUSTOM:-/root/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting \
+    && git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions.git \
+        ${ZSH_CUSTOM:-/root/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
 
 COPY cmake/RealManSDKConfig.cmake   /opt/realman-sdk/
 COPY third_party/RM_API2/C/include  /opt/realman-sdk/include/
@@ -105,7 +125,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Non-root user matching typical host UID
-RUN useradd -m -u 1000 -s /bin/bash ubuntu && \
+RUN useradd -m -u 1000 -s /bin/zsh ubuntu && \
     mkdir -p /ws && chown ubuntu:ubuntu /ws
 
 # SSH key — generated at build time for remote deployment to runtime container
@@ -113,12 +133,22 @@ RUN mkdir -p /home/ubuntu/.ssh && \
     ssh-keygen -t ed25519 -f /home/ubuntu/.ssh/id_rsa -N '' -C "realman-dev" && \
     chown -R ubuntu:ubuntu /home/ubuntu/.ssh
 
+# oh-my-zsh for ubuntu user (copy from root install in base-dev)
+COPY --from=realman-base-dev --chown=ubuntu:ubuntu \
+    /root/.oh-my-zsh /home/ubuntu/.oh-my-zsh
+RUN echo 'export ZSH="$HOME/.oh-my-zsh"' > /home/ubuntu/.zshrc && \
+    echo 'ZSH_THEME="powerlevel10k/powerlevel10k"' >> /home/ubuntu/.zshrc && \
+    echo 'plugins=(git zsh-syntax-highlighting zsh-autosuggestions extract z)' >> /home/ubuntu/.zshrc && \
+    echo 'source $ZSH/oh-my-zsh.sh' >> /home/ubuntu/.zshrc && \
+    chown ubuntu:ubuntu /home/ubuntu/.zshrc
+
 COPY scripts/entrypoint-dev.sh /entrypoint-dev.sh
 RUN chmod +x /entrypoint-dev.sh
 
 USER ubuntu
 WORKDIR /ws
 
+SHELL ["/bin/zsh", "-c"]
 ENTRYPOINT ["/entrypoint-dev.sh"]
 
 # =============================================================================
@@ -141,9 +171,18 @@ COPY --from=realman-develop --chown=root:root \
     /home/ubuntu/.ssh/id_rsa.pub /root/.ssh/authorized_keys
 RUN chmod 600 /root/.ssh/authorized_keys
 
+# zsh as default shell for root (oh-my-zsh installed in base stage)
+RUN echo 'export ZSH="$HOME/.oh-my-zsh"' > /root/.zshrc && \
+    echo 'ZSH_THEME="powerlevel10k/powerlevel10k"' >> /root/.zshrc && \
+    echo 'plugins=(git zsh-syntax-highlighting zsh-autosuggestions extract z)' >> /root/.zshrc && \
+    echo 'source $ZSH/oh-my-zsh.sh' >> /root/.zshrc && \
+    chsh -s /bin/zsh
+
 COPY scripts/entrypoint-runtime.sh /entrypoint-runtime.sh
 COPY scripts/supervisord.conf    /etc/supervisor/conf.d/realman.conf
 RUN chmod +x /entrypoint-runtime.sh
+
+SHELL ["/bin/zsh", "-c"]
 
 # Built artifacts are expected at /ws/install (mounted or synced at deploy time)
 RUN mkdir -p /ws/install
