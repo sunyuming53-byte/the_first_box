@@ -12,7 +12,7 @@ find_package(rclcpp REQUIRED)
 find_package(std_srvs REQUIRED)
 
 # ── RealMan SDK ──
-list(CMAKE_PREFIX_PATH APPEND "${CMAKE_CURRENT_SOURCE_DIR}/../../cmake")
+list(APPEND CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../cmake")
 find_package(RealManSDK REQUIRED)
 
 # Find the built realman_driver library

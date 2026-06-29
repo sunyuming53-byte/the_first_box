@@ -8,7 +8,7 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 
 # RealMan SDK — discovered via find_package (Config at /opt/realman-sdk/ or cmake/)
-list(CMAKE_PREFIX_PATH APPEND "${CMAKE_CURRENT_SOURCE_DIR}/../../cmake")
+list(APPEND CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../cmake")
 find_package(RealManSDK REQUIRED)
 
 add_library(realman_driver SHARED
