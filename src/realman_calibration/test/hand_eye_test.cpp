@@ -20,7 +20,7 @@ namespace {
 // constants
 // ──────────────────────────────────────────────────────────────
 
-constexpr int kNumMotions = 6;
+constexpr int kNumMotions = 12;
 constexpr int kBoardW      = 8;
 constexpr int kBoardH      = 6;
 constexpr double kSquareSize = 0.03;
@@ -34,15 +34,10 @@ constexpr double kMaxT       = 1.5;
 // bounded-pose generation
 // ──────────────────────────────────────────────────────────────
 
-thread_local std::mt19937 tl_rng{[] {
-    std::random_device rd;
-    std::array<std::random_device::result_type, 8> seeds{};
-    for (auto& s : seeds) s = rd();
-    std::seed_seq seq(seeds.begin(), seeds.end());
-    return std::mt19937{seq};
-}()};
+// Fixed seed for deterministic test outputs across runs
+std::mt19937 rng{42};
 
-double rand_sign() { return (tl_rng() % 2) ? 1.0 : -1.0; }
+double rand_sign() { return (rng() % 2) ? 1.0 : -1.0; }
 
 [[nodiscard]] auto bounded_random_poses(int num)
     -> std::vector<std::array<double, 6>>
@@ -55,11 +50,11 @@ double rand_sign() { return (tl_rng() % 2) ? 1.0 : -1.0; }
     poses.reserve(static_cast<std::size_t>(num));
 
     for (int i = 0; i < num; ++i) {
-        double ax = axis_dist(tl_rng), ay = axis_dist(tl_rng), az = axis_dist(tl_rng);
+        double ax = axis_dist(rng), ay = axis_dist(rng), az = axis_dist(rng);
         double len = std::sqrt(ax * ax + ay * ay + az * az);
         if (len < 1e-12) { ax = 1.0; ay = 0.0; az = 0.0; len = 1.0; }
 
-        double angle = ad(tl_rng) * rand_sign();
+        double angle = ad(rng) * rand_sign();
         cv::Mat axis = (cv::Mat_<double>(3, 1) << ax / len, ay / len, az / len);
         cv::Mat rvec = axis * angle;
         cv::Mat R;
@@ -77,9 +72,9 @@ double rand_sign() { return (tl_rng() % 2) ? 1.0 : -1.0; }
         }
 
         poses.push_back({
-            td(tl_rng) * rand_sign(),
-            td(tl_rng) * rand_sign(),
-            td(tl_rng) * rand_sign(),
+            td(rng) * rand_sign(),
+            td(rng) * rand_sign(),
+            td(rng) * rand_sign(),
             roll, pitch, yaw
         });
     }
@@ -163,6 +158,7 @@ struct HandEyeTestData {
                                        double noise_sigma)
     -> HandEyeTestData
 {
+    rng = std::mt19937{42};
     HandEyeTestData data;
 
     // ── 1. Random H ──
@@ -172,17 +168,17 @@ struct HandEyeTestData {
         std::uniform_real_distribution<double> td(0.05, 0.5);
         std::uniform_real_distribution<double> axis_d(-1.0, 1.0);
 
-        double ax = axis_d(tl_rng), ay = axis_d(tl_rng), az = axis_d(tl_rng);
+        double ax = axis_d(rng), ay = axis_d(rng), az = axis_d(rng);
         double len = std::sqrt(ax * ax + ay * ay + az * az);
         if (len < 1e-12) { ax = 1.0; ay = 0.0; az = 0.0; len = 1.0; }
         cv::Mat axis = (cv::Mat_<double>(3, 1) << ax / len, ay / len, az / len);
-        cv::Mat rvec_h = axis * ad(tl_rng) * rand_sign();
+        cv::Mat rvec_h = axis * ad(rng) * rand_sign();
         cv::Mat R_gt;
         cv::Rodrigues(rvec_h, R_gt);
         cv::Mat t_gt = (cv::Mat_<double>(3, 1) <<
-                        td(tl_rng) * rand_sign(),
-                        td(tl_rng) * rand_sign(),
-                        td(tl_rng) * rand_sign());
+                        td(rng) * rand_sign(),
+                        td(rng) * rand_sign(),
+                        td(rng) * rand_sign());
         data.H_true = compose_4x4(R_gt, t_gt);
     }
     cv::Mat H_inv = data.H_true.inv();
@@ -204,17 +200,17 @@ struct HandEyeTestData {
     std::uniform_real_distribution<double> td_big(0.5, 3.5);
     std::uniform_real_distribution<double> axis_d(-1.0, 1.0);
 
-    double ax = axis_d(tl_rng), ay = axis_d(tl_rng), az = axis_d(tl_rng);
+    double ax = axis_d(rng), ay = axis_d(rng), az = axis_d(rng);
     double len = std::sqrt(ax * ax + ay * ay + az * az);
     if (len < 1e-12) { ax = 1.0; ay = 0.0; az = 0.0; len = 1.0; }
     cv::Mat axis_t = (cv::Mat_<double>(3, 1) << ax / len, ay / len, az / len);
-    cv::Mat rvec_t = axis_t * ad_big(tl_rng) * rand_sign();
+    cv::Mat rvec_t = axis_t * ad_big(rng) * rand_sign();
     cv::Mat R_t2b;
     cv::Rodrigues(rvec_t, R_t2b);
     cv::Mat t_t2b = (cv::Mat_<double>(3, 1) <<
-                     td_big(tl_rng) * rand_sign(),
-                     td_big(tl_rng) * rand_sign(),
-                     td_big(tl_rng) * rand_sign());
+                     td_big(rng) * rand_sign(),
+                     td_big(rng) * rand_sign(),
+                     td_big(rng) * rand_sign());
     cv::Mat T_t2b = compose_4x4(R_t2b, t_t2b);
 
     // ── 4. Camera views ──
@@ -492,6 +488,8 @@ TEST(HandEyeSolverTest, ConditionNumber) {
     // rank-deficient.  We verify the solver still produces a result and
     // that the resulting condition_number is finite.
     {
+        rng = std::mt19937{42};
+        
         // 1. Random H (ground truth)
         std::uniform_real_distribution<double>
             ad(10.0 * M_PI / 180.0, 50.0 * M_PI / 180.0);
@@ -500,17 +498,17 @@ TEST(HandEyeSolverTest, ConditionNumber) {
         std::uniform_real_distribution<double>
             axis_d(-1.0, 1.0);
 
-        double ax = axis_d(tl_rng), ay = axis_d(tl_rng), az = axis_d(tl_rng);
+        double ax = axis_d(rng), ay = axis_d(rng), az = axis_d(rng);
         double len = std::sqrt(ax * ax + ay * ay + az * az);
         if (len < 1e-12) { ax = 1.0; ay = 0.0; az = 0.0; len = 1.0; }
         cv::Mat axis = (cv::Mat_<double>(3, 1) << ax / len, ay / len, az / len);
-        cv::Mat rvec_h = axis * ad(tl_rng) * rand_sign();
+        cv::Mat rvec_h = axis * ad(rng) * rand_sign();
         cv::Mat R_gt;
         cv::Rodrigues(rvec_h, R_gt);
         cv::Mat t_gt = (cv::Mat_<double>(3, 1) <<
-                        td(tl_rng) * rand_sign(),
-                        td(tl_rng) * rand_sign(),
-                        td(tl_rng) * rand_sign());
+                        td(rng) * rand_sign(),
+                        td(rng) * rand_sign(),
+                        td(rng) * rand_sign());
         cv::Mat H_true  = compose_4x4(R_gt, t_gt);
         cv::Mat H_inv   = H_true.inv();
 
@@ -520,17 +518,17 @@ TEST(HandEyeSolverTest, ConditionNumber) {
             degen_poses.push_back({kMinT + i * 0.15, 0.0, 0.0,  0.0, 0.0, 0.0});
 
         // 3. Random T_target2base
-        ax = axis_d(tl_rng); ay = axis_d(tl_rng); az = axis_d(tl_rng);
+        ax = axis_d(rng); ay = axis_d(rng); az = axis_d(rng);
         len = std::sqrt(ax * ax + ay * ay + az * az);
         if (len < 1e-12) { ax = 1.0; ay = 0.0; az = 0.0; len = 1.0; }
         cv::Mat axis_t = (cv::Mat_<double>(3, 1) << ax / len, ay / len, az / len);
-        cv::Mat rvec_t = axis_t * ad(tl_rng) * rand_sign();
+        cv::Mat rvec_t = axis_t * ad(rng) * rand_sign();
         cv::Mat R_t2b;
         cv::Rodrigues(rvec_t, R_t2b);
         cv::Mat t_t2b = (cv::Mat_<double>(3, 1) <<
-                         td(tl_rng) * rand_sign(),
-                         td(tl_rng) * rand_sign(),
-                         td(tl_rng) * rand_sign());
+                         td(rng) * rand_sign(),
+                         td(rng) * rand_sign(),
+                         td(rng) * rand_sign());
         cv::Mat T_t2b = compose_4x4(R_t2b, t_t2b);
 
         // 4. Extract R_tool / t_tool and camera views

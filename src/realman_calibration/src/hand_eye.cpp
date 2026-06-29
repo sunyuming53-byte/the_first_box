@@ -194,6 +194,15 @@ auto HandEyeSolver::solve(std::span<const cv::Mat> R_tool,
         }
         }
 
+        // Validate OpenCV output — calibrateHandEye returns void and
+        // can silently produce garbage with degenerate/noisy data
+        if (R_m.empty() || t_m.empty()) {
+            return false;
+        }
+        if (std::abs(cv::determinant(R_m) - 1.0) > 0.01) {
+            return false;
+        }
+
         const double err = compute_reproj_error(R_tool, t_tool, R_cam, tvecs,
                                                  R_m, t_m, mode_);
 
@@ -206,10 +215,23 @@ auto HandEyeSolver::solve(std::span<const cv::Mat> R_tool,
         return true;
     };
 
+    bool any_valid = false;
+
     if (method == HandEyeMethod::Auto) {
-        for (auto m : all_methods) { try_method(m); }
+        for (auto m : all_methods) {
+            if (try_method(m)) any_valid = true;
+        }
     } else {
-        try_method(method);
+        any_valid = try_method(method);
+    }
+
+
+    if (!any_valid) {
+        return Unexpected<std::string>(
+            method == HandEyeMethod::Auto
+                ? "All hand-eye methods failed to produce a valid result"
+                : std::format("Hand-eye method '{}' failed to produce a valid result",
+                              method_to_string(method)));
     }
 
     return HandEyeResult{
