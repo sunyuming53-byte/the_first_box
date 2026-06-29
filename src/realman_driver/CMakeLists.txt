@@ -59,4 +59,9 @@ install(DIRECTORY include/ DESTINATION include)
 ament_export_targets(realman_driver_targets HAS_LIBRARY_TARGET)
 ament_export_include_directories(include)
 
+if(BUILD_TESTING)
+  find_package(ament_cmake_gtest REQUIRED)
+  add_subdirectory(test)
+endif()
+
 ament_package()

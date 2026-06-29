@@ -57,3 +57,15 @@ target_link_libraries(camera_calib_test
     ${OpenCV_LIBS}
 )
 target_link_options(camera_calib_test PRIVATE "LINKER:--disable-new-dtags")
+
+# ── tf_integration_test — HandEyeTransform load + projection ──
+ament_add_gtest(tf_integration_test test_main.cpp tf_integration_test.cpp)
+target_include_directories(tf_integration_test PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include
+)
+target_link_libraries(tf_integration_test
+    realman_calibration
+    synthetic_poses
+    ${OpenCV_LIBS}
+)
+target_link_options(tf_integration_test PRIVATE "LINKER:--disable-new-dtags")

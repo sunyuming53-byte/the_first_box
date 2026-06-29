@@ -71,8 +71,11 @@ public:
 private:
     void workerLoop();
     void pollState() const;
+    bool ensureConnected();
 
     rm_robot_handle* handle_{nullptr};
+    std::string ip_;
+    int port_{0};
     std::thread worker_;
     std::atomic<bool> running_{true};
 
@@ -98,15 +101,14 @@ private:
 //  Constructor
 // ──────────────────────────────────────────────
 
-Arm::Impl::Impl(const ArmConfig& config) {
+Arm::Impl::Impl(const ArmConfig& config)
+    : ip_(config.ip), port_(config.tcp_port)
+{
     int ret = rm_init(RM_TRIPLE_MODE_E);
     check(ret, "rm_init");
 
-    handle_ = rm_create_robot_arm(config.ip.c_str(), config.tcp_port);
-    if (!handle_ || handle_->id < 0) {
-        throw ArmError(-1, "Failed to connect to arm at " + config.ip +
-                            ":" + std::to_string(config.tcp_port));
-    }
+    // Defer TCP connection to first command (lazy connect).
+    // This allows ArmNode construction without arm hardware.
 
     running_ = true;
     worker_ = std::thread(&Impl::workerLoop, this);
@@ -129,6 +131,24 @@ Arm::Impl::~Impl() {
 }
 
 // ──────────────────────────────────────────────
+//  Lazy connection (called before first command)
+// ──────────────────────────────────────────────
+
+bool Arm::Impl::ensureConnected() {
+    if (handle_) return true;
+
+    handle_ = rm_create_robot_arm(ip_.c_str(), port_);
+    if (handle_ && handle_->id >= 0) return true;
+
+    // Connection failed — clean up and report
+    if (handle_) {
+        rm_delete_robot_arm(handle_);
+        handle_ = nullptr;
+    }
+    return false;
+}
+
+// ──────────────────────────────────────────────
 //  Worker loop
 // ──────────────────────────────────────────────
 
@@ -142,6 +162,13 @@ void Arm::Impl::workerLoop() {
             if (cmd_queue_.empty()) continue;
             cmd = std::move(cmd_queue_.front());
             cmd_queue_.pop();
+        }
+        if (!ensureConnected()) {
+            std::lock_guard lock(done_mutex_);
+            last_motion_ok_ = false;
+            motion_done_ = true;
+            done_cv_.notify_one();
+            continue;
         }
         cmd();
     }
@@ -331,6 +358,7 @@ void Arm::Impl::moveC(const CartesianPose& mid, const CartesianPose& end,
 // ──────────────────────────────────────────────
 
 void Arm::Impl::stop() {
+    if (!ensureConnected()) throw ArmError(-1, "Not connected to arm");
     int ret = rm_set_arm_stop(handle_);
     check(ret, "rm_set_arm_stop");
 }
@@ -515,6 +543,7 @@ GripperState Arm::Impl::gripperState() const {
 // ──────────────────────────────────────────────
 
 void Arm::Impl::pollState() const {
+    if (!handle_) return;
     rm_current_arm_state_t cs{};
     int ret = rm_get_current_arm_state(handle_, &cs);
     if (ret != 0) return;
