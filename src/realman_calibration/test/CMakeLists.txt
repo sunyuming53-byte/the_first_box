@@ -33,3 +33,27 @@ target_link_options(pose_proc_test PRIVATE "LINKER:--disable-new-dtags")
 add_library(synthetic_poses STATIC synthetic_poses.cpp)
 target_include_directories(synthetic_poses PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(synthetic_poses PUBLIC ${OpenCV_LIBS})
+
+# ── Hand-eye solver unit tests (Tsai method only) ──
+ament_add_gtest(hand_eye_test test_main.cpp hand_eye_test.cpp)
+target_include_directories(hand_eye_test PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include
+)
+target_link_libraries(hand_eye_test
+    realman_calibration
+    synthetic_poses
+    ${OpenCV_LIBS}
+)
+target_link_options(hand_eye_test PRIVATE "LINKER:--disable-new-dtags")
+
+# ── camera_calib_test ──
+ament_add_gtest(camera_calib_test test_main.cpp camera_calib_test.cpp)
+target_include_directories(camera_calib_test PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include
+)
+target_link_libraries(camera_calib_test
+    realman_calibration
+    synthetic_board
+    ${OpenCV_LIBS}
+)
+target_link_options(camera_calib_test PRIVATE "LINKER:--disable-new-dtags")
