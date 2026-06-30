@@ -126,6 +126,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
     gdb \
+    clangd-14 \
     && rm -rf /var/lib/apt/lists/*
 
 # Non-root user matching typical host UID
@@ -152,6 +153,14 @@ COPY --chown=ubuntu:ubuntu config/p10k.zsh /home/ubuntu/.p10k.zsh
 
 COPY scripts/entrypoint-dev.sh /entrypoint-dev.sh
 RUN chmod +x /entrypoint-dev.sh
+
+COPY scripts/deploy-remote scripts/generate-compile-commands.sh \
+     scripts/ssh-remote scripts/sync-remote \
+     /usr/local/bin/
+RUN chmod +x /usr/local/bin/deploy-remote \
+              /usr/local/bin/generate-compile-commands.sh \
+              /usr/local/bin/ssh-remote \
+              /usr/local/bin/sync-remote
 
 USER ubuntu
 WORKDIR /ws
