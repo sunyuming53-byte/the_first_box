@@ -12,3 +12,15 @@ log/
 __pycache__/
 *.pyc
 lark_auth_qr.png
+
+# LaTeX build artifacts
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+texput.log
