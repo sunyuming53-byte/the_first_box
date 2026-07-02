@@ -68,6 +68,9 @@ public:
                                        get_parameter("board_h").as_int());
         cfg_.square_size_m = static_cast<float>(get_parameter("square_size_m").as_double());
 
+        // Reconnect arm with configured IP
+        arm_ = rm::Arm(rm::ArmConfig{.ip = cfg_.arm_ip});
+
         RCLCPP_INFO(get_logger(),
             "CalibNode ready — arm=%s mode=%s board=%dx%d sq=%.3fm session=%s",
             cfg_.arm_ip.c_str(), mode_str.c_str(),
