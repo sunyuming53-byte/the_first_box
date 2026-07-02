@@ -78,7 +78,6 @@ install(TARGETS realman_calibration
 install(TARGETS collect_data calibrate_camera process_poses compute_hand_eye run_pipeline calib_node
     RUNTIME DESTINATION lib/${PROJECT_NAME}
 )
-install(DIRECTORY launch/ DESTINATION share/${PROJECT_NAME}/launch)
 install(DIRECTORY include/ DESTINATION include)
 install(DIRECTORY config/ DESTINATION share/${PROJECT_NAME}/config)
 

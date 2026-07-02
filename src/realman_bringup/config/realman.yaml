@@ -1,0 +1,20 @@
+# RealMan System Configuration
+# =============================
+# Shared parameters for bringup, arm control, and calibration.
+
+# ── Arm ──────────────────────────────────────────────────────────
+arm_node:
+  ros__parameters:
+    arm_ip: "192.168.1.18"
+
+# ── Calibration ───────────────────────────────────────────────────
+calib_node:
+  ros__parameters:
+    arm_ip: "192.168.1.18"
+    mode: "in_hand"            # in_hand | to_hand
+    board_w: 11
+    board_h: 8
+    square_size_m: 0.030
+    session_dir: "data/calib_session"
+    parent_frame_id: "base_link"
+    child_frame_id: "camera_link"

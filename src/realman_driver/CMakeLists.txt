@@ -28,8 +28,8 @@ find_package(Threads REQUIRED)
 target_link_libraries(realman_driver RealManSDK::RealManSDK Threads::Threads)
 ament_target_dependencies(realman_driver rclcpp std_srvs tf2_ros geometry_msgs sensor_msgs)
 
-# add_executable(hello_arm examples/hello_arm.cpp)
-# target_link_libraries(hello_arm realman_driver)
+add_executable(movej_test examples/hello_arm.cpp)
+target_link_libraries(movej_test realman_driver)
 
 # add_executable(external_trigger examples/external_trigger.cpp)
 # target_link_libraries(external_trigger realman_driver)
@@ -45,6 +45,12 @@ install(TARGETS arm_node
 add_executable(gripper_test examples/gripper_test.cpp)
 target_link_libraries(gripper_test realman_driver)
 
+add_executable(joint_test examples/joint_test.cpp)
+target_link_libraries(joint_test realman_driver)
+
+add_executable(movel_test examples/movel_test.cpp)
+target_link_libraries(movel_test realman_driver)
+
 install(TARGETS realman_driver
     EXPORT realman_driver_targets
     LIBRARY DESTINATION lib
@@ -54,7 +60,6 @@ install(EXPORT realman_driver_targets
     FILE realman_driverTargets.cmake
     DESTINATION share/realman_driver/cmake
 )
-install(DIRECTORY launch/ DESTINATION share/${PROJECT_NAME}/launch)
 install(DIRECTORY include/ DESTINATION include)
 
 ament_export_targets(realman_driver_targets HAS_LIBRARY_TARGET)
