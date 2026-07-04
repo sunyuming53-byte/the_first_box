@@ -27,10 +27,10 @@ cd realman
 source /opt/ros/humble/setup.bash
 colcon build
 
-# 3. Source and run an example
+# 3. Source and run examples
 source install/setup.bash
-ros2 run realman_driver arm_node
-ros2 run realman_driver gripper_test
+ros2 run realman_arm movej_test
+ros2 run realman_arm gripper_test
 ```
 
 ## Project Structure
@@ -38,54 +38,55 @@ ros2 run realman_driver gripper_test
 ```
 realman/                              # ROS2 workspace root
 ├── src/
-│   ├── realman_vision/               # Shared lib — RealSense D435 capture
+│   ├── realman_vision/               # ament_cmake — RealSense D435 capture (no ROS deps)
 │   │   ├── include/realman_vision/
+│   │   │   ├── camera/               #   CameraStream, CameraConfig
+│   │   │   └── capture.hpp           #   Capture abstraction
 │   │   ├── src/
 │   │   ├── CMakeLists.txt
 │   │   └── package.xml
-│   ├── realman_driver/               # Shared lib — arm control via RM_API2 SDK
+│   ├── realman_arm/                  # Plain CMake — arm control via RM_API2 SDK (ZERO ROS deps)
 │   │   ├── include/realman/          # Public headers (subdirectories by domain)
-│   │   │   ├── core/                 #   Arm, ArmConfig, ArmState, ArmError
+│   │   │   ├── core/                 #   Arm (PIMPL), ArmConfig, ArmState, ArmError
 │   │   │   ├── motion/               #   JointPosition, CartesianPose, SpeedRatio
-│   │   │   ├── gripper/              #   Gripper types
-│   │   │   ├── node/                 #   ArmNode — rclcpp::Node wrapper
+│   │   │   ├── gripper/              #   GripperState, GripperAction
 │   │   │   └── hal/                  #   Hardware abstraction types
 │   │   ├── src/                      # Implementation (subdirectories)
-│   │   │   ├── core/                 #   arm.cpp, arm_impl.hpp (private), error.cpp
-│   │   │   ├── motion/               #   move functions
-│   │   │   ├── gripper/              #   gripper functions
-│   │   │   ├── state/                #   pollState, cached state
-│   │   │   └── node/                 #   ArmNode implementation
+│   │   │   ├── core/                 #   arm_facade.cpp, arm_impl.hpp (private), connection.cpp, error.cpp
+│   │   │   ├── motion/               #   motion.cpp (moveJ, moveL, moveC, moveJ_P)
+│   │   │   ├── gripper/              #   gripper.cpp
+│   │   │   └── state/                #   state.cpp (pollState, cached state)
 │   │   ├── examples/                 # Executables
 │   │   │   ├── hello_arm.cpp         #   → movej_test
-│   │   │   ├── arm_node.cpp          #   → arm_node (ROS2 standalone node)
 │   │   │   ├── gripper_test.cpp      #   → gripper_test
 │   │   │   ├── joint_test.cpp        #   → joint_test
 │   │   │   ├── movel_test.cpp        #   → movel_test
 │   │   │   └── external_trigger.cpp  #   commented out in CMakeLists.txt
-│   │   ├── test/                     # ament_cmake_gtest (BUILD_TESTING gate)
+│   │   ├── cmake/                    #   RealManSDKConfig.cmake, FindRealManSDK.cmake
+│   │   ├── test/                     #   ament_cmake_gtest (BUILD_TESTING gate)
 │   │   ├── CMakeLists.txt
 │   │   └── package.xml
-│   ├── realman_calibration/          # Shared lib + executables — hand-eye calibration
+│   ├── realman_calibration/          # ament_cmake — hand-eye calibration
 │   │   ├── include/realman_calibration/
 │   │   ├── src/
 │   │   ├── apps/                     # Pipeline executables + calib_node
 │   │   ├── config/                   # Board config YAML
+│   │   ├── launch/
+│   │   ├── test/                     # Comprehensive test suite
 │   │   ├── CMakeLists.txt
 │   │   └── package.xml
-│   ├── realman_hardware/             # ros2_control plugin
+│   ├── realman_hardware/             # ament_cmake — ros2_control plugin
 │   │   ├── include/
 │   │   ├── src/
 │   │   ├── plugins.xml
 │   │   ├── CMakeLists.txt
 │   │   └── package.xml
-│   └── realman_bringup/              # Launch + config only (no compiled code)
+│   └── realman_bringup/              # ament_cmake — launch + config only (no compiled code)
 │       ├── launch/
 │       ├── config/
 │       ├── CMakeLists.txt
 │       └── package.xml
-├── cmake/
-│   └── RealManSDKConfig.cmake        # CMake find module for libapi_c.so
+├── cmake/                            # Shared CMake modules (clang_tidy.cmake, etc.)
 ├── scripts/                          # Deployment scripts
 │   ├── deploy-remote                 #   Sync + restart services on robot
 │   ├── sync-remote                   #   Rsync install/ to runtime container
@@ -93,48 +94,46 @@ realman/                              # ROS2 workspace root
 │   ├── generate-compile-commands.sh  #   Merge clangd compile_commands.json
 │   ├── entrypoint-dev.sh             #   Develop container entrypoint
 │   ├── entrypoint-runtime.sh         #   Runtime container entrypoint
-│   └── supervisord.conf              #   Supervisor config (auto-starts arm_node + calib_node)
+│   └── supervisord.conf              #   Supervisor config (auto-starts controller_manager + calib_node)
 ├── .devcontainer/
 │   └── devcontainer.json             # VS Code dev container config
 ├── Dockerfile                        # Multi-stage (develop + runtime)
 ├── docker-compose.yml
 ├── .env.example                      # Proxy + ROS_DOMAIN_ID config
+├── .clang-format                     # Google-based, 4-space indent, 100col
+├── .clang-tidy                       # C++23 target, GCC 11.4 toolchain
 ├── third_party/
 │   └── RM_API2/                      # Git submodule — official RealMan C SDK
 │       └── C/
 │           ├── include/              #   rm_interface.h, etc.
 │           └── linux/                #   libapi_c.so (versioned: linux_x86_c_vv1.1.5/)
-├── docs/                             # Project documentation
-└── knowledge-base/                   # Notes & references
+└── docs/                             # Project documentation
 ```
 
 ## Architecture
 
 ```
-  Your rclcpp::Node
-  ├── subscriber   (external trigger)
-  ├── timer        (periodic control loop)
-  └── arm.moveJ()  (arm control)
+  Your code (ROS2 node, ros2_control, or plain C++)
+  └── arm.moveJ()     (arm control)
         │
         ▼
-  rm::Arm (PIMPL, non-ROS)
+  rm::Arm             (PIMPL, non-ROS — single worker thread + command queue)
         │  C API
         ▼
-  libapi_c.so (RM_API2 SDK)
+  libapi_c.so         (RM_API2 SDK)
         │  TCP
         ▼
   RealMan Robot Arm
 ```
 
-Two usage modes:
-
-1. **As a library** — embed `rm::Arm` in your own ROS2 node for full control
-2. **As a standalone node** — run `arm_node` and call its ROS2 services
+`rm::Arm` is a plain C++ class (not an `rclcpp::Node`) with **zero ROS dependency**.
+It can be used in any context — embedded in your own ROS2 node, linked into a
+`ros2_control` hardware interface, or used standalone outside ROS2.
 
 ## Building
 
 The SDK is discovered at `/opt/realman-sdk` (or `$REALMAN_SDK`) via
-`find_package(RealManSDK REQUIRED)` backed by `cmake/RealManSDKConfig.cmake`.
+`find_package(RealManSDK REQUIRED)` backed by `src/realman_arm/cmake/RealManSDKConfig.cmake`.
 The Docker build copies SDK files from the submodule to this location.
 
 ```bash
@@ -149,7 +148,7 @@ colcon build --cmake-args -DREALMAN_SDK=/custom/path
 
 ### Build order (automatic with colcon)
 
-`realman_vision` → `realman_driver` → `realman_calibration` / `realman_hardware` → `realman_bringup`
+`realman_vision` → `realman_arm` → `realman_calibration` / `realman_hardware` → `realman_bringup`
 
 `colcon build` resolves this automatically, but it matters when building packages individually or adding cross-package dependencies.
 
@@ -163,8 +162,9 @@ generate-compile-commands.sh
 ```
 
 This produces `build/compile_commands.json` at the workspace root, which clangd
-uses for go-to-definition, diagnostics, and completions. The dev container runs
-this automatically on creation.
+uses for go-to-definition, diagnostics, and completions. The `.clangd` config
+suppresses ROS2-header false positives and disables `UnusedIncludes`. The dev
+container runs this automatically on creation.
 
 ## Testing
 
@@ -177,6 +177,9 @@ colcon test
 
 Test binaries need the SDK library on `LD_LIBRARY_PATH` — the CMake config
 handles this via `APPEND_ENV`.
+
+`realman_calibration` has the most comprehensive test suite: camera calibration,
+pose processing, hand-eye solvers, TF integration, and synthetic data generators.
 
 ## Docker & Dev Container
 
@@ -203,8 +206,8 @@ Or open in VS Code → "Reopen in Container" (uses `.devcontainer/devcontainer.j
 docker compose up runtime -d
 ```
 
-The runtime container runs supervisor with auto-starting `arm_node` + `calib_node`,
-plus an SSH server on port 2022 for receiving built artifacts.
+The runtime container runs supervisor with auto-starting `controller_manager` +
+`calib_node`, plus an SSH server on port 2022 for receiving built artifacts.
 
 ### Deploy to robot
 

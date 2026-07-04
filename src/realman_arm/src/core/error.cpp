@@ -4,4 +4,4 @@
 
 namespace rm {
 // (currently empty — ArmError is header-only)
-} // namespace rm
+}  // namespace rm

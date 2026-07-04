@@ -1,18 +1,20 @@
-#include <realman_calibration/camera_calib.hpp>
+#include "realman_calibration/format_polyfill.hpp"
 
 #include <filesystem>
-#include "realman_calibration/format_polyfill.hpp"
 #include <iostream>
+#include <string_view>
+
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
-#include <string_view>
+#include <realman_calibration/camera_calib.hpp>
 
 int main(int argc, char* argv[]) {
     std::filesystem::path input_dir;
     cv::Size board_size{11, 8};
-    float square_size_m{0.030f};
+    float square_size_m{0.030F};
 
     // Parse CLI arguments
+    // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     for (int i = 1; i < argc; i += 2) {
         std::string_view arg = argv[i];
         if (arg == "--input" && i + 1 < argc) {
@@ -38,8 +40,9 @@ int main(int argc, char* argv[]) {
             cv::Mat img = cv::imread(entry.path().string(), cv::IMREAD_GRAYSCALE);
             if (!img.empty()) {
                 images.push_back(std::move(img));
-            }
         }
+    }
+    // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     }
 
     if (images.empty()) {
@@ -64,7 +67,7 @@ int main(int argc, char* argv[]) {
     std::cout << result->K << "\n\n";
     std::cout << std::format("Distortion coefficients:\n");
     std::cout << result->dist << "\n\n";
-    std::cout << std::format("Reprojection error: {:.4f} px\n", result->reproj_error);
+    std::cout << std::format("Reprojection error: {:.4F} px\n", result->reproj_error);
     std::cout << std::format("Images used: {}\n", result->images_used);
 
     return 0;

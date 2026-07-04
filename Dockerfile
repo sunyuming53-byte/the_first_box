@@ -3,8 +3,8 @@
 # =============================================================================
 #
 # Stages:
-#   realman-base-dev   ← osrf/ros:humble-desktop + OpenCV + realsense2 + SDK
-#   realman-base       ← ros:humble              + OpenCV + realsense2 + SDK
+#   realman-base-dev   ← osrf/ros:humble-desktop + OpenCV + realsense2
+#   realman-base       ← ros:humble              + OpenCV + realsense2
 #   realman-develop    ← base-dev + build tools + dev user
 #   realman-runtime    ← base     + supervisor + entrypoint
 #
@@ -57,16 +57,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-humble-rmw-cyclonedds-cpp \
     && rm -rf /var/lib/apt/lists/*
 
-# RealMan SDK — placed at submodule-relative paths so cmake config resolves naturally
-COPY cmake/RealManSDKConfig.cmake   cmake/
-COPY src/realman_arm/third_party/RM_API2/C/include  third_party/RM_API2/C/include/
-COPY src/realman_arm/third_party/RM_API2/C/linux/linux_x86_c_vv1.1.5/libapi_c.so third_party/RM_API2/C/linux/linux_x86_c_vv1.1.5/
-
 # rosdep — install ROS2 deps declared in package.xml without embedding source
 RUN --mount=type=bind,source=src,target=/tmp/src,readonly \
     apt-get update && \
     rosdep update && \
-    rosdep install --from-paths /tmp/src --ignore-src -r -y && \
+    rosdep install --from-paths /tmp/src --ignore-src -r -y --skip-keys realman_arm && \
     rm -rf /var/lib/apt/lists/*
 
 # oh-my-zsh + powerlevel10k + plugins (as root; copied to ubuntu user in develop stage)
@@ -111,14 +106,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-humble-rmw-cyclonedds-cpp \
     && rm -rf /var/lib/apt/lists/*
 
-COPY cmake/RealManSDKConfig.cmake   cmake/
-COPY src/realman_arm/third_party/RM_API2/C/include  third_party/RM_API2/C/include/
-COPY src/realman_arm/third_party/RM_API2/C/linux/linux_x86_c_vv1.1.5/libapi_c.so third_party/RM_API2/C/linux/linux_x86_c_vv1.1.5/
-
 RUN --mount=type=bind,source=src,target=/tmp/src,readonly \
     apt-get update && \
     rosdep update && \
-    rosdep install --from-paths /tmp/src --ignore-src -r -y && \
+    rosdep install --from-paths /tmp/src --ignore-src -r -y --skip-keys realman_arm && \
     rm -rf /var/lib/apt/lists/*
 
 # oh-my-zsh + powerlevel10k + plugins for root (runtime container)
@@ -141,8 +132,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
     gdb \
-    clangd-14 \
+    wget gnupg \
     && rm -rf /var/lib/apt/lists/*
+
+# clangd + clang-tidy + clang-format from LLVM apt repo (latest available for Jammy)
+RUN wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc && \
+    echo "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-19 main" > /etc/apt/sources.list.d/llvm.list && \
+    apt-get update && apt-get install -y --no-install-recommends clangd-19 clang-tidy-19 clang-format-19 && \
+    ln -sf /usr/bin/clangd-19 /usr/bin/clangd && \
+    ln -sf /usr/bin/clang-tidy-19 /usr/bin/clang-tidy && \
+    ln -sf /usr/bin/clang-format-19 /usr/bin/clang-format && \
+    rm -rf /var/lib/apt/lists/*
 
 # Non-root user matching typical host UID, with video (camera) and passwordless sudo
 RUN useradd -m -u 1000 -s /bin/zsh ubuntu && \
@@ -174,11 +174,13 @@ RUN chmod +x /entrypoint-dev.sh
 
 COPY scripts/deploy-remote scripts/generate-compile-commands.sh \
      scripts/ssh-remote scripts/sync-remote \
+     scripts/build-local \
      /usr/local/bin/
 RUN chmod +x /usr/local/bin/deploy-remote \
               /usr/local/bin/generate-compile-commands.sh \
               /usr/local/bin/ssh-remote \
-              /usr/local/bin/sync-remote
+              /usr/local/bin/sync-remote \
+              /usr/local/bin/build-local
 
 USER ubuntu
 WORKDIR /ws

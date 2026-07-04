@@ -1,18 +1,20 @@
 #pragma once
 
 #include <array>
-#include "expected_polyfill.hpp"
-#include <opencv2/core/mat.hpp>
+#include <cstdint>
 #include <span>
 #include <string>
 #include <vector>
 
+#include "expected_polyfill.hpp"
+#include <opencv2/core/mat.hpp>
+
 namespace rm::calib {
 
 /// Hand-eye calibration configuration mode.
-enum class HandEyeMode {
-    EyeInHand,   // camera rigidly mounted on end-effector
-    EyeToHand,   // camera fixed in the world
+enum class HandEyeMode : uint8_t {
+    EyeInHand,  // camera rigidly mounted on end-effector
+    EyeToHand,  // camera fixed in the world
 };
 
 struct PoseProcResult {

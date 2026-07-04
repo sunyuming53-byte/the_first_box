@@ -1,22 +1,24 @@
-#include <realman_calibration/hand_eye.hpp>
-#include <realman_calibration/pose_proc.hpp>
+#include "realman_calibration/format_polyfill.hpp"
 
 #include <array>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
-#include <opencv2/core.hpp>
-#include <opencv2/core/persistence.hpp>
-#include "realman_calibration/format_polyfill.hpp"
 #include <sstream>
 #include <string>
 #include <string_view>
 #include <vector>
 
+#include <opencv2/core.hpp>
+#include <opencv2/core/persistence.hpp>
+#include <realman_calibration/hand_eye.hpp>
+#include <realman_calibration/pose_proc.hpp>
+
 namespace {
 
 void print_usage() {
-    std::cout << R"(Usage: compute_hand_eye --rvecs <path> --tvecs <path> --poses <path> --mode <in_hand|to_hand> [--method <method>] [--output <path>]
+    std::cout
+        << R"(Usage: compute_hand_eye --rvecs <path> --tvecs <path> --poses <path> --mode <in_hand|to_hand> [--method <method>] [--output <path>]
 
 Compute the hand-eye calibration transform from pre-collected camera and arm data.
 
@@ -33,10 +35,8 @@ Options:
 
 /// Load a sequence of cv::Mat from a YAML file key (OpenCV FileStorage format).
 /// Supports both sequences and single matrices.
-[[nodiscard]] auto load_mats_from_yaml(const std::string& path,
-                                        const std::string& key)
-    -> std::vector<cv::Mat>
-{
+[[nodiscard]] auto load_mats_from_yaml(const std::string& path, const std::string& key)
+    -> std::vector<cv::Mat> {
     cv::FileStorage fs(path, cv::FileStorage::READ);
     if (!fs.isOpened()) {
         throw std::runtime_error(std::format("Cannot open file: {}", path));
@@ -66,8 +66,7 @@ Options:
 
 /// Load arm poses from CSV: skip header line, parse 6 doubles per row.
 [[nodiscard]] auto load_poses_from_csv(const std::string& path)
-    -> std::vector<std::array<double, 6>>
-{
+    -> std::vector<std::array<double, 6>> {
     std::ifstream file(path);
     if (!file.is_open()) {
         throw std::runtime_error(std::format("Cannot open CSV: {}", path));
@@ -87,9 +86,11 @@ Options:
         std::array<double, 6> pose{};
         std::istringstream ss(line);
         std::string token;
+        // NOLINTBEGIN(cppcoreguidelines-pro-bounds-constant-array-index)
         for (int j = 0; j < 6 && std::getline(ss, token, ','); ++j) {
             pose[j] = std::stod(token);
         }
+        // NOLINTEND(cppcoreguidelines-pro-bounds-constant-array-index)
         poses.push_back(pose);
     }
 
@@ -102,15 +103,15 @@ Options:
 
 /// Parse method string to enum.
 [[nodiscard]] auto parse_method(const std::string& s) -> rm::calib::HandEyeMethod {
-    if (s == "auto")       return rm::calib::HandEyeMethod::Auto;
-    if (s == "tsai")       return rm::calib::HandEyeMethod::Tsai;
-    if (s == "park")       return rm::calib::HandEyeMethod::Park;
-    if (s == "horaud")     return rm::calib::HandEyeMethod::Horaud;
+    if (s == "auto") return rm::calib::HandEyeMethod::Auto;
+    if (s == "tsai") return rm::calib::HandEyeMethod::Tsai;
+    if (s == "park") return rm::calib::HandEyeMethod::Park;
+    if (s == "horaud") return rm::calib::HandEyeMethod::Horaud;
     if (s == "daniilidis") return rm::calib::HandEyeMethod::Daniilidis;
     throw std::runtime_error(std::format("Unknown method: '{}'", s));
 }
 
-} // anonymous namespace
+}  // anonymous namespace
 
 int main(int argc, char* argv[]) {
     std::string rvecs_path;
@@ -121,12 +122,14 @@ int main(int argc, char* argv[]) {
     std::string output_path{"calibration_result.yaml"};
 
     // Parse CLI arguments
+    // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     for (int i = 1; i < argc; ++i) {
         std::string_view arg = argv[i];
         if (arg == "--help" || arg == "-h") {
             print_usage();
             return 0;
-        } else if (arg == "--rvecs" && i + 1 < argc) {
+        }
+        if (arg == "--rvecs" && i + 1 < argc) {
             rvecs_path = argv[++i];
         } else if (arg == "--tvecs" && i + 1 < argc) {
             tvecs_path = argv[++i];
@@ -154,7 +157,7 @@ int main(int argc, char* argv[]) {
 
     try {
         // ── Parse mode ──
-        rm::calib::HandEyeMode mode;
+        rm::calib::HandEyeMode mode = rm::calib::HandEyeMode::EyeInHand;
         if (mode_str == "in_hand") {
             mode = rm::calib::HandEyeMode::EyeInHand;
         } else if (mode_str == "to_hand") {
@@ -196,9 +199,8 @@ int main(int argc, char* argv[]) {
         std::cout << std::format("Solving hand-eye (method: {})...\n", method_str);
 
         rm::calib::HandEyeSolver solver(mode);
-        auto he_result = solver.solve(pose_result->R_motions,
-                                       pose_result->t_motions,
-                                       rvecs, tvecs, method);
+        auto he_result =
+            solver.solve(pose_result->R_motions, pose_result->t_motions, rvecs, tvecs, method);
 
         if (!he_result) {
             std::cerr << std::format("Hand-eye solve failed: {}\n", he_result.error());
@@ -216,8 +218,8 @@ int main(int argc, char* argv[]) {
         std::cout << std::format("Method: {}\n", he_result->method);
         std::cout << "Rotation matrix R:\n" << he_result->R << "\n";
         std::cout << "Translation vector t:\n" << he_result->t << "\n";
-        std::cout << std::format("Reprojection error: {:.4f}\n", he_result->reproj_error);
-        std::cout << std::format("Condition number: {:.4f}\n", he_result->condition_number);
+        std::cout << std::format("Reprojection error: {:.4F}\n", he_result->reproj_error);
+        std::cout << std::format("Condition number: {:.4F}\n", he_result->condition_number);
         std::cout << std::format("Result saved to {}\n", output_path);
 
         return 0;
@@ -225,5 +227,6 @@ int main(int argc, char* argv[]) {
     } catch (const std::exception& e) {
         std::cerr << std::format("Error: {}\n", e.what());
         return 1;
+        }
     }
-}
+    // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)

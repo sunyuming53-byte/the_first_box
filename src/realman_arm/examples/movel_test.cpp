@@ -1,8 +1,9 @@
 #include "realman/core/arm.hpp"
-#include <iostream>
-#include <iomanip>
-#include <thread>
+
 #include <chrono>
+#include <iomanip>
+#include <iostream>
+#include <thread>
 
 int main() {
     rm::ArmConfig cfg;
@@ -17,17 +18,19 @@ int main() {
         // Read current tool pose
         auto start = arm.toolPose();
         std::cout << "Current TCP: x=" << start.x << " y=" << start.y << " z=" << start.z
-                  << " roll=" << start.roll << " pitch=" << start.pitch << " yaw=" << start.yaw << "\n";
+                  << " roll=" << start.roll << " pitch=" << start.pitch << " yaw=" << start.yaw
+                  << "\n";
 
         // Target: Z+50mm, same orientation
         rm::CartesianPose target = start;
         target.z += 0.050;  // +50 mm
 
         std::cout << "Target TCP:  x=" << target.x << " y=" << target.y << " z=" << target.z
-                  << " roll=" << target.roll << " pitch=" << target.pitch << " yaw=" << target.yaw << "\n";
+                  << " roll=" << target.roll << " pitch=" << target.pitch << " yaw=" << target.yaw
+                  << "\n";
         std::cout << "Executing moveL (speed=20, blocking)...\n";
 
-        arm.moveL(target, 20, true);
+        arm.moveL(target, 20, /*blocking=*/true);
 
         // Read final pose
         std::this_thread::sleep_for(std::chrono::milliseconds(500));

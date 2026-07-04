@@ -4,6 +4,8 @@ project(realman_calibration VERSION 0.1.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+include(${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/clang_tidy.cmake OPTIONAL)
+
 find_package(ament_cmake REQUIRED)
 find_package(OpenCV REQUIRED COMPONENTS core calib3d highgui imgproc imgcodecs objdetect aruco)
 find_package(realsense2 REQUIRED)

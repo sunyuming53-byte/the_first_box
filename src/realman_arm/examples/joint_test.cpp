@@ -1,9 +1,11 @@
 #include "realman/core/arm.hpp"
+
 #include <cmath>
-#include <iostream>
-#include <iomanip>
-#include <thread>
+
 #include <chrono>
+#include <iomanip>
+#include <iostream>
+#include <thread>
 
 int main() {
     rm::ArmConfig cfg;
@@ -28,7 +30,8 @@ int main() {
 
             std::cout << "               (deg): ";
             for (size_t j = 0; j < st.joint_position.radians.size(); ++j) {
-                std::cout << "J" << (j + 1) << "=" << st.joint_position.radians[j] * 180.0 / M_PI << "  ";
+                std::cout << "J" << (j + 1) << "=" << st.joint_position.radians[j] * 180.0 / M_PI
+                          << "  ";
             }
             std::cout << "\n\n";
 

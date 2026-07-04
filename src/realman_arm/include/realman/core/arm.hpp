@@ -1,13 +1,14 @@
 #pragma once
-#include "realman/core/types.hpp"
 #include "realman/core/error.hpp"
-#include "realman/motion/types.hpp"
+#include "realman/core/types.hpp"
 #include "realman/gripper/types.hpp"
-#include <memory>
+#include "realman/motion/types.hpp"
+
+#include <array>
 #include <functional>
+#include <memory>
 #include <string>
 #include <vector>
-#include <array>
 
 namespace rm {
 
@@ -25,14 +26,14 @@ public:
     Arm& operator=(Arm&&) noexcept;
 
     // ── Motion ──
-    void moveJ(const JointPosition& target, SpeedRatio speed = 50,
-               bool blocking = true, int trajectory_connect = 0);
-    void moveJ_P(const CartesianPose& target, SpeedRatio speed = 50,
-                 bool blocking = true, int trajectory_connect = 0);
-    void moveL(const CartesianPose& target, SpeedRatio speed = 50,
-               bool blocking = true, int trajectory_connect = 0);
-    void moveC(const CartesianPose& mid, const CartesianPose& end,
-               SpeedRatio speed = 50, int loop = 1, bool blocking = true);
+    void moveJ(const JointPosition& target, SpeedRatio speed = 50, bool blocking = true,
+               int trajectory_connect = 0);
+    void moveJ_P(const CartesianPose& target, SpeedRatio speed = 50, bool blocking = true,
+                 int trajectory_connect = 0);
+    void moveL(const CartesianPose& target, SpeedRatio speed = 50, bool blocking = true,
+               int trajectory_connect = 0);
+    void moveC(const CartesianPose& mid, const CartesianPose& end, SpeedRatio speed = 50,
+               int loop = 1, bool blocking = true);
     void stop();
 
     // ── CANFD ──
@@ -40,9 +41,9 @@ public:
     void moveP_CANFD(const CartesianPose& target, int mode = 0);
 
     // ── State (read cached, non-blocking) ──
-    JointPosition jointPosition() const;
-    CartesianPose  toolPose() const;
-    ArmState       state() const;
+    [[nodiscard]] JointPosition jointPosition() const;
+    [[nodiscard]] CartesianPose toolPose() const;
+    [[nodiscard]] ArmState state() const;
 
     // ── Frames ──
     std::vector<std::string> getWorkFrames();
@@ -54,14 +55,14 @@ public:
     void gripperRelease(int speed, bool blocking = true, int timeout = 30);
     void gripperPick(int speed, int force, bool blocking = true, int timeout = 30);
     void gripperPickOn(int speed, int force, bool blocking = true, int timeout = 30);
-    GripperState gripperState() const;
+    [[nodiscard]] GripperState gripperState() const;
 
     // ── Force control (requires 6-axis force sensor) ──
     void enableForceControl(const std::array<double, 6>& params);
     void disableForceControl();
 
     // ── Connection ──
-    bool isConnected() const;
+    [[nodiscard]] bool isConnected() const;
 
     // ── Callback ──
     void onMotionComplete(MotionCallback cb);
@@ -71,4 +72,4 @@ private:
     std::unique_ptr<Impl> impl_;
 };
 
-} // namespace rm
+}  // namespace rm

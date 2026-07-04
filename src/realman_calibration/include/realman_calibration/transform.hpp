@@ -1,11 +1,12 @@
 #pragma once
 
-#include "pose_proc.hpp"
-#include "expected_polyfill.hpp"
 #include <array>
 #include <filesystem>
-#include <opencv2/core/mat.hpp>
 #include <string>
+
+#include "expected_polyfill.hpp"
+#include "pose_proc.hpp"
+#include <opencv2/core/mat.hpp>
 
 namespace rm::calib {
 
@@ -30,15 +31,14 @@ public:
     /// Eye-in-hand  (eye_in_hand=true):  p_base = H_ee_base * T_ * p_cam
     /// Eye-to-hand  (eye_to_hand=true):  p_base = T_ * p_cam
     [[nodiscard]] auto point_camera_to_base(double x, double y, double z,
-                                             const std::array<double, 6>& arm_pose = {})
+                                            const std::array<double, 6>& arm_pose = {})
         -> std::array<double, 3>;
 
     /// Transform a 6-DOF pose from camera frame to robot base frame.
     ///
     /// arm_pose is only used in eye-in-hand mode.
-    [[nodiscard]] auto pose_camera_to_base(double x, double y, double z,
-                                            double rx, double ry, double rz,
-                                            const std::array<double, 6>& arm_pose = {})
+    [[nodiscard]] auto pose_camera_to_base(double x, double y, double z, double rx, double ry,
+                                           double rz, const std::array<double, 6>& arm_pose = {})
         -> std::array<double, 6>;
 
     [[nodiscard]] auto mode() const -> HandEyeMode { return mode_; }
@@ -49,7 +49,7 @@ public:
 private:
     HandEyeTransform(cv::Mat T, HandEyeMode mode);
 
-    cv::Mat T_;        // 4×4 homogeneous matrix, CV_64F
+    cv::Mat T_;  // 4×4 homogeneous matrix, CV_64F
     HandEyeMode mode_;
 };
 

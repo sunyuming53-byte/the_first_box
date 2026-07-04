@@ -11,7 +11,7 @@ namespace rm {
 void Arm::Impl::setGripperRoute(int min, int max) {
     if (!ensureConnected()) throw ArmError(-1, "Not connected to arm");
     int ret = rm_set_gripper_route(handle_, min, max);
-    impl::check(ret, "rm_set_gripper_route");
+    impl::check(ret, /*operation=*/"rm_set_gripper_route");
 }
 
 // ── gripper — position control ──
@@ -27,7 +27,7 @@ void Arm::Impl::gripper(int position, bool blocking, int timeout) {
 
     {
         std::lock_guard lock(cmd_mutex_);
-        cmd_queue_.push([this, position, blocking, timeout]() {
+        cmd_queue_.emplace([this, position, blocking, timeout]() {
             int ret = rm_set_gripper_position(handle_, position, blocking, timeout);
             if (blocking) {
                 last_motion_ok_ = (ret == 0);
@@ -63,7 +63,7 @@ void Arm::Impl::gripperRelease(int speed, bool blocking, int timeout) {
 
     {
         std::lock_guard lock(cmd_mutex_);
-        cmd_queue_.push([this, speed, blocking, timeout]() {
+        cmd_queue_.emplace([this, speed, blocking, timeout]() {
             int ret = rm_set_gripper_release(handle_, speed, blocking, timeout);
             if (blocking) {
                 last_motion_ok_ = (ret == 0);
@@ -99,7 +99,7 @@ void Arm::Impl::gripperPick(int speed, int force, bool blocking, int timeout) {
 
     {
         std::lock_guard lock(cmd_mutex_);
-        cmd_queue_.push([this, speed, force, blocking, timeout]() {
+        cmd_queue_.emplace([this, speed, force, blocking, timeout]() {
             int ret = rm_set_gripper_pick(handle_, speed, force, blocking, timeout);
             if (blocking) {
                 last_motion_ok_ = (ret == 0);
@@ -135,7 +135,7 @@ void Arm::Impl::gripperPickOn(int speed, int force, bool blocking, int timeout) 
 
     {
         std::lock_guard lock(cmd_mutex_);
-        cmd_queue_.push([this, speed, force, blocking, timeout]() {
+        cmd_queue_.emplace([this, speed, force, blocking, timeout]() {
             int ret = rm_set_gripper_pick_on(handle_, speed, force, blocking, timeout);
             if (blocking) {
                 last_motion_ok_ = (ret == 0);
@@ -161,7 +161,7 @@ void Arm::Impl::gripperPickOn(int speed, int force, bool blocking, int timeout) 
 // ── gripperState — read gripper status ──
 
 GripperState Arm::Impl::gripperState() const {
-    if (!handle_) throw ArmError(-1, "Not connected to arm");
+    if (handle_ == nullptr) throw ArmError(-1, "Not connected to arm");
 
     rm_gripper_state_t gs{};
     int ret = rm_get_gripper_state(handle_, &gs);
@@ -170,14 +170,14 @@ GripperState Arm::Impl::gripperState() const {
     }
 
     GripperState state;
-    state.enable_state  = gs.enable_state;
-    state.status        = gs.status;
-    state.error         = gs.error;
-    state.mode          = gs.mode;
+    state.enable_state = gs.enable_state;
+    state.status = gs.status;
+    state.error = gs.error;
+    state.mode = gs.mode;
     state.current_force = gs.current_force;
-    state.temperature   = gs.temperature;
-    state.actpos        = gs.actpos;
+    state.temperature = gs.temperature;
+    state.actpos = gs.actpos;
     return state;
 }
 
-} // namespace rm
+}  // namespace rm

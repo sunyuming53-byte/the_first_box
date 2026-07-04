@@ -1,17 +1,18 @@
+#include "realman_calibration/hand_eye.hpp"
+#include "realman_calibration/transform.hpp"
+
+#include <cmath>
 #include <gtest/gtest.h>
 
 #include <array>
-#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <string>
 
+#include "synthetic_poses.h"
 #include <opencv2/core.hpp>
 #include <opencv2/core/persistence.hpp>
-
-#include "realman_calibration/transform.hpp"
-#include "realman_calibration/hand_eye.hpp"
-#include "synthetic_poses.h"
+// NOLINTBEGIN(readability-convert-member-functions-to-static,cppcoreguidelines-pro-bounds-constant-array-index)
 
 using namespace rm::calib;
 using namespace rm::calib::test;
@@ -24,10 +25,10 @@ namespace {
 
 class TransformIntegrationTest : public ::testing::Test {
 protected:
-    static constexpr auto kTempFile       = "/tmp/test_calib_tf.yaml";
-    static constexpr auto kEmptyFile      = "/tmp/test_empty_tf.yaml";
-    static constexpr auto kCorruptedFile  = "/tmp/test_corrupt_tf.yaml";
-    static constexpr auto kEyeToHandFile  = "/tmp/test_eye2hand_tf.yaml";
+    static constexpr auto kTempFile = "/tmp/test_calib_tf.yaml";
+    static constexpr auto kEmptyFile = "/tmp/test_empty_tf.yaml";
+    static constexpr auto kCorruptedFile = "/tmp/test_corrupt_tf.yaml";
+    static constexpr auto kEyeToHandFile = "/tmp/test_eye2hand_tf.yaml";
 
     void TearDown() override {
         std::filesystem::remove(kTempFile);
@@ -40,11 +41,11 @@ protected:
     /// {0.1, 0.2, 0.3} — easy to hand-compute expected values.
     [[nodiscard]] HandEyeResult make_known_result(HandEyeMode mode) const {
         HandEyeResult r;
-        r.R    = cv::Mat::eye(3, 3, CV_64F);
-        r.t    = (cv::Mat_<double>(3, 1) << 0.1, 0.2, 0.3);
+        r.R = cv::Mat::eye(3, 3, CV_64F);
+        r.t = (cv::Mat_<double>(3, 1) << 0.1, 0.2, 0.3);
         r.mode = mode;
-        r.reproj_error     = 0.01;
-        r.method           = "Tsai";
+        r.reproj_error = 0.01;
+        r.method = "Tsai";
         r.condition_number = 42.0;
         return r;
     }
@@ -142,9 +143,7 @@ TEST_F(TransformIntegrationTest, PoseCameraToBase_EyeInHand) {
     const std::array<double, 6> arm_pose = {1.0, 2.0, 3.0, 0.0, 0.0, 0.0};
 
     // Camera-frame pose: (1,2,3) position, zero rotation
-    auto pose = loaded->pose_camera_to_base(1.0, 2.0, 3.0,
-                                             0.0, 0.0, 0.0,
-                                             arm_pose);
+    auto pose = loaded->pose_camera_to_base(1.0, 2.0, 3.0, 0.0, 0.0, 0.0, arm_pose);
 
     // All 6 components must be finite
     for (int i = 0; i < 6; ++i) {
@@ -190,8 +189,8 @@ TEST_F(TransformIntegrationTest, EyeToHandDiffersFromEyeInHand) {
     for (int i = 0; i < 3; ++i) {
         max_diff = std::max(max_diff, std::abs(pt_eih[i] - pt_eth[i]));
     }
-    EXPECT_GT(max_diff, 1e-6)
-        << "EyeInHand and EyeToHand must differ with non-zero arm_pose";
+    EXPECT_GT(max_diff, 1e-6) << "EyeInHand and EyeToHand must differ with non-zero arm_pose";
 }
 
 }  // namespace
+// NOLINTEND(readability-convert-member-functions-to-static,cppcoreguidelines-pro-bounds-constant-array-index)

@@ -7,7 +7,7 @@ namespace rm {
 // ──────────────────────────────────────────────
 
 void Arm::Impl::pollState() const {
-    if (!handle_) return;
+    if (handle_ == nullptr) return;
     rm_current_arm_state_t cs{};
     int ret = rm_get_current_arm_state(handle_, &cs);
     if (ret != 0) return;
@@ -21,27 +21,30 @@ void Arm::Impl::pollState() const {
     // Joint angles: degrees → radians
     joint_pos_.radians.clear();
     for (int i = 0; i < ARM_DOF; ++i) {
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
         joint_pos_.radians.push_back(static_cast<double>(cs.joint[i]) * M_PI / 180.0);
     }
 
     // Tool pose
-    tool_pose_.x     = static_cast<double>(cs.pose.position.x);
-    tool_pose_.y     = static_cast<double>(cs.pose.position.y);
-    tool_pose_.z     = static_cast<double>(cs.pose.position.z);
-    tool_pose_.roll  = static_cast<double>(cs.pose.euler.rx);
+    tool_pose_.x = static_cast<double>(cs.pose.position.x);
+    tool_pose_.y = static_cast<double>(cs.pose.position.y);
+    tool_pose_.z = static_cast<double>(cs.pose.position.z);
+    tool_pose_.roll = static_cast<double>(cs.pose.euler.rx);
     tool_pose_.pitch = static_cast<double>(cs.pose.euler.ry);
-    tool_pose_.yaw   = static_cast<double>(cs.pose.euler.rz);
+    tool_pose_.yaw = static_cast<double>(cs.pose.euler.rz);
 
     // Arm state
     arm_state_.joint_position = joint_pos_;
-    arm_state_.tool_pose      = tool_pose_;
+    arm_state_.tool_pose = tool_pose_;
     for (int i = 0; i < 6; ++i) {
-        arm_state_.joint_current[i]     = static_cast<double>(as.joint_current[i]);
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
+        arm_state_.joint_current[i] = static_cast<double>(as.joint_current[i]);
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
         arm_state_.joint_temperature[i] = static_cast<double>(as.joint_temperature[i]);
     }
-    arm_state_.error_code    = (as.err.err_len > 0) ? as.err.err[0] : 0;
+    arm_state_.error_code = (as.err.err_len > 0) ? as.err.err[0] : 0;
     arm_state_.error_message = "";
-    arm_state_.is_moving     = false;
+    arm_state_.is_moving = false;
 }
 
 // ──────────────────────────────────────────────
@@ -66,4 +69,4 @@ ArmState Arm::Impl::state() const {
     return arm_state_;
 }
 
-} // namespace rm
+}  // namespace rm

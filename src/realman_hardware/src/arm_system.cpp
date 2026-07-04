@@ -1,6 +1,8 @@
 #include "realman_hardware/arm_system.hpp"
-#include <pluginlib/class_list_macros.hpp>
+
 #include <cmath>
+
+#include <pluginlib/class_list_macros.hpp>
 
 using hardware_interface::CallbackReturn;
 
@@ -23,9 +25,9 @@ CallbackReturn ArmSystem::on_init(const hardware_interface::HardwareInfo& info) 
     }
 
     // Parse arm config from ros2_control <param> tags in URDF
-    arm_config_.ip      = info.hardware_parameters.at("arm_ip");
+    arm_config_.ip = info.hardware_parameters.at("arm_ip");
     arm_config_.tcp_port = std::stoi(info.hardware_parameters.at("tcp_port"));
-    arm_config_.dof     = dof_;
+    arm_config_.dof = dof_;
 
     // Resize state/command vectors
     hw_position_.resize(dof_, 0.0);
@@ -34,9 +36,8 @@ CallbackReturn ArmSystem::on_init(const hardware_interface::HardwareInfo& info) 
     hw_position_cmd_.resize(dof_, 0.0);
     hw_position_cmd_prev_.resize(dof_, NAN);  // NAN = "no previous command"
 
-    RCLCPP_INFO(rclcpp::get_logger("ArmSystem"),
-        "ArmSystem on_init: ip=%s port=%d dof=%d",
-        arm_config_.ip.c_str(), arm_config_.tcp_port, dof_);
+    RCLCPP_INFO(rclcpp::get_logger("ArmSystem"), "ArmSystem on_init: ip=%s port=%d dof=%d",
+                arm_config_.ip.c_str(), arm_config_.tcp_port, dof_);
 
     return CallbackReturn::SUCCESS;
 }
@@ -45,8 +46,7 @@ CallbackReturn ArmSystem::on_configure(const rclcpp_lifecycle::State& /*previous
     try {
         arm_ = std::make_unique<rm::Arm>(arm_config_);
     } catch (const rm::ArmError& e) {
-        RCLCPP_ERROR(rclcpp::get_logger("ArmSystem"),
-            "Failed to create rm::Arm: %s", e.what());
+        RCLCPP_ERROR(rclcpp::get_logger("ArmSystem"), "Failed to create rm::Arm: %s", e.what());
         return CallbackReturn::ERROR;
     }
     RCLCPP_INFO(rclcpp::get_logger("ArmSystem"), "ArmSystem configured");
@@ -76,29 +76,29 @@ CallbackReturn ArmSystem::on_deactivate(const rclcpp_lifecycle::State& /*previou
 
 std::vector<hardware_interface::StateInterface> ArmSystem::export_state_interfaces() {
     std::vector<hardware_interface::StateInterface> interfaces;
+    interfaces.reserve(static_cast<std::size_t>(dof_) * 3);
     for (int i = 0; i < dof_; ++i) {
-        interfaces.emplace_back(joint_names_[i],
-            hardware_interface::HW_IF_POSITION, &hw_position_[i]);
-        interfaces.emplace_back(joint_names_[i],
-            hardware_interface::HW_IF_VELOCITY, &hw_velocity_[i]);
-        interfaces.emplace_back(joint_names_[i],
-            hardware_interface::HW_IF_EFFORT,   &hw_effort_[i]);
+        interfaces.emplace_back(joint_names_[i], hardware_interface::HW_IF_POSITION,
+                                &hw_position_[i]);
+        interfaces.emplace_back(joint_names_[i], hardware_interface::HW_IF_VELOCITY,
+                                &hw_velocity_[i]);
+        interfaces.emplace_back(joint_names_[i], hardware_interface::HW_IF_EFFORT, &hw_effort_[i]);
     }
     return interfaces;
 }
 
 std::vector<hardware_interface::CommandInterface> ArmSystem::export_command_interfaces() {
     std::vector<hardware_interface::CommandInterface> interfaces;
+    interfaces.reserve(static_cast<std::size_t>(dof_));
     for (int i = 0; i < dof_; ++i) {
-        interfaces.emplace_back(joint_names_[i],
-            hardware_interface::HW_IF_POSITION, &hw_position_cmd_[i]);
+        interfaces.emplace_back(joint_names_[i], hardware_interface::HW_IF_POSITION,
+                                &hw_position_cmd_[i]);
     }
     return interfaces;
 }
 
-hardware_interface::return_type ArmSystem::read(
-    const rclcpp::Time& /*time*/, const rclcpp::Duration& /*period*/)
-{
+hardware_interface::return_type ArmSystem::read(const rclcpp::Time& /*time*/,
+                                                const rclcpp::Duration& /*period*/) {
     if (!arm_ || !arm_->isConnected()) {
         return hardware_interface::return_type::OK;
     }
@@ -111,17 +111,15 @@ hardware_interface::return_type ArmSystem::read(
         // Velocity and effort are not provided by the current SDK — leave as 0
     } catch (const rm::ArmError& e) {
         rclcpp::Clock steady_clock(RCL_STEADY_TIME);
-        RCLCPP_ERROR_THROTTLE(rclcpp::get_logger("ArmSystem"),
-            steady_clock, 5000,
-            "read() failed: %s", e.what());
+        RCLCPP_ERROR_THROTTLE(rclcpp::get_logger("ArmSystem"), steady_clock, 5000,
+                              "read() failed: %s", e.what());
     }
 
     return hardware_interface::return_type::OK;
 }
 
-hardware_interface::return_type ArmSystem::write(
-    const rclcpp::Time& /*time*/, const rclcpp::Duration& /*period*/)
-{
+hardware_interface::return_type ArmSystem::write(const rclcpp::Time& /*time*/,
+                                                 const rclcpp::Duration& /*period*/) {
     if (!arm_ || !arm_->isConnected()) {
         return hardware_interface::return_type::OK;
     }
@@ -140,22 +138,19 @@ hardware_interface::return_type ArmSystem::write(
     }
 
     try {
-        auto target = std::vector<double>(hw_position_cmd_.begin(),
-                                          hw_position_cmd_.begin() + dof_);
+        auto target =
+            std::vector<double>(hw_position_cmd_.begin(), hw_position_cmd_.begin() + dof_);
         arm_->moveJ(rm::JointPosition(std::move(target)), 100, false);
         hw_position_cmd_prev_ = hw_position_cmd_;
     } catch (const rm::ArmError& e) {
         rclcpp::Clock steady_clock(RCL_STEADY_TIME);
-        RCLCPP_ERROR_THROTTLE(rclcpp::get_logger("ArmSystem"),
-            steady_clock, 5000,
-            "write() failed: %s", e.what());
+        RCLCPP_ERROR_THROTTLE(rclcpp::get_logger("ArmSystem"), steady_clock, 5000,
+                              "write() failed: %s", e.what());
     }
 
     return hardware_interface::return_type::OK;
 }
 
-} // namespace realman_hardware
+}  // namespace realman_hardware
 
-PLUGINLIB_EXPORT_CLASS(
-    realman_hardware::ArmSystem,
-    hardware_interface::SystemInterface)
+PLUGINLIB_EXPORT_CLASS(realman_hardware::ArmSystem, hardware_interface::SystemInterface)

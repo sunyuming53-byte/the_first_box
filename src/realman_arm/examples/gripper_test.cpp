@@ -1,17 +1,16 @@
 #include "realman/core/arm.hpp"
-#include <iostream>
-#include <iomanip>
+
 #include <unistd.h>
 
+#include <iomanip>
+#include <iostream>
+
 static void printGripperState(const rm::GripperState& gs) {
-    std::cout << "  enable: " << gs.enable_state
-              << "  online: " << gs.status
-              << "  mode: " << gs.mode
-              << "  pos: " << gs.actpos
-              << "  force: " << gs.current_force << "g"
+    std::cout << "  enable: " << gs.enable_state << "  online: " << gs.status
+              << "  mode: " << gs.mode << "  pos: " << gs.actpos << "  force: " << gs.current_force
+              << "g"
               << "  temp: " << gs.temperature << "C"
-              << "  err: 0x" << std::hex << gs.error << std::dec
-              << std::endl;
+              << "  err: 0x" << std::hex << gs.error << std::dec << std::endl;
 }
 
 int main() {

@@ -1,0 +1,131 @@
+# RealMan ROS2 Workspace — clang-format configuration
+# Matches existing codebase style (4-space indent, Attach braces, no namespace indent)
+#
+# Usage:
+#   clang-format -i <file>            # format a file in-place
+#   git clang-format                  # format staged changes only
+#   clang-format --dry-run <file>     # check without modifying
+
+BasedOnStyle: Google
+
+# ── General ──
+Language: Cpp
+Standard: Latest
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+ColumnLimit: 100
+SortIncludes: CaseSensitive
+IncludeBlocks: Regroup
+IncludeCategories:
+  # Project headers first (quoted includes)
+  - Regex: '^"(realman|realman_arm|realman_vision|realman_hardware|realman_calibration|core|motion|gripper|state|node|camera)/.*"'
+    Priority: 0
+  # C system headers
+  - Regex: '^<.*\.h>'
+    Priority: 3
+  # C++ system headers
+  - Regex: '^<(cstddef|cstdint|cstring|ctime|cmath|climits|cassert|cerrno|cfloat|csignal|csetjmp|cstdarg|cstdlib|cstdio|cwchar|cwctype|clocale|complex|exception)>'
+    Priority: 3
+  # Standard library
+  - Regex: '^<(algorithm|any|array|atomic|barrier|bit|bitset|charconv|chrono|codecvt|compare|complex|concepts|condition_variable|coroutine|deque|exception|execution|expected|filesystem|format|forward_list|fstream|functional|future|initializer_list|iomanip|ios|iosfwd|iostream|istream|iterator|latch|limits|list|locale|map|mdspan|memory|memory_resource|mutex|new|numbers|numeric|optional|ostream|queue|random|ranges|ratio|regex|scoped_allocator|semaphore|set|shared_mutex|source_location|span|spanstream|sstream|stack|stacktrace|stdexcept|stop_token|streambuf|string|string_view|strstream|syncstream|system_error|thread|tuple|type_traits|typeindex|typeinfo|unordered_map|unordered_set|utility|valarray|variant|vector|version)>'
+    Priority: 4
+  # ROS2 / third-party
+  - Regex: '^<(rclcpp|rcl|rmw|std_msgs|std_srvs|sensor_msgs|geometry_msgs|tf2|tf2_ros|nav_msgs|visualization_msgs|hardware_interface|pluginlib)>'
+    Priority: 5
+  # Everything else
+  - Regex: '.*'
+    Priority: 6
+
+# ── Braces ──
+BreakBeforeBraces: Attach
+BraceWrapping:
+  AfterCaseLabel: false
+  AfterClass: false
+  AfterControlStatement: Never
+  AfterEnum: false
+  AfterFunction: false
+  AfterNamespace: false
+  AfterStruct: false
+  AfterUnion: false
+  AfterExternBlock: false
+  BeforeCatch: false
+  BeforeElse: false
+  BeforeLambdaBody: false
+  BeforeWhile: false
+  IndentBraces: false
+  SplitEmptyFunction: false
+  SplitEmptyRecord: false
+  SplitEmptyNamespace: false
+
+# ── Indentation ──
+AccessModifierOffset: -4
+IndentCaseLabels: true
+IndentGotoLabels: false
+IndentRequiresClause: true
+IndentExternBlock: NoIndent
+NamespaceIndentation: None
+
+# ── Alignment ──
+AlignAfterOpenBracket: Align
+AlignConsecutiveAssignments: None
+AlignConsecutiveBitFields: None
+AlignConsecutiveDeclarations: None
+AlignConsecutiveMacros: None
+AlignEscapedNewlines: Left
+AlignOperands: Align
+AlignTrailingComments: true
+PointerAlignment: Left
+ReferenceAlignment: Left
+
+# ── Functions ──
+AllowShortFunctionsOnASingleLine: All
+AllowShortLambdasOnASingleLine: All
+AllowShortBlocksOnASingleLine: Never
+AlwaysBreakAfterReturnType: None
+AlwaysBreakTemplateDeclarations: Yes
+BreakBeforeBinaryOperators: None
+BreakBeforeTernaryOperators: true
+BreakConstructorInitializers: BeforeColon
+ConstructorInitializerIndentWidth: 4
+ConstructorInitializerAllOnOneLineOrOnePerLine: false
+
+# ── Control flow ──
+AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortLoopsOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: true
+
+# ── Spacing ──
+SpaceAfterCStyleCast: true
+SpaceAfterLogicalNot: false
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeCaseColon: false
+SpaceBeforeCpp11BracedList: false
+SpaceBeforeCtorInitializerColon: true
+SpaceBeforeInheritanceColon: true
+SpaceBeforeParens: ControlStatements
+SpaceBeforeRangeBasedForLoopColon: true
+SpaceInEmptyBlock: false
+SpacesInAngles: Never
+SpacesInCStyleCastParentheses: false
+SpacesInConditionalStatement: false
+SpacesInContainerLiterals: false
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+
+# ── Line breaks ──
+AllowAllArgumentsOnNextLine: true
+AllowAllParametersOfDeclarationOnNextLine: true
+BinPackArguments: true
+BinPackParameters: true
+
+# ── Penalties (discourage undesired breaks) ──
+PenaltyBreakAssignment: 2
+PenaltyBreakBeforeFirstCallParameter: 19
+PenaltyBreakComment: 300
+PenaltyBreakFirstLessLess: 120
+PenaltyBreakOpenParenthesis: 0
+PenaltyBreakString: 1000
+PenaltyBreakTemplateDeclaration: 10
+PenaltyExcessCharacter: 1000000
+PenaltyReturnTypeOnItsOwnLine: 60

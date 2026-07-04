@@ -1,6 +1,7 @@
 #pragma once
 
 #include "realman_vision/camera/types.hpp"
+
 #include <memory>
 #include <optional>
 
@@ -30,4 +31,4 @@ private:
     std::unique_ptr<Impl> impl_;
 };
 
-} // namespace rm::vision::camera
+}  // namespace rm::vision::camera

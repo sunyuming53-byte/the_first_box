@@ -1,0 +1,19 @@
+CompileFlags:
+  CompilationDatabase: build
+
+Diagnostics:
+  # ROS2/system headers trigger many false positives — suppress by pattern
+  Suppress:
+    - "pp_file_not_found"
+    - "drv_unknown_argument"
+  UnusedIncludes: None
+
+Index:
+  Background: Build
+
+InlayHints:
+  BlockEnd: No
+  Designators: Yes
+
+Completion:
+  AllScopes: Yes

@@ -1,19 +1,21 @@
+#include "realman_calibration/format_polyfill.hpp"
+
+#include <filesystem>
+#include <iostream>
+#include <string_view>
+
+#include <opencv2/imgcodecs.hpp>
 #include <realman_calibration/camera_calib.hpp>
 #include <realman_calibration/collector.hpp>
 #include <realman_calibration/hand_eye.hpp>
 #include <realman_calibration/pose_proc.hpp>
 
-#include <filesystem>
-#include "realman_calibration/format_polyfill.hpp"
-#include <iostream>
-#include <opencv2/imgcodecs.hpp>
-#include <string_view>
-
-int main(int argc, char* argv[]) {
+int main(int argc, char* argv[]) {  // NOLINT(bugprone-exception-escape)
     rm::calib::CalibDataConfig cfg;
     std::string mode_str;
 
     // Parse CLI arguments
+    // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     for (int i = 1; i < argc; i += 2) {
         std::string_view arg = argv[i];
         if (arg == "--ip" && i + 1 < argc) {
@@ -38,13 +40,14 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    rm::calib::HandEyeMode mode;
+    rm::calib::HandEyeMode mode = rm::calib::HandEyeMode::EyeInHand;
     if (mode_str == "in_hand") {
         mode = rm::calib::HandEyeMode::EyeInHand;
     } else if (mode_str == "to_hand") {
         mode = rm::calib::HandEyeMode::EyeToHand;
     } else {
-        std::cerr << std::format("Error: unknown mode '{}' (expected in_hand or to_hand)\n", mode_str);
+        std::cerr << std::format("Error: unknown mode '{}' (expected in_hand or to_hand)\n",
+                                 mode_str);
         return 1;
     }
 
@@ -60,8 +63,8 @@ int main(int argc, char* argv[]) {
     }
 
     auto& session = *session_result;
-    std::cout << std::format("Stage {}: Done. {} images saved to {}\n",
-                             1, cfg.total_images, session.dir.string());
+    std::cout << std::format("Stage {}: Done. {} images saved to {}\n", 1, cfg.total_images,
+                             session.dir.string());
 
     // ── Stage 2: Camera intrinsic calibration ────────────────────────────
     std::cout << std::format("Stage {}: Running camera intrinsic calibration...\n", 2);
@@ -72,8 +75,9 @@ int main(int argc, char* argv[]) {
             cv::Mat img = cv::imread(entry.path().string(), cv::IMREAD_GRAYSCALE);
             if (!img.empty()) {
                 images.push_back(std::move(img));
-            }
         }
+    }
+    // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     }
 
     if (images.empty()) {
@@ -94,8 +98,8 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    std::cout << std::format("Stage {}: Done. Reprojection error: {:.4f} px, images used: {}\n",
-                             2, cam_result->reproj_error, cam_result->images_used);
+    std::cout << std::format("Stage {}: Done. Reprojection error: {:.4F} px, images used: {}\n", 2,
+                             cam_result->reproj_error, cam_result->images_used);
 
     // ── Stage 3: Pose processing ─────────────────────────────────────────
     std::cout << std::format("Stage {}: Computing relative arm motions...\n", 3);
@@ -108,16 +112,14 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    std::cout << std::format("Stage {}: Done. {} motion pairs computed.\n",
-                             3, pose_result->R_motions.size());
+    std::cout << std::format("Stage {}: Done. {} motion pairs computed.\n", 3,
+                             pose_result->R_motions.size());
 
     // ── Stage 4: Hand-eye solve ──────────────────────────────────────────
     std::cout << std::format("Stage {}: Solving hand-eye calibration...\n", 4);
 
     rm::calib::HandEyeSolver solver(mode);
-    auto he_result = solver.solve(pose_result->R_motions,
-                                  pose_result->t_motions,
-                                  cam_result->rvecs,
+    auto he_result = solver.solve(pose_result->R_motions, pose_result->t_motions, cam_result->rvecs,
                                   cam_result->tvecs);
 
     if (!he_result) {
@@ -131,7 +133,7 @@ int main(int argc, char* argv[]) {
     std::cout << "\nCalibration result:\n";
     std::cout << "Rotation matrix R:\n" << he_result->R << "\n";
     std::cout << "Translation vector t:\n" << he_result->t << "\n";
-    std::cout << std::format("Reprojection error: {:.4f} px\n", he_result->reproj_error);
+    std::cout << std::format("Reprojection error: {:.4F} px\n", he_result->reproj_error);
     std::cout << std::format("\nResult saved to {}/calibration_result.yaml\n",
                              cfg.output_dir.string());
 

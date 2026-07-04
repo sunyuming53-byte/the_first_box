@@ -1,4 +1,5 @@
 #include "core/arm_impl.hpp"
+
 #include <cstring>
 
 namespace rm {
@@ -7,16 +8,13 @@ namespace rm {
 //  Constructor
 // ──────────────────────────────────────────────
 
-Arm::Impl::Impl(const ArmConfig& config)
-    : ip_(config.ip), port_(config.tcp_port)
-{
+Arm::Impl::Impl(const ArmConfig& config) : ip_(config.ip), port_(config.tcp_port), running_(true) {
     int ret = rm_init(RM_TRIPLE_MODE_E);
-    impl::check(ret, "rm_init");
+    impl::check(ret, /*operation=*/"rm_init");
 
     // Defer TCP connection to first command (lazy connect).
-    // This allows ArmNode construction without arm hardware.
+    // This allows Arm construction without hardware.
 
-    running_ = true;
     worker_ = std::thread(&Impl::workerLoop, this);
 }
 
@@ -30,7 +28,7 @@ Arm::Impl::~Impl() {
     if (worker_.joinable()) {
         worker_.join();
     }
-    if (handle_) {
+    if (handle_ != nullptr) {
         rm_delete_robot_arm(handle_);
         handle_ = nullptr;
     }
@@ -41,22 +39,20 @@ Arm::Impl::~Impl() {
 // ──────────────────────────────────────────────
 
 bool Arm::Impl::ensureConnected() {
-    if (handle_) return true;
+    if (handle_ != nullptr) return true;
 
     handle_ = rm_create_robot_arm(ip_.c_str(), port_);
-    if (handle_ && handle_->id >= 0) return true;
+    if (handle_ != nullptr && handle_->id >= 0) return true;
 
     // Connection failed — clean up and report
-    if (handle_) {
+    if (handle_ != nullptr) {
         rm_delete_robot_arm(handle_);
         handle_ = nullptr;
     }
     return false;
 }
 
-bool Arm::Impl::isConnected() const {
-    return handle_ != nullptr;
-}
+bool Arm::Impl::isConnected() const { return handle_ != nullptr; }
 
 // ──────────────────────────────────────────────
 //  Worker loop
@@ -84,4 +80,4 @@ void Arm::Impl::workerLoop() {
     }
 }
 
-} // namespace rm
+}  // namespace rm

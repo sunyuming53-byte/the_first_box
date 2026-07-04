@@ -9,10 +9,10 @@ public:
     explicit ArmError(int code, const std::string& message)
         : std::runtime_error(message), code_(code) {}
 
-    int code() const noexcept { return code_; }
+    [[nodiscard]] int code() const noexcept { return code_; }
 
 private:
     int code_;
 };
 
-} // namespace rm
+}  // namespace rm

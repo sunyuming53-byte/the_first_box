@@ -17,22 +17,22 @@ class Expected {
     std::variant<T, E> data_;
 
 public:
-    Expected(T val) : data_(std::move(val)) {}
-    Expected(Unexpected<E> err) : data_(std::move(err.error)) {}
+    Expected(T val) : data_(std::move(val)) {}  // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
+    Expected(Unexpected<E> err) : data_(std::move(err.error)) {}  // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
 
-    bool has_value() const { return data_.index() == 0; }
+    [[nodiscard]] bool has_value() const { return data_.index() == 0; }
 
-    T& value() & { return std::get<0>(data_); }
-    const T& value() const& { return std::get<0>(data_); }
-    T&& value() && { return std::get<0>(std::move(data_)); }
+    [[nodiscard]] T& value() & { return std::get<0>(data_); }
+    [[nodiscard]] const T& value() const& { return std::get<0>(data_); }
+    [[nodiscard]] T&& value() && { return std::get<0>(std::move(data_)); }
 
     T* operator->() { return &value(); }
     const T* operator->() const { return &value(); }
     T& operator*() & { return value(); }
     const T& operator*() const& { return value(); }
 
-    E& error() & { return std::get<1>(data_); }
-    const E& error() const& { return std::get<1>(data_); }
+    [[nodiscard]] E& error() & { return std::get<1>(data_); }
+    [[nodiscard]] const E& error() const& { return std::get<1>(data_); }
 
     explicit operator bool() const { return has_value(); }
 };

@@ -1,8 +1,9 @@
 #pragma once
 #include <cstdint>
-#include <vector>
+
 #include <array>
 #include <string>
+#include <vector>
 
 namespace rm {
 
@@ -20,13 +21,13 @@ struct CartesianPose {
 using SpeedRatio = uint8_t;  // 0–100
 
 struct ArmState {
-    JointPosition                 joint_position;
-    CartesianPose                 tool_pose;
-    std::array<double, 6>         joint_current{};
-    std::array<double, 6>         joint_temperature{};
-    bool                          is_moving{false};
-    int                           error_code{0};
-    std::string                   error_message;
+    JointPosition joint_position;
+    CartesianPose tool_pose;
+    std::array<double, 6> joint_current{};
+    std::array<double, 6> joint_temperature{};
+    bool is_moving{false};
+    int error_code{0};
+    std::string error_message;
 };
 
-} // namespace rm
+}  // namespace rm

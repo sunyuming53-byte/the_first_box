@@ -1,8 +1,7 @@
-#include <realman_calibration/pose_proc.hpp>
+#include "realman_calibration/format_polyfill.hpp"
 
 #include <array>
 #include <filesystem>
-#include "realman_calibration/format_polyfill.hpp"
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -10,11 +9,14 @@
 #include <string_view>
 #include <vector>
 
+#include <realman_calibration/pose_proc.hpp>
+
 int main(int argc, char* argv[]) {
     std::filesystem::path poses_path;
     std::string mode_str;
 
     // Parse CLI arguments
+    // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     for (int i = 1; i < argc; i += 2) {
         std::string_view arg = argv[i];
         if (arg == "--poses" && i + 1 < argc) {
@@ -23,6 +25,7 @@ int main(int argc, char* argv[]) {
             mode_str = argv[i + 1];
         }
     }
+    // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 
     if (poses_path.empty()) {
         std::cerr << "Error: --poses <path> is required\n";
@@ -33,13 +36,14 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    rm::calib::HandEyeMode mode;
+    rm::calib::HandEyeMode mode = rm::calib::HandEyeMode::EyeInHand;
     if (mode_str == "in_hand") {
         mode = rm::calib::HandEyeMode::EyeInHand;
     } else if (mode_str == "to_hand") {
         mode = rm::calib::HandEyeMode::EyeToHand;
     } else {
-        std::cerr << std::format("Error: unknown mode '{}' (expected in_hand or to_hand)\n", mode_str);
+        std::cerr << std::format("Error: unknown mode '{}' (expected in_hand or to_hand)\n",
+                                 mode_str);
         return 1;
     }
 
@@ -64,9 +68,11 @@ int main(int argc, char* argv[]) {
         std::array<double, 6> pose{};
         std::istringstream ss(line);
         std::string token;
+        // NOLINTBEGIN(cppcoreguidelines-pro-bounds-constant-array-index)
         for (int j = 0; j < 6 && std::getline(ss, token, ','); ++j) {
             pose[j] = std::stod(token);
         }
+        // NOLINTEND(cppcoreguidelines-pro-bounds-constant-array-index)
         poses.push_back(pose);
     }
 

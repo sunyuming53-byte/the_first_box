@@ -1,17 +1,19 @@
 #pragma once
 
-#include "pose_proc.hpp"
-#include "expected_polyfill.hpp"
+#include <cstdint>
 #include <filesystem>
-#include <opencv2/core/mat.hpp>
 #include <span>
 #include <string>
 #include <vector>
 
+#include "expected_polyfill.hpp"
+#include "pose_proc.hpp"
+#include <opencv2/core/mat.hpp>
+
 namespace rm::calib {
 
 /// Hand-eye calibration method.
-enum class HandEyeMethod {
+enum class HandEyeMethod : uint8_t {
     Tsai,
     Park,
     Horaud,
@@ -21,9 +23,9 @@ enum class HandEyeMethod {
 
 /// Result of a hand-eye calibration solve.
 struct HandEyeResult {
-    cv::Mat R;                     // 3×3, CV_64F  — camera→end-effector (or camera→base)
-    cv::Mat t;                     // 3×1, CV_64F  — translation part
-    HandEyeMode mode;
+    cv::Mat R;  // 3×3, CV_64F  — camera→end-effector (or camera→base)
+    cv::Mat t;  // 3×1, CV_64F  — translation part
+    HandEyeMode mode = HandEyeMode::EyeInHand;
     double reproj_error{0.0};
     std::string method;
     double condition_number{0.0};
@@ -45,12 +47,9 @@ public:
     /// @param rvecs    Per-image rotation vectors from CameraCalibrator
     /// @param tvecs    Per-image translation vectors from CameraCalibrator
     /// @param method   Hand-eye method (default Auto: run all four, pick best)
-    [[nodiscard]] auto solve(std::span<const cv::Mat> R_tool,
-                              std::span<const cv::Mat> t_tool,
-                              std::span<const cv::Mat> rvecs,
-                              std::span<const cv::Mat> tvecs,
-                              HandEyeMethod method = HandEyeMethod::Auto)
-        -> Result<HandEyeResult>;
+    [[nodiscard]] auto solve(std::span<const cv::Mat> R_tool, std::span<const cv::Mat> t_tool,
+                             std::span<const cv::Mat> rvecs, std::span<const cv::Mat> tvecs,
+                             HandEyeMethod method = HandEyeMethod::Auto) -> Result<HandEyeResult>;
 
 private:
     HandEyeMode mode_;

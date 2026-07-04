@@ -1,12 +1,13 @@
+#include "realman_calibration/format_polyfill.hpp"
 #include "realman_calibration/hand_eye.hpp"
+
+#include <cmath>
+
+#include <span>
 
 #include <opencv2/calib3d.hpp>
 #include <opencv2/core.hpp>
 #include <opencv2/core/persistence.hpp>
-
-#include <cmath>
-#include "realman_calibration/format_polyfill.hpp"
-#include <span>
 
 namespace rm::calib {
 
@@ -18,22 +19,22 @@ namespace {
 /// Map method enum to OpenCV flag.
 [[nodiscard]] auto method_to_cv_flag(HandEyeMethod m) -> cv::HandEyeCalibrationMethod {
     switch (m) {
-    case HandEyeMethod::Tsai:       return cv::CALIB_HAND_EYE_TSAI;
-    case HandEyeMethod::Park:       return cv::CALIB_HAND_EYE_PARK;
-    case HandEyeMethod::Horaud:     return cv::CALIB_HAND_EYE_HORAUD;
-    case HandEyeMethod::Daniilidis: return cv::CALIB_HAND_EYE_DANIILIDIS;
-    default:                        return cv::CALIB_HAND_EYE_TSAI;
+        case HandEyeMethod::Tsai: return cv::CALIB_HAND_EYE_TSAI;
+        case HandEyeMethod::Park: return cv::CALIB_HAND_EYE_PARK;
+        case HandEyeMethod::Horaud: return cv::CALIB_HAND_EYE_HORAUD;
+        case HandEyeMethod::Daniilidis: return cv::CALIB_HAND_EYE_DANIILIDIS;
+        default: return cv::CALIB_HAND_EYE_TSAI;
     }
 }
 
 /// Map method enum to display string.
 [[nodiscard]] auto method_to_string(HandEyeMethod m) -> const char* {
     switch (m) {
-    case HandEyeMethod::Tsai:       return "Tsai";
-    case HandEyeMethod::Park:       return "Park";
-    case HandEyeMethod::Horaud:     return "Horaud";
-    case HandEyeMethod::Daniilidis: return "Daniilidis";
-    case HandEyeMethod::Auto:       return "Auto";
+        case HandEyeMethod::Tsai: return "Tsai";
+        case HandEyeMethod::Park: return "Park";
+        case HandEyeMethod::Horaud: return "Horaud";
+        case HandEyeMethod::Daniilidis: return "Daniilidis";
+        case HandEyeMethod::Auto: return "Auto";
     }
     return "Unknown";
 }
@@ -73,23 +74,20 @@ namespace {
 /// Compute reprojection error: for each pair (R_tool, t_tool, R_cam, t_cam),
 /// the solved X (R, t) should satisfy the hand-eye equation.
 [[nodiscard]] auto compute_reproj_error(std::span<const cv::Mat> R_tool,
-                                         std::span<const cv::Mat> t_tool,
-                                         std::span<const cv::Mat> R_cam,
-                                         std::span<const cv::Mat> t_cam,
-                                         const cv::Mat& R_X,
-                                         const cv::Mat& t_X,
-                                         HandEyeMode mode) -> double
-{
+                                        std::span<const cv::Mat> t_tool,
+                                        std::span<const cv::Mat> R_cam,
+                                        std::span<const cv::Mat> t_cam, const cv::Mat& R_X,
+                                         const cv::Mat& t_X, HandEyeMode /*mode*/) -> double {
     if (R_tool.empty()) return 0.0;
 
     double total_err = 0.0;
     const auto N = std::min(R_tool.size(), R_cam.size());
 
-    for (auto i = 0uz; i < N; ++i) {
-        cv::Mat A_R = R_tool[i];
-        cv::Mat A_t = t_tool[i];
-        cv::Mat B_R = R_cam[i];
-        cv::Mat B_t = t_cam[i];
+    for (auto i = 0UZ; i < N; ++i) {
+        const cv::Mat& A_R = R_tool[i];
+        const cv::Mat& A_t = t_tool[i];
+        const cv::Mat& B_R = R_cam[i];
+        const cv::Mat& B_t = t_cam[i];
 
         cv::Mat B_R_t;
         cv::Rodrigues(cv::Mat::eye(3, 3, CV_64F), B_R_t);  // placeholder, not used
@@ -114,7 +112,7 @@ namespace {
         t_X.copyTo(X_roi_t);
 
         // A * X should equal X * B  (hand-eye equation)
-        cv::Mat left  = A * X;
+        cv::Mat left = A * X;
         cv::Mat right = X * B;
 
         // error = norm(left - right)
@@ -125,7 +123,7 @@ namespace {
     return total_err / static_cast<double>(N);
 }
 
-} // anonymous namespace
+}  // anonymous namespace
 
 // ──────────────────────────────────────────────────────────────
 // HandEyeSolver
@@ -133,13 +131,9 @@ namespace {
 
 HandEyeSolver::HandEyeSolver(HandEyeMode mode) : mode_{mode} {}
 
-auto HandEyeSolver::solve(std::span<const cv::Mat> R_tool,
-                           std::span<const cv::Mat> t_tool,
-                           std::span<const cv::Mat> rvecs,
-                           std::span<const cv::Mat> tvecs,
-                           HandEyeMethod method)
-    -> Result<HandEyeResult>
-{
+auto HandEyeSolver::solve(std::span<const cv::Mat> R_tool, std::span<const cv::Mat> t_tool,
+                          std::span<const cv::Mat> rvecs, std::span<const cv::Mat> tvecs,
+                          HandEyeMethod method) -> Result<HandEyeResult> {
     if (R_tool.size() < 3) {
         return Unexpected<std::string>(
             std::format("Need at least 3 relative motions (got {})", R_tool.size()));
@@ -150,8 +144,8 @@ auto HandEyeSolver::solve(std::span<const cv::Mat> R_tool,
 
     if (R_cam.size() != R_tool.size()) {
         return Unexpected<std::string>(
-            std::format("Mismatched data sizes: {} tool motions vs {} camera views",
-                        R_tool.size(), R_cam.size()));
+            std::format("Mismatched data sizes: {} tool motions vs {} camera views", R_tool.size(),
+                        R_cam.size()));
     }
 
     const double cond_num = compute_condition_number(R_tool);
@@ -163,35 +157,35 @@ auto HandEyeSolver::solve(std::span<const cv::Mat> R_tool,
         HandEyeMethod::Daniilidis,
     };
 
-    cv::Mat best_R, best_t;
+    cv::Mat best_R;
+    cv::Mat best_t;
     double best_reproj = std::numeric_limits<double>::max();
     HandEyeMethod best_method = HandEyeMethod::Tsai;
 
     auto try_method = [&](HandEyeMethod m) -> bool {
-        cv::Mat R_m, t_m;
+        cv::Mat R_m;
+        cv::Mat t_m;
         const auto cv_flag = method_to_cv_flag(m);
 
         switch (mode_) {
-        case HandEyeMode::EyeInHand: {
-            std::vector<cv::Mat> R_tool_vec(R_tool.begin(), R_tool.end());
-            std::vector<cv::Mat> t_tool_vec(t_tool.begin(), t_tool.end());
-            std::vector<cv::Mat> R_cam_vec(R_cam.begin(), R_cam.end());
-            std::vector<cv::Mat> tvecs_vec(tvecs.begin(), tvecs.end());
-            cv::calibrateHandEye(R_tool_vec, t_tool_vec,
-                                 R_cam_vec, tvecs_vec,
-                                 R_m, t_m, cv_flag);
-            break;
-        }
-        case HandEyeMode::EyeToHand: {
-            std::vector<cv::Mat> R_cam_vec(R_cam.begin(), R_cam.end());
-            std::vector<cv::Mat> tvecs_vec(tvecs.begin(), tvecs.end());
-            std::vector<cv::Mat> R_tool_vec(R_tool.begin(), R_tool.end());
-            std::vector<cv::Mat> t_tool_vec(t_tool.begin(), t_tool.end());
-            cv::calibrateHandEye(R_cam_vec, tvecs_vec,
-                                 R_tool_vec, t_tool_vec,
-                                 R_m, t_m, cv_flag);
-            break;
-        }
+            case HandEyeMode::EyeInHand: {
+                std::vector<cv::Mat> R_tool_vec(R_tool.begin(), R_tool.end());
+                std::vector<cv::Mat> t_tool_vec(t_tool.begin(), t_tool.end());
+                std::vector<cv::Mat> R_cam_vec(R_cam.begin(), R_cam.end());
+                std::vector<cv::Mat> tvecs_vec(tvecs.begin(), tvecs.end());
+                cv::calibrateHandEye(R_tool_vec, t_tool_vec, R_cam_vec, tvecs_vec, R_m, t_m,
+                                     cv_flag);
+                break;
+            }
+            case HandEyeMode::EyeToHand: {
+                std::vector<cv::Mat> R_cam_vec(R_cam.begin(), R_cam.end());
+                std::vector<cv::Mat> tvecs_vec(tvecs.begin(), tvecs.end());
+                std::vector<cv::Mat> R_tool_vec(R_tool.begin(), R_tool.end());
+                std::vector<cv::Mat> t_tool_vec(t_tool.begin(), t_tool.end());
+                cv::calibrateHandEye(R_cam_vec, tvecs_vec, R_tool_vec, t_tool_vec, R_m, t_m,
+                                     cv_flag);
+                break;
+            }
         }
 
         // Validate OpenCV output — calibrateHandEye returns void and
@@ -203,8 +197,7 @@ auto HandEyeSolver::solve(std::span<const cv::Mat> R_tool,
             return false;
         }
 
-        const double err = compute_reproj_error(R_tool, t_tool, R_cam, tvecs,
-                                                 R_m, t_m, mode_);
+        const double err = compute_reproj_error(R_tool, t_tool, R_cam, tvecs, R_m, t_m, mode_);
 
         if (err < best_reproj) {
             best_reproj = err;
@@ -225,7 +218,6 @@ auto HandEyeSolver::solve(std::span<const cv::Mat> R_tool,
         any_valid = try_method(method);
     }
 
-
     if (!any_valid) {
         return Unexpected<std::string>(
             method == HandEyeMethod::Auto
@@ -235,13 +227,13 @@ auto HandEyeSolver::solve(std::span<const cv::Mat> R_tool,
     }
 
     return HandEyeResult{
-        .R                = best_R,
-        .t                = best_t,
-        .mode             = mode_,
-        .reproj_error     = best_reproj,
-        .method           = method_to_string(best_method),
+        .R = best_R,
+        .t = best_t,
+        .mode = mode_,
+        .reproj_error = best_reproj,
+        .method = method_to_string(best_method),
         .condition_number = cond_num,
-        .used_method      = best_method,
+        .used_method = best_method,
     };
 }
 
@@ -264,4 +256,4 @@ void HandEyeResult::save_yaml(const std::filesystem::path& path) const {
     fs.release();
 }
 
-} // namespace rm::calib
+}  // namespace rm::calib

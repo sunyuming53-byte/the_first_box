@@ -1,4 +1,5 @@
 #include "core/arm_impl.hpp"
+
 #include <vector>
 
 namespace rm {
@@ -9,23 +10,23 @@ namespace rm {
 
 // ── moveJ — joint space motion to joint targets ──
 
-void Arm::Impl::moveJ(const JointPosition& target, SpeedRatio speed,
-                      bool blocking, int tc) {
+void Arm::Impl::moveJ(const JointPosition& target, SpeedRatio speed, bool blocking, int tc) {
     // Reject values that look like degrees (joint range is ±π rad ≈ ±180°)
     for (size_t i = 0; i < target.radians.size(); ++i) {
         if (std::abs(target.radians[i]) > 2.0 * M_PI) {
-            throw ArmError(-1,
-                "Joint " + std::to_string(i) + " value " + std::to_string(target.radians[i])
-                + " looks like degrees. This API expects radians (max ±π).");
+            throw ArmError(-1, "Joint " + std::to_string(i) + " value " +
+                                   std::to_string(target.radians[i]) +
+                                   " looks like degrees. This API expects radians (max ±π).");
         }
     }
 
     // Convert radians to degrees
     std::vector<float> joints_deg;
+    joints_deg.reserve(target.radians.size());
     for (double r : target.radians) {
         joints_deg.push_back(static_cast<float>(r * 180.0 / M_PI));
     }
-    joints_deg.resize(ARM_DOF, 0.0f);
+    joints_deg.resize(ARM_DOF, 0.0F);
 
     int block_flag = blocking ? 1 : 0;
     if (blocking) {
@@ -36,9 +37,8 @@ void Arm::Impl::moveJ(const JointPosition& target, SpeedRatio speed,
 
     {
         std::lock_guard lock(cmd_mutex_);
-        cmd_queue_.push([this, j = std::move(joints_deg), speed, tc, block_flag]() {
-            int ret = rm_movej(handle_, j.data(), static_cast<int>(speed),
-                               0, tc, block_flag);
+        cmd_queue_.emplace([this, j = std::move(joints_deg), speed, tc, block_flag]() {
+            int ret = rm_movej(handle_, j.data(), static_cast<int>(speed), 0, tc, block_flag);
             if (block_flag) {
                 last_motion_ok_ = (ret == 0);
                 {
@@ -62,8 +62,7 @@ void Arm::Impl::moveJ(const JointPosition& target, SpeedRatio speed,
 
 // ── moveJ_P — joint space motion to Cartesian pose ──
 
-void Arm::Impl::moveJ_P(const CartesianPose& target, SpeedRatio speed,
-                        bool blocking, int tc) {
+void Arm::Impl::moveJ_P(const CartesianPose& target, SpeedRatio speed, bool blocking, int tc) {
     rm_pose_t pose = impl::toRmPose(target);
 
     int block_flag = blocking ? 1 : 0;
@@ -75,9 +74,8 @@ void Arm::Impl::moveJ_P(const CartesianPose& target, SpeedRatio speed,
 
     {
         std::lock_guard lock(cmd_mutex_);
-        cmd_queue_.push([this, pose, speed, tc, block_flag]() {
-            int ret = rm_movej_p(handle_, pose, static_cast<int>(speed),
-                                 0, tc, block_flag);
+        cmd_queue_.emplace([this, pose, speed, tc, block_flag]() {
+            int ret = rm_movej_p(handle_, pose, static_cast<int>(speed), 0, tc, block_flag);
             if (block_flag) {
                 last_motion_ok_ = (ret == 0);
                 {
@@ -101,8 +99,7 @@ void Arm::Impl::moveJ_P(const CartesianPose& target, SpeedRatio speed,
 
 // ── moveL — Cartesian linear motion ──
 
-void Arm::Impl::moveL(const CartesianPose& target, SpeedRatio speed,
-                      bool blocking, int tc) {
+void Arm::Impl::moveL(const CartesianPose& target, SpeedRatio speed, bool blocking, int tc) {
     rm_pose_t pose = impl::toRmPose(target);
 
     int block_flag = blocking ? 1 : 0;
@@ -114,9 +111,8 @@ void Arm::Impl::moveL(const CartesianPose& target, SpeedRatio speed,
 
     {
         std::lock_guard lock(cmd_mutex_);
-        cmd_queue_.push([this, pose, speed, tc, block_flag]() {
-            int ret = rm_movel(handle_, pose, static_cast<int>(speed),
-                               0, tc, block_flag);
+        cmd_queue_.emplace([this, pose, speed, tc, block_flag]() {
+            int ret = rm_movel(handle_, pose, static_cast<int>(speed), 0, tc, block_flag);
             if (block_flag) {
                 last_motion_ok_ = (ret == 0);
                 {
@@ -140,10 +136,10 @@ void Arm::Impl::moveL(const CartesianPose& target, SpeedRatio speed,
 
 // ── moveC — Cartesian arc motion ──
 
-void Arm::Impl::moveC(const CartesianPose& mid, const CartesianPose& end,
-                      SpeedRatio speed, int loop, bool blocking) {
+void Arm::Impl::moveC(const CartesianPose& mid, const CartesianPose& end, SpeedRatio speed,
+                      int loop, bool blocking) {
     rm_pose_t pose_via = impl::toRmPose(mid);
-    rm_pose_t pose_to  = impl::toRmPose(end);
+    rm_pose_t pose_to = impl::toRmPose(end);
 
     int block_flag = blocking ? 1 : 0;
     if (blocking) {
@@ -154,9 +150,9 @@ void Arm::Impl::moveC(const CartesianPose& mid, const CartesianPose& end,
 
     {
         std::lock_guard lock(cmd_mutex_);
-        cmd_queue_.push([this, pose_via, pose_to, speed, loop, block_flag]() {
-            int ret = rm_movec(handle_, pose_via, pose_to,
-                               static_cast<int>(speed), 0, loop, 0, block_flag);
+        cmd_queue_.emplace([this, pose_via, pose_to, speed, loop, block_flag]() {
+            int ret = rm_movec(handle_, pose_via, pose_to, static_cast<int>(speed), 0, loop, 0,
+                               block_flag);
             if (block_flag) {
                 last_motion_ok_ = (ret == 0);
                 {
@@ -183,7 +179,7 @@ void Arm::Impl::moveC(const CartesianPose& mid, const CartesianPose& end,
 void Arm::Impl::stop() {
     if (!ensureConnected()) throw ArmError(-1, "Not connected to arm");
     int ret = rm_set_arm_stop(handle_);
-    impl::check(ret, "rm_set_arm_stop");
+    impl::check(ret, /*operation=*/"rm_set_arm_stop");
 }
 
 // ── V1 stubs — not implemented ──
@@ -219,4 +215,4 @@ void Arm::Impl::onMotionComplete(Arm::MotionCallback cb) {
     motion_cb_ = std::move(cb);
 }
 
-} // namespace rm
+}  // namespace rm
