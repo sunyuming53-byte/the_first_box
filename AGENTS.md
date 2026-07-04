@@ -204,6 +204,13 @@ customize. `docker compose` reads proxy vars from `.env`.
 **are** workspace packages (`src/realman_vision/`, `src/realman_arm/`), not
 external dependencies. They must be built before the calibration package.
 
+**When adding a new ROS2 `<depend>` in any `package.xml`**: also add the
+corresponding `ros-humble-*` apt package to the `RUN apt-get install` blocks in
+the Dockerfile (both `realman-base-dev` and `realman-base` stages). The
+Dockerfile uses explicit `apt-get install` instead of `rosdep` because
+`rosdep update` fails in GitHub Actions CI (DNS cannot resolve
+`raw.githubusercontent.com` from Docker build containers).
+
 ## CodeGraph
 
 This workspace is indexed with CodeGraph (`.codegraph/`). Use `codegraph_*`

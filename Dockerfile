@@ -55,14 +55,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     librealsense2-dev \
     zsh curl git \
     ros-humble-rmw-cyclonedds-cpp \
+    ros-humble-rclcpp \
+    ros-humble-std-srvs \
+    ros-humble-tf2-ros \
+    ros-humble-geometry-msgs \
+    ros-humble-hardware-interface \
+    ros-humble-pluginlib \
+    ros-humble-sensor-msgs \
+    ros-humble-std-msgs \
+    ros-humble-visualization-msgs \
     && rm -rf /var/lib/apt/lists/*
-
-# rosdep — install ROS2 deps declared in package.xml without embedding source
-RUN --mount=type=bind,source=src,target=/tmp/src,readonly \
-    apt-get update && \
-    rosdep update && \
-    rosdep install --from-paths /tmp/src --ignore-src -r -y --skip-keys realman_arm && \
-    rm -rf /var/lib/apt/lists/*
 
 # oh-my-zsh + powerlevel10k + plugins (as root; copied to ubuntu user in develop stage)
 RUN sh -c "$(curl -fsSL --retry 5 --retry-delay 10 https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended \
