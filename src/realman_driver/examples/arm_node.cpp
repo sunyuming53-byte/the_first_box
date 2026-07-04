@@ -1,4 +1,4 @@
-#include "realman/arm_node.hpp"
+#include "realman/node/arm_node.hpp"
 #include <rclcpp/rclcpp.hpp>
 
 int main(int argc, char** argv) {

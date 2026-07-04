@@ -13,6 +13,9 @@ __pycache__/
 *.pyc
 lark_auth_qr.png
 
+# Environment overrides (developer-specific)
+.env
+
 # LaTeX build artifacts
 *.aux
 *.log

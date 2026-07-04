@@ -1,23 +1,41 @@
-#include "realman/arm_node.hpp"
-#include <std_srvs/srv/trigger.hpp>
-#include <rclcpp/parameter_value.hpp>
-
+#include "realman/node/arm_node.hpp"
+#include <array>
 #include <cmath>
 #include <fstream>
 #include <sstream>
+#include <string>
 #include <stdexcept>
 
 namespace rm {
-
 namespace {
 
-// Simple YAML parser for calibration format:
-//   rotation_matrix: { rows: 3, cols: 3, data: [r11, r12, ...] }
-//   translation_vector: { rows: 3, cols: 1, data: [tx, ty, tz] }
 struct CalibrationData {
     std::array<double, 9> rot_matrix{1,0,0, 0,1,0, 0,0,1};
     std::array<double, 3> translation{0, 0, 0};
 };
+
+std::string parseArrayData(const std::string& txt, const std::string& key) {
+    auto pos = txt.find(key);
+    if (pos == std::string::npos) return "";
+    auto start = txt.find('[', pos);
+    auto end = txt.find(']', start);
+    if (start == std::string::npos || end == std::string::npos) return "";
+    return txt.substr(start + 1, end - start - 1);
+}
+
+void parseDoubles(const std::string& data, double* out, size_t count) {
+    std::istringstream ss(data);
+    std::string token;
+    size_t i = 0;
+    while (std::getline(ss, token, ',') && i < count) {
+        size_t s = token.find_first_not_of(" \t\n\r");
+        size_t e = token.find_last_not_of(" \t\n\r");
+        if (s != std::string::npos && e != std::string::npos) {
+            out[i] = std::stod(token.substr(s, e - s + 1));
+        }
+        i++;
+    }
+}
 
 CalibrationData loadCalibrationYAML(const std::string& path) {
     std::ifstream file(path);
@@ -38,52 +56,19 @@ CalibrationData loadCalibrationYAML(const std::string& path) {
             in_translation = true;
             in_rotation = false;
         } else if (in_rotation || in_translation) {
-            // Accumulate data lines
             auto& target = in_rotation ? rot_data : trans_data;
             target += line + "\n";
         }
     }
 
-    // Parse rotation data from the accumulated text
-    auto parse_data = [](const std::string& txt, std::string key) -> std::string {
-        auto pos = txt.find(key);
-        if (pos == std::string::npos) return "";
-        auto start = txt.find('[', pos);
-        auto end = txt.find(']', start);
-        if (start == std::string::npos || end == std::string::npos) return "";
-        return txt.substr(start + 1, end - start - 1);
-    };
-
-    std::string rdata = parse_data(rot_data, "data:");
+    std::string rdata = parseArrayData(rot_data, "data:");
     if (!rdata.empty()) {
-        std::istringstream ss(rdata);
-        std::string token;
-        int i = 0;
-        while (std::getline(ss, token, ',') && i < 9) {
-            // trim whitespace
-            size_t s = token.find_first_not_of(" \t\n\r");
-            size_t e = token.find_last_not_of(" \t\n\r");
-            if (s != std::string::npos && e != std::string::npos) {
-                calib.rot_matrix[i] = std::stod(token.substr(s, e - s + 1));
-            }
-            i++;
-        }
-        // Skip if fewer than 9 elements — keep identity default
+        parseDoubles(rdata, calib.rot_matrix.data(), 9);
     }
 
-    std::string tdata = parse_data(trans_data, "data:");
+    std::string tdata = parseArrayData(trans_data, "data:");
     if (!tdata.empty()) {
-        std::istringstream ss(tdata);
-        std::string token;
-        int i = 0;
-        while (std::getline(ss, token, ',') && i < 3) {
-            size_t s = token.find_first_not_of(" \t\n\r");
-            size_t e = token.find_last_not_of(" \t\n\r");
-            if (s != std::string::npos && e != std::string::npos) {
-                calib.translation[i] = std::stod(token.substr(s, e - s + 1));
-            }
-            i++;
-        }
+        parseDoubles(tdata, calib.translation.data(), 3);
     }
 
     return calib;

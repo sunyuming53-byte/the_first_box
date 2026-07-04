@@ -14,8 +14,8 @@
 #include <realman_calibration/pose_proc.hpp>
 #include <realman_calibration/transform.hpp>
 
-#include <realman/arm.hpp>
-#include <realman/types.hpp>
+#include <realman/core/arm.hpp>
+#include <realman/motion/types.hpp>
 
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <rclcpp/rclcpp.hpp>

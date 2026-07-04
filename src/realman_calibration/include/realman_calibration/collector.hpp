@@ -1,6 +1,6 @@
 #pragma once
 
-#include "realman/types.hpp"
+#include "realman/motion/types.hpp"
 #include "realman_vision/camera/types.hpp"
 #include <array>
 #include "expected_polyfill.hpp"

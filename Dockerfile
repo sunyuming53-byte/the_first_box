@@ -22,10 +22,21 @@
 #       -v $(pwd)/install:/ws/install \
 #       realman:runtime
 
+# Build-time proxy args — set via docker compose --build-arg or compose build.args
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+
 # =============================================================================
 # Stage 1a — Dev base (desktop: GUI tools, RViz, display support)
 # =============================================================================
 FROM osrf/ros:humble-desktop AS realman-base-dev
+
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ENV HTTP_PROXY=${HTTP_PROXY} \
+    HTTPS_PROXY=${HTTPS_PROXY} \
+    http_proxy=${HTTP_PROXY} \
+    https_proxy=${HTTPS_PROXY}
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -43,12 +54,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libopencv-dev \
     librealsense2-dev \
     zsh curl git \
+    ros-humble-rmw-cyclonedds-cpp \
     && rm -rf /var/lib/apt/lists/*
 
-# RealMan SDK
-COPY cmake/RealManSDKConfig.cmake   /opt/realman-sdk/
-COPY third_party/RM_API2/C/include  /opt/realman-sdk/include/
-COPY third_party/RM_API2/C/linux/linux_x86_c_vv1.1.5/libapi_c.so /opt/realman-sdk/lib/libapi_c.so
+# RealMan SDK — placed at submodule-relative paths so cmake config resolves naturally
+COPY cmake/RealManSDKConfig.cmake   cmake/
+COPY third_party/RM_API2/C/include  third_party/RM_API2/C/include/
+COPY third_party/RM_API2/C/linux/linux_x86_c_vv1.1.5/libapi_c.so third_party/RM_API2/C/linux/linux_x86_c_vv1.1.5/
 
 # rosdep — install ROS2 deps declared in package.xml without embedding source
 RUN --mount=type=bind,source=src,target=/tmp/src,readonly \
@@ -68,13 +80,17 @@ RUN sh -c "$(curl -fsSL --retry 5 --retry-delay 10 https://raw.githubusercontent
     && test -f /root/.oh-my-zsh/oh-my-zsh.sh \
     || (echo "ERROR: oh-my-zsh install failed (curl timeout?)" >&2 && false)
 
-# Make SDK discoverable by CMake find_package(RealManSDK)
-ENV REALMAN_SDK=/opt/realman-sdk
-
 # =============================================================================
 # Stage 1b — Runtime base (ros-base: no GUI, smaller image)
 # =============================================================================
 FROM ros:humble AS realman-base
+
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ENV HTTP_PROXY=${HTTP_PROXY} \
+    HTTPS_PROXY=${HTTPS_PROXY} \
+    http_proxy=${HTTP_PROXY} \
+    https_proxy=${HTTPS_PROXY}
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -92,11 +108,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libopencv-dev \
     librealsense2-dev \
     zsh curl git \
+    ros-humble-rmw-cyclonedds-cpp \
     && rm -rf /var/lib/apt/lists/*
 
-COPY cmake/RealManSDKConfig.cmake   /opt/realman-sdk/
-COPY third_party/RM_API2/C/include  /opt/realman-sdk/include/
-COPY third_party/RM_API2/C/linux/linux_x86_c_vv1.1.5/libapi_c.so /opt/realman-sdk/lib/libapi_c.so
+COPY cmake/RealManSDKConfig.cmake   cmake/
+COPY third_party/RM_API2/C/include  third_party/RM_API2/C/include/
+COPY third_party/RM_API2/C/linux/linux_x86_c_vv1.1.5/libapi_c.so third_party/RM_API2/C/linux/linux_x86_c_vv1.1.5/
 
 RUN --mount=type=bind,source=src,target=/tmp/src,readonly \
     apt-get update && \
@@ -115,8 +132,6 @@ RUN sh -c "$(curl -fsSL --retry 5 --retry-delay 10 https://raw.githubusercontent
     && test -f /root/.oh-my-zsh/oh-my-zsh.sh \
     || (echo "ERROR: oh-my-zsh install failed (curl timeout?)" >&2 && false)
 
-ENV REALMAN_SDK=/opt/realman-sdk
-
 # =============================================================================
 # Stage 2 — Develop
 # =============================================================================
@@ -129,9 +144,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     clangd-14 \
     && rm -rf /var/lib/apt/lists/*
 
-# Non-root user matching typical host UID
+# Non-root user matching typical host UID, with video (camera) and passwordless sudo
 RUN useradd -m -u 1000 -s /bin/zsh ubuntu && \
-    mkdir -p /ws && chown ubuntu:ubuntu /ws
+    mkdir -p /ws && chown ubuntu:ubuntu /ws && \
+    usermod -aG video ubuntu && \
+    usermod -aG sudo ubuntu && \
+    echo "ubuntu ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/ubuntu
 
 # SSH key — generated at build time for remote deployment to runtime container
 RUN mkdir -p /home/ubuntu/.ssh && \

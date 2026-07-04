@@ -2,6 +2,7 @@
 #include <librealsense2/rs.hpp>
 #include <opencv2/core.hpp>
 #include <cstring>
+#include <exception>
 
 namespace rm::vision::camera {
 
@@ -23,7 +24,7 @@ public:
         try {
             profile_  = pipeline_.start(config_);
             has_frames_ = true;
-        } catch (const rs2::error&) {
+        } catch (...) {
             has_frames_ = false;
         }
 
@@ -110,6 +111,10 @@ public:
     }
 
     [[nodiscard]] auto active() const -> bool { return has_frames_; }
+
+    ~Impl() {
+        try { pipeline_.stop(); } catch (...) {}
+    }
 
 private:
     rs2::pipeline         pipeline_;

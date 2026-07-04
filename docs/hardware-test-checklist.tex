@@ -1,0 +1,787 @@
+% !TEX program = xelatex
+\documentclass[12pt,a4paper,fontset=ubuntu]{ctexart}
+
+% ── Packages ──
+\usepackage[top=2.5cm, bottom=2.5cm, left=2.5cm, right=2.5cm, headheight=14pt]{geometry}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{listings}
+\usepackage{tcolorbox}
+\usepackage{amssymb}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage{tabularx}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!60!black,
+  urlcolor=blue!60!black,
+}
+
+% ── Page style ──
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small RealMan 真机测试操作手册}
+\fancyhead[R]{\small 青赋驭境科技}
+\fancyfoot[C]{\thepage}
+
+% ── Colors ──
+\definecolor{criticalbg}{RGB}{255,235,235}
+\definecolor{criticalfg}{RGB}{180,20,20}
+\definecolor{checkbg}{RGB}{235,245,235}
+\definecolor{infobg}{RGB}{235,240,255}
+\definecolor{codebg}{RGB}{245,245,245}
+\definecolor{warnbg}{RGB}{255,250,230}
+
+% ── Code listing style ──
+\lstset{
+  basicstyle=\small\ttfamily,
+  backgroundcolor=\color{codebg},
+  frame=single,
+  framesep=6pt,
+  rulecolor=\color{black!20},
+  breaklines=true,
+  xleftmargin=1em,
+  xrightmargin=1em,
+  showstringspaces=false,
+  aboveskip=8pt,
+  belowskip=8pt,
+}
+
+% ── Checkbox command ──
+\newcommand{\chkbox}{$\square$}
+\newcommand{\chkboxdone}{$\boxtimes$}
+
+% ── tcolorbox styles ──
+\newtcolorbox{criticalbox}{
+  colback=criticalbg,
+  colframe=criticalfg,
+  sharp corners,
+  boxrule=1pt,
+  left=4mm, right=4mm, top=3mm, bottom=3mm,
+  before skip=10pt, after skip=10pt,
+}
+
+\newtcolorbox{infobox}{
+  colback=infobg,
+  colframe=blue!40,
+  sharp corners,
+  boxrule=0.5pt,
+  left=4mm, right=4mm, top=3mm, bottom=3mm,
+  before skip=8pt, after skip=8pt,
+}
+
+\newtcolorbox{warnbox}{
+  colback=warnbg,
+  colframe=orange!60,
+  sharp corners,
+  boxrule=0.5pt,
+  left=4mm, right=4mm, top=3mm, bottom=3mm,
+  before skip=8pt, after skip=8pt,
+}
+
+\newcommand{\passcriteria}[1]{%
+  \textbf{通过标准：} #1%
+}
+
+\newenvironment{testitem}[1]{%
+  \subsection{#1}
+}{%
+  \bigskip
+}
+
+% ── Title ──
+\title{\Huge\textbf{RealMan 真机测试操作手册}\\[6pt]
+       \large 密级：内部}
+\author{}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\vspace{2cm}
+
+\begin{center}
+\begin{minipage}{0.7\textwidth}
+\large
+\textbf{目标：} 按照本手册逐步操作，验证 \texttt{realman\_driver}、
+\texttt{realman\_vision}、\texttt{realman\_calibration} 三个包
+在真机上的功能是否正常。
+\end{minipage}
+\end{center}
+
+\vfill
+
+\clearpage
+
+\tableofcontents
+\clearpage
+
+% ════════════════════════════════════════════════════════════════════
+\section{准备工作}
+
+\subsection{硬件检查}
+
+\begin{itemize}[label=\chkbox, itemsep=4pt]
+  \item 机械臂已开机，网线已连接到 MiniPC
+  \item Intel RealSense D400 相机已通过 USB 3.0 连接到 MiniPC
+  \item 棋盘格标定板已打印（$11\times8$ 内角点，方格边长 30\,mm），贴在平整硬板上
+  \item 机械臂工作范围内无杂物，急停按钮可触及
+\end{itemize}
+
+\subsection{环境初始化}
+
+打开终端，执行以下命令：
+
+\begin{lstlisting}[language=bash]
+# 1. 加载 ROS2 环境
+source /opt/ros/humble/setup.bash
+source ~/ws/realman/install/setup.bash
+
+# 2. 确认机械臂 IP（默认 192.168.1.18，不确定问负责人）
+ping 192.168.1.18      # 应该能 ping 通
+
+# 3. 确认相机连接
+ls /dev/video*          # 应能看到 realsense 相关 video 设备
+\end{lstlisting}
+
+\subsection{重要提醒}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}>{\bfseries}lX@{}}
+  \toprule
+  单位 & 代码中角度用\textbf{弧度}，长度用\textbf{米}。示教器上角度用\textbf{度}，长度用\textbf{毫米}。
+        对比时注意换算：$1\,\text{rad} \approx 57.3^\circ$，$1\,\text{m} = 1000\,\text{mm}$。\\[4pt]
+  安全 & 运行运动测试前确保周围无人。急停按钮随手可及。\\[4pt]
+  报错记录 & 任何步骤报错，截图或复制完整错误信息（包含错误码），记录到测试报告中。\\[4pt]
+  测试数据 & 所有测试产物（图片、CSV、YAML）保留，不要删除，测试结束后统一归档。\\
+  \bottomrule
+\end{tabularx}
+\end{center}
+
+% ════════════════════════════════════════════════════════════════════
+\section{Phase 1：基础硬件连通性}
+
+\subsection{T1.1 — 机械臂 TCP 连接}
+
+\textbf{操作：}
+
+\begin{lstlisting}[language=bash]
+# 运行 gripper_test，自动连接机械臂（默认 IP 192.168.1.18）
+ros2 run realman_driver gripper_test
+\end{lstlisting}
+
+\textbf{期望看到：}
+
+\begin{lstlisting}[]
+[1] Connected to arm
+[2] Gripper pre-check:
+  enable: 1  online: 1  mode: ...
+\end{lstlisting}
+
+\passcriteria{
+  不报错，能看到 ``Connected to arm''；夹爪状态 online: 1。
+}
+
+\begin{warnbox}
+\textbf{如果失败：}
+\begin{enumerate}[nosep]
+  \item 检查 IP：\texttt{ping 192.168.1.18}
+  \item 检查机械臂是否开机（示教器有显示）
+  \item 确认机械臂和 MiniPC 在同一网段
+  \item 如果 IP 不同，用 \texttt{--ip <实际IP>} 指定
+\end{enumerate}
+\end{warnbox}
+
+\begin{center}\chkbox\ \textbf{T1.1 通过}\end{center}
+
+% ──
+
+\subsection{T1.2 — RealSense 相机采集}
+
+\textbf{操作：}
+
+\begin{lstlisting}[language=bash]
+ros2 run realman_calibration collect_data \
+    --ip 192.168.1.18 --output /tmp/test_cam --count 5
+\end{lstlisting}
+
+\begin{infobox}
+有显示器时：弹出相机预览窗口，能看到实时彩色画面。
+
+无显示器时（SSH 远程）：自动降级为 headless 模式，终端输出状态日志。
+\end{infobox}
+
+\passcriteria{
+  连续能看到画面，不报错；按 \texttt{Q} 可正常退出。
+}
+
+\begin{center}\chkbox\ \textbf{T1.2 通过}\end{center}
+
+% ════════════════════════════════════════════════════════════════════
+\section{Phase 2：机械臂运动与状态读取}
+
+\subsection{T2.1 — 关节位置读取}
+
+\textbf{操作：}
+
+\begin{lstlisting}[language=bash]
+ros2 run realman_driver joint_test
+\end{lstlisting}
+
+\begin{infobox}
+连接机械臂后每秒打印一次 6 个关节角度（同时显示弧度和度），共 20 次，按 Ctrl+C 可提前退出。
+\end{infobox}
+
+\textbf{期望看到：}
+
+\begin{lstlisting}[]
+[1] Joints (rad): J1=0.xxx  J2=0.xxx  J3=0.xxx  J4=0.xxx  J5=0.xxx  J6=0.xxx
+               (deg): J1=xx.x   J2=xx.x   J3=xx.x   J4=xx.x   J5=xx.x   J6=xx.x
+\end{lstlisting}
+
+\passcriteria{
+  6 个关节的读数均为正常弧度值（范围 $\approx \pm\pi$）；读数不为全零；
+  手动轻推机械臂某关节（松开刹车后），对应读数有变化。
+}
+
+\begin{center}\chkbox\ \textbf{T2.1 通过}\end{center}
+
+% ──
+
+\subsection{T2.2 — 末端位姿读取}
+
+\textbf{操作：}
+
+先用示教器记下当前机械臂末端位姿（示教器上通常显示 $x/y/z$ 毫米和
+$roll/pitch/yaw$ 度）。
+
+有显示器时，运行采集程序在 overlay 窗口读取：
+
+\begin{lstlisting}[language=bash]
+ros2 run realman_calibration collect_data --ip 192.168.1.18 --count 1
+\end{lstlisting}
+
+\begin{infobox}
+有显示器时：CV 窗口左上角显示 ``Arm: x=... y=... z=... roll=... pitch=... yaw=...''
+（角度已换算为度）。无显示器时可改用 \texttt{joint\_test}
+（输出含 toolPose 但不含此信息，建议通过有显示器的环境测试）。
+\end{infobox}
+
+\passcriteria{
+  CV overlay 显示的位姿数值与示教器一致。
+
+  \textbf{单位换算：} 示教器角度 $\div 57.3 =$ 弧度，
+  示教器位置 $\div 1000 =$ 米。
+
+  \textit{示例：} 示教器显示 $X=500\,\text{mm}$、$Roll=30^\circ$
+  $\rightarrow$ overlay 显示接近 $X=0.5\,\text{m}$、$Roll=30^\circ$
+  （overlay 已转换为度）。
+}
+
+\begin{center}\chkbox\ \textbf{T2.2 通过}\end{center}
+
+% ──
+
+\subsection{T2.3 — \textcolor{red}{moveJ 弧度/度转换验证（最高优先级）}}
+
+\begin{criticalbox}
+\textbf{\large [WARNING] 这是最重要的测试。如果转换有 bug，
+机械臂会以错误的角度运动，可能造成碰撞。}
+\end{criticalbox}
+
+\textbf{背景：} C SDK 内部使用度，API 对外使用弧度。\texttt{Arm::Impl}
+在调用 SDK 前做 rad$\rightarrow$deg 转换。\texttt{movej\_test}
+正是为此设计——发送 Joint1 $=0.5\,\text{rad}$ 的指令，肉眼判断是否正确。
+
+\textbf{操作：}
+
+\begin{enumerate}[nosep]
+  \item 在示教器上记下当前 Joint1 的角度（比如显示 $10^\circ$）
+  \item 运行 movej\_test：
+\end{enumerate}
+
+\begin{lstlisting}[language=bash]
+ros2 run realman_driver movej_test
+\end{lstlisting}
+
+\begin{enumerate}[nosep, start=3]
+  \item 观察机械臂实际运动后，在示教器上再次读取 Joint1 角度
+\end{enumerate}
+
+\passcriteria{
+  机械臂 Joint1 实际旋转约 $28.6^\circ$（即 $0.5\,\text{rad}$），
+  其他关节基本不动；终端输出 ``MoveJ complete''，不报错。
+}
+
+\begin{criticalbox}
+\textbf{如果 Joint1 只转了 $\approx0.5^\circ$ 而不是 $28.6^\circ$，
+说明弧度$\rightarrow$度转换有 bug！}
+
+立刻停止测试，报告负责人。
+\end{criticalbox}
+
+\begin{center}\chkbox\ \textbf{T2.3 通过}\end{center}
+
+% ──
+
+\subsection{T2.4 — 急停功能}
+
+\textbf{操作：}
+
+\begin{lstlisting}[language=bash]
+# 终端 1：启动 arm_node
+ros2 run realman_driver arm_node --ros-args -p arm_ip:=192.168.1.18
+
+# 终端 2：发送运动指令让机械臂动起来，然后立即急停
+ros2 service call /arm_node/stop std_srvs/srv/Trigger "{}"
+\end{lstlisting}
+
+\passcriteria{
+  机械臂在调用 stop 后 1 秒内完全停止；不报错，服务返回 \texttt{success: true}。
+}
+
+\begin{center}\chkbox\ \textbf{T2.4 通过}\end{center}
+
+% ──
+
+\subsection{T2.5 — 直线运动 moveL}
+
+\textbf{操作：}
+
+\begin{lstlisting}[language=bash]
+ros2 run realman_driver movel_test
+\end{lstlisting}
+
+\begin{infobox}
+程序连接机械臂 $\rightarrow$ 读取当前 TCP 位姿
+$\rightarrow$ Z 轴 +50\,mm $\rightarrow$ 执行 \texttt{moveL}
+$\rightarrow$ 读取并打印最终位姿和 Z 偏移量。
+\end{infobox}
+
+\textbf{期望看到：}
+
+\begin{lstlisting}[]
+Current TCP: x=... y=... z=... roll=... pitch=... yaw=...
+Target TCP:  x=... y=... z=... roll=... pitch=... yaw=...
+Executing moveL (speed=20, blocking)...
+Final TCP:   x=... y=... z=... roll=... pitch=... yaw=...
+Delta Z = 0.0500 m  (expected ~0.050)
+moveL test PASSED
+\end{lstlisting}
+
+\passcriteria{
+  机械臂末端沿直线上升约 50\,mm；示教器上轨迹为直线；终端 Delta Z $\approx 0.050\,\text{m}$。
+}
+
+\begin{center}\chkbox\ \textbf{T2.5 通过}\end{center}
+
+% ════════════════════════════════════════════════════════════════════
+\section{Phase 3：夹爪操作}
+
+\begin{warnbox}
+如果机械臂未安装夹爪，此阶段可跳过。
+\end{warnbox}
+
+\subsection{T3.1 — 夹爪基本开合}
+
+\textbf{操作：}
+
+\begin{lstlisting}[language=bash]
+ros2 run realman_driver gripper_test
+\end{lstlisting}
+
+观察各步骤：步骤 [4] 夹爪完全张开；步骤 [5] 闭合到一半（500）；
+步骤 [7] 完全闭合（1000）；步骤 [8] 再次张开。
+
+\passcriteria{
+  各步骤夹爪动作正常；终端打印 ``All gripper tests passed.''；无超时报错。
+}
+
+\begin{center}\chkbox\ \textbf{T3.1 通过}\end{center}
+
+% ──
+
+\subsection{T3.2 — 力控抓取 gripperPick}
+
+\textbf{操作：}
+
+在夹爪中间放入一个物体（如纸杯、小块泡沫），运行 \texttt{gripper\_test}。
+
+\passcriteria{
+  步骤 [6] 夹爪闭合到接触物体后自动停止（不会夹扁物体）；
+  gripperState 输出 mode 字段显示力控模式。
+}
+
+\begin{center}\chkbox\ \textbf{T3.2 通过}\end{center}
+
+% ──
+
+\subsection{T3.3 — 夹爪状态读取}
+
+\textbf{操作：}
+
+分三次运行 gripper\_test，每次在启动前手动将夹爪调整到不同位置
+（全开/半开/全闭）。
+
+\passcriteria{
+  三次的 \texttt{actpos} 值递增或递减一致；
+  $\text{actpos}=0$ 接近全开，$\text{actpos}=1000$ 接近全闭。
+}
+
+\begin{center}\chkbox\ \textbf{T3.3 通过}\end{center}
+
+% ════════════════════════════════════════════════════════════════════
+\section{Phase 4：棋盘格检测验证}
+
+\subsection{T4.1 — 棋盘格检出率}
+
+\textbf{操作：}
+
+\begin{lstlisting}[language=bash]
+ros2 run realman_calibration collect_data \
+    --ip 192.168.1.18 --output /tmp/calib_test --count 18
+\end{lstlisting}
+
+启动后进入交互模式：
+\begin{itemize}[nosep]
+  \item \textcolor{green!60!black}{绿色圆点 overlay} = 棋盘格角点被成功检测
+  \item \textcolor{red}{红色叉号} = 未检测到
+  \item 看到绿色角点 $\rightarrow$ 按 \textbf{S} 保存当前帧
+  \item 按 \textbf{Q} 退出
+\end{itemize}
+
+将棋盘格放在相机视野的\textbf{至少 10 个不同角度}，每个角度按一次 S：
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+  \toprule
+  角度类型 & 示例 \\
+  \midrule
+  正面 & 棋盘格正对相机 \\
+  左侧 $30^\circ$ & 向左倾斜 \\
+  右侧 $30^\circ$ & 向右倾斜 \\
+  上仰 $30^\circ$ & 向上倾斜 \\
+  下俯 $30^\circ$ & 向下倾斜 \\
+  左旋 $45^\circ$ & 顺时针旋转 \\
+  右旋 $45^\circ$ & 逆时针旋转 \\
+  近距 & 棋盘格靠近相机 \\
+  远距 & 棋盘格拉远 \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+\passcriteria{
+  10 个不同角度中 $\ge 8$ 个成功检出（显示绿色角点）；角点 overlay 稳定，不闪烁。
+}
+
+\begin{warnbox}
+\textbf{常见问题：}
+\begin{itemize}[nosep]
+  \item 棋盘格反光 $\rightarrow$ 调整光源角度
+  \item 棋盘格太远 $\rightarrow$ 靠近相机
+  \item 一直检测不到 $\rightarrow$ 检查 \texttt{--board-w} / \texttt{--board-h} 是否与打印棋盘格内角点数一致
+\end{itemize}
+\end{warnbox}
+
+\begin{center}\chkbox\ \textbf{T4.1 通过}\end{center}
+
+% ════════════════════════════════════════════════════════════════════
+\section{Phase 5：数据采集集成}
+
+\subsection{T5.1 — 完整采集 18 张图片}
+
+\textbf{操作：}
+
+\begin{lstlisting}[language=bash]
+ros2 run realman_calibration collect_data \
+    --ip 192.168.1.18 \
+    --output /tmp/calib_test \
+    --count 18 \
+    --board-w 11 --board-h 8 --square-size 0.03
+\end{lstlisting}
+
+按照 T4.1 的方法，在 18 个不同角度各按一次 S。
+
+\begin{warnbox}
+\textbf{注意：} 机械臂每张图之间要有明显不同的旋转（不能只平移棋盘格）。
+\end{warnbox}
+
+\passcriteria{
+  程序结束时提示 ``Rotation diversity OK''（不是 ``WARNING: rotation diversity insufficient''）；
+  \texttt{/tmp/calib\_test/images/} 下有 18 张 jpg 图片；
+  \texttt{/tmp/calib\_test/robot\_poses.csv} 有 19 行（1 行 header + 18 行数据）。
+}
+
+验证命令：
+\begin{lstlisting}[language=bash]
+ls /tmp/calib_test/images/ | wc -l       # 应输出 18
+wc -l /tmp/calib_test/robot_poses.csv     # 应输出 19
+\end{lstlisting}
+
+\begin{center}\chkbox\ \textbf{T5.1 通过}\end{center}
+
+% ──
+
+\subsection{T5.2 — 旋转多样性门控验证}
+
+\textbf{操作：}
+
+重新采集一次，故意只\textbf{在相似角度}拍（机械臂不动，只平动棋盘格）。
+
+\passcriteria{
+  程序提示 ``WARNING: rotation diversity insufficient''；
+  按 Q 可以正常退出，不会崩溃。
+}
+
+\begin{center}\chkbox\ \textbf{T5.2 通过}\end{center}
+
+% ════════════════════════════════════════════════════════════════════
+\section{Phase 6：全流水线端到端}
+
+\subsection{T6.1 — run\_pipeline 一键标定}
+
+\textbf{方式 A（推荐）：交互式全流程}
+
+\begin{lstlisting}[language=bash]
+ros2 run realman_calibration run_pipeline \
+    --ip 192.168.1.18 \
+    --output /tmp/calib_full \
+    --count 18 \
+    --mode in_hand \
+    --board-w 11 --board-h 8 --square-size 0.03
+\end{lstlisting}
+
+\begin{infobox}
+程序依次执行：
+\textbf{Stage 1} 采集图片
+$\rightarrow$ \textbf{Stage 2} 相机内参标定
+$\rightarrow$ \textbf{Stage 3} 位姿处理
+$\rightarrow$ \textbf{Stage 4} 手眼标定。
+Stage 1 是交互采集阶段，与 T5.1 操作相同。
+\end{infobox}
+
+\textbf{方式 B（分步执行）：}
+
+\begin{lstlisting}[language=bash]
+# 第一步：采集数据
+ros2 run realman_calibration collect_data \
+    --ip 192.168.1.18 --output /tmp/calib_full --count 18
+
+# 第二步：相机内参标定
+ros2 run realman_calibration calibrate_camera \
+    --output /tmp/calib_full --board-w 11 --board-h 8 --square-size 0.03
+
+# 第三步：手眼标定
+ros2 run realman_calibration compute_hand_eye \
+    --output /tmp/calib_full --mode in_hand
+\end{lstlisting}
+
+\passcriteria{
+  所有阶段不报错；最终产生 \texttt{/tmp/calib\_full/calibration\_result.yaml}。
+}
+
+\begin{center}\chkbox\ \textbf{T6.1 通过}\end{center}
+
+% ──
+
+\subsection{T6.2 — 标定结果质量评估}
+
+\textbf{操作：}
+
+\begin{lstlisting}[language=bash]
+cat /tmp/calib_full/calibration_result.yaml
+\end{lstlisting}
+
+\textbf{逐项检查：}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}l>{\ttfamily}lX@{}}
+  \toprule
+  \textbf{检查项} & \textbf{字段} & \textbf{标准} \\
+  \midrule
+  旋转矩阵 & rotation\_matrix & $3\times3$，$\det \approx 1.0$（误差 $< 0.01$）\\
+  平移向量 & translation\_vector & $3\times1$，值 $< 2\,\text{m}$\\
+  重投影误差 & reprojection\_error & $< 100.0$\,px\\
+  条件数 & condition\_number & $> 0$ 且 $< 1000$\\
+  求解方法 & method & Tsai / Park / Horaud / Daniilidis\\
+  目测验证 & 观察 $R$ 矩阵 & 若相机固定在夹爪附近正方向，$R$ 应接近单位阵\\
+  \bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{warnbox}
+\textbf{辅助判断：} 如果 $R$ 矩阵和单位阵差很多，或 $t$ 向量与相机到法兰的
+物理距离差很多，可能标定有问题。
+\end{warnbox}
+
+\begin{center}\chkbox\ \textbf{T6.2 通过}\end{center}
+
+% ════════════════════════════════════════════════════════════════════
+\section{Phase 7：ROS2 节点集成}
+
+\subsection{T7.1 — calib\_node 启动}
+
+\textbf{操作：}
+
+\begin{lstlisting}[language=bash]
+# 终端 1：启动 calib_node
+ros2 run realman_calibration calib_node --ros-args -p arm_ip:=192.168.1.18
+\end{lstlisting}
+
+验证：
+
+\begin{lstlisting}[language=bash]
+# 终端 2：检查节点是否存在
+ros2 node list
+\end{lstlisting}
+
+\passcriteria{ 输出中能看到 \texttt{/calib\_node}。}
+
+\begin{center}\chkbox\ \textbf{T7.1 通过}\end{center}
+
+% ──
+
+\subsection{T7.2 — 服务调用}
+
+\textbf{操作：}
+
+在 calib\_node 运行的状态下，依次调用各服务：
+
+\begin{lstlisting}[language=bash]
+# 相机标定服务（立即返回）
+ros2 service call /calib_node/calibrate std_srvs/srv/Trigger "{}"
+
+# 手眼标定服务（立即返回，需先跑过 calibrate）
+ros2 service call /calib_node/hand_eye std_srvs/srv/Trigger "{}"
+
+# 紧急停止服务（立即返回）
+ros2 service call /calib_node/stop std_srvs/srv/Trigger "{}"
+\end{lstlisting}
+
+\begin{warnbox}
+\textbf{注意：} \texttt{\~/run} 服务会进入交互采集模式（与 \texttt{collect\_data}
+相同），通过 \texttt{ros2 service call} 调用会一直阻塞直到人工按 Q 或 S 完成采集，
+不适合作为一键验证。建议用 T6.1 的 \texttt{run\_pipeline} 替代。
+\end{warnbox}
+
+\passcriteria{
+  每个 service call 返回 \texttt{success: true}；
+  calibrate 返回相机标定结果；
+  hand\_eye 返回手眼标定结果；
+  stop 返回 \texttt{success: true} 且机械臂急停。
+}
+
+\begin{center}\chkbox\ \textbf{T7.2 通过}\end{center}
+
+% ──
+
+\subsection{T7.3 — TF 坐标变换广播验证}
+
+\textbf{操作：}
+
+在 calib\_node 完成 hand\_eye 标定后：
+
+\begin{lstlisting}[language=bash]
+ros2 run tf2_ros tf2_echo base_link camera_link
+\end{lstlisting}
+
+\passcriteria{
+  能看到连续的 TF 变换输出（Translation + Rotation）；不报 ``can't find transform''。
+}
+
+\begin{center}\chkbox\ \textbf{T7.3 通过}\end{center}
+
+% ════════════════════════════════════════════════════════════════════
+\section{测试汇总}
+
+\subsection{完成情况}
+
+\renewcommand{\arraystretch}{1.2}
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}c>{\raggedright\arraybackslash}p{5.5cm}ccc@{}}
+  \toprule
+  \textbf{阶段} & \textbf{测试项} & \textbf{状态} & \textbf{备注} \\
+  \midrule
+  P1 & T1.1 — Arm TCP 连接 & \chkbox & \\
+  P1 & T1.2 — 相机采集 & \chkbox & \\\addlinespace
+  P2 & T2.1 — 关节位置读取 & \chkbox & \\
+  P2 & T2.2 — 末端位姿读取 & \chkbox & \\
+  P2 & \textbf{\textcolor{red}{T2.3 — 弧度/度转换}} & \chkbox & \textbf{\textcolor{red}{关键}} \\
+  P2 & T2.4 — 急停 & \chkbox & \\
+  P2 & T2.5 — 直线运动 moveL & \chkbox & \\\addlinespace
+  P3 & T3.1 — 夹爪基本开合 & \chkbox & \\
+  P3 & T3.2 — 力控抓取 & \chkbox & \\
+  P3 & T3.3 — 夹爪状态读取 & \chkbox & \\\addlinespace
+  P4 & T4.1 — 棋盘格检出率 & \chkbox & \\\addlinespace
+  P5 & T5.1 — 18 张完整采集 & \chkbox & \\
+  P5 & T5.2 — 旋转多样性门控 & \chkbox & \\\addlinespace
+  P6 & T6.1 — 全流水线标定 & \chkbox & \\
+  P6 & T6.2 — 标定结果质量 & \chkbox & \\\addlinespace
+  P7 & T7.1 — calib\_node 启动 & \chkbox & \\
+  P7 & T7.2 — 服务调用 & \chkbox & \\
+  P7 & T7.3 — TF 广播 & \chkbox & \\
+  \bottomrule
+\end{tabularx}
+\end{center}
+
+\subsection{测试环境记录}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}>{\bfseries}lX@{}}
+  \toprule
+  测试日期 & 202\_\ \rule{1cm}{0.4pt}\ -\ \rule{1cm}{0.4pt}\ -\ \rule{1cm}{0.4pt} \\
+  机械臂型号 & \rule{5cm}{0.4pt} \\
+  机械臂 IP & \rule{5cm}{0.4pt} \\
+  相机型号 & \rule{5cm}{0.4pt} \\
+  标定板规格 & 内角点 $\rule{1cm}{0.4pt} \times \rule{1cm}{0.4pt}$，方格 $\rule{1.5cm}{0.4pt}$\,mm \\
+  \bottomrule
+\end{tabularx}
+\end{center}
+
+% ════════════════════════════════════════════════════════════════════
+\section*{附录：常见问题}
+
+\addcontentsline{toc}{section}{附录：常见问题}
+
+\subsection*{A. 网络不通}
+
+\begin{lstlisting}[language=bash]
+# 确认同一网段
+ip addr show       # 看 MiniPC 的 IP
+ping 192.168.1.18
+
+# 确认端口 8080 开放
+nc -zv 192.168.1.18 8080
+\end{lstlisting}
+
+\subsection*{B. 相机无法打开}
+
+\begin{lstlisting}[language=bash]
+# 检查 realsense 设备
+rs-enumerate-devices
+
+# 重新插拔 USB 线（确认是 USB 3.0 蓝色口）
+\end{lstlisting}
+
+\subsection*{C. 棋盘格检测不到}
+
+\begin{enumerate}[nosep]
+  \item 确保光线均匀，无强烈反光
+  \item 棋盘格占画面 $1/4 \sim 1/2$ 面积
+  \item 棋盘格平整，无弯曲
+  \item 用 \texttt{--board-w 11 --board-h 8} 确认内角点数正确
+\end{enumerate}
+
+\subsection*{D. headless 模式（无显示器）}
+
+SSH 远程登录时，采集程序自动降级为 headless 模式，无法用鼠标键盘交互。
+需要模拟按键保存帧。如果完全无交互能力，联系负责人配置远程桌面或使用
+\texttt{--mode batch} 模式。
+
+\end{document}

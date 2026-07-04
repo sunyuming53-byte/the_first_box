@@ -1,6 +1,8 @@
 #pragma once
-#include "realman/types.hpp"
-#include "realman/error.hpp"
+#include "realman/core/types.hpp"
+#include "realman/core/error.hpp"
+#include "realman/motion/types.hpp"
+#include "realman/gripper/types.hpp"
 #include <memory>
 #include <functional>
 #include <string>

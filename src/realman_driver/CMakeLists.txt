@@ -15,19 +15,29 @@ find_package(sensor_msgs REQUIRED)
 list(APPEND CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../cmake")
 find_package(RealManSDK REQUIRED)
 
-add_library(realman_driver SHARED
-    src/arm.cpp
-    src/error.cpp
-    src/arm_node.cpp
+# ── Library sources (GLOB_RECURSE across new subdirectory structure) ──
+file(GLOB_RECURSE DRIVER_SOURCES CONFIGURE_DEPENDS
+    src/core/*.cpp
+    src/motion/*.cpp
+    src/gripper/*.cpp
+    src/state/*.cpp
+    src/node/*.cpp
 )
+
+add_library(realman_driver SHARED ${DRIVER_SOURCES})
 target_include_directories(realman_driver PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
 )
+target_include_directories(realman_driver PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src   # for "core/arm_impl.hpp" private header
+)
+
 find_package(Threads REQUIRED)
 target_link_libraries(realman_driver RealManSDK::RealManSDK Threads::Threads)
 ament_target_dependencies(realman_driver rclcpp std_srvs tf2_ros geometry_msgs sensor_msgs)
 
+# ── Example executables ──
 add_executable(movej_test examples/hello_arm.cpp)
 target_link_libraries(movej_test realman_driver)
 

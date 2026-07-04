@@ -2,48 +2,14 @@
 // Requires: Docker, VS Code Dev Containers extension, X11 server (for RViz/GUI)
 {
 	"name": "RealMan ROS2 Humble",
-	"build": {
-		"context": "..",
-		"dockerfile": "../Dockerfile",
-		"target": "realman-develop"
-	},
+	"dockerComposeFile": "../docker-compose.yml",
+	"service": "develop",
 
 	// Mount workspace to /ws (matches Dockerfile WORKDIR)
 	"workspaceFolder": "/ws",
-	"workspaceMount": "source=${localWorkspaceFolder},target=/ws,type=bind,consistency=cached",
-
-	// Run with host networking for ROS2 DDS discovery and hardware access
-	"runArgs": [
-		"--network=host",
-		"--ipc=host",
-		"--pid=host"
-	],
-
-	// Mount X11 socket for GUI tools (RViz, Gazebo, etc.)
-	"mounts": [
-		"type=bind,source=/tmp/.X11-unix,target=/tmp/.X11-unix",
-		"type=bind,source=${localEnv:HOME}/.ssh,target=/home/ubuntu/.ssh,readonly"
-	],
-
-	// Environment for X11 forwarding and ROS2
-	"containerEnv": {
-		"DISPLAY": "${localEnv:DISPLAY}",
-		"QT_X11_NO_MITSHM": "1",
-		"ROS_DOMAIN_ID": "${localEnv:ROS_DOMAIN_ID:0}",
-		"RCUTILS_COLORIZED_OUTPUT": "1",
-		"http_proxy": "http://127.0.0.1:7890",
-		"https_proxy": "http://127.0.0.1:7890",
-		"HTTP_PROXY": "http://127.0.0.1:7890",
-		"HTTPS_PROXY": "http://127.0.0.1:7890"
-	},
 
 	// Build workspace after container creation
-	"postCreateCommand": "bash -c 'source /opt/ros/humble/setup.bash && rm -rf /ws/build /ws/install /ws/log && colcon build --symlink-install --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON && bash scripts/generate-compile-commands.sh'",
-	// Ports commonly used for ROS2 / arm communication
-	"forwardPorts": [
-		8080,   // RM arm API default
-		2022    // SSH deploy to runtime container
-	],
+	"postCreateCommand": "bash -c 'source /opt/ros/humble/setup.bash && rm -rf /ws/build /ws/install /ws/log && colcon build --symlink-install --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON && generate-compile-commands.sh'",
 
 	// VS Code extensions for C++ / ROS2 / CMake development
 	"customizations": {
@@ -51,7 +17,6 @@
 			"extensions": [
 				"ms-vscode.cpptools",
 				"ms-vscode.cpptools-extension-pack",
-				"ms-vscode.cmake-tools",
 				"twxs.cmake",
 				"ms-iot.vscode-ros",
 				"ms-python.python",
@@ -59,8 +24,9 @@
 				"llvm-vs-code-extensions.vscode-clangd"
 			],
 			"settings": {
-				"cmake.sourceDirectory": "/ws/src/realman_driver",
-				"cmake.buildDirectory": "/ws/build",
+				"clangd.path": "/usr/bin/clangd-14",
+                "dev.containers.logLevel": "trace",
+                "remote.autoForwardPorts": false,
 				"ros.distro": "humble",
 				"C_Cpp.default.cppStandard": "c++23",
 				"editor.formatOnSave": false,

@@ -7,7 +7,7 @@
 #include <chrono>
 #include <thread>
 
-#include "realman/arm_node.hpp"
+#include "realman/node/arm_node.hpp"
 
 class ArmNodeTest : public ::testing::Test {
 protected:

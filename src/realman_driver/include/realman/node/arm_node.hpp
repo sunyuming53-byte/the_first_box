@@ -4,7 +4,7 @@
 #include <tf2_ros/static_transform_broadcaster.h>
 #include <sensor_msgs/msg/joint_state.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
-#include "realman/arm.hpp"
+#include "realman/core/arm.hpp"
 
 namespace rm {
 

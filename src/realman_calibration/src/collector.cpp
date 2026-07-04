@@ -1,9 +1,9 @@
 #include "realman_calibration/collector.hpp"
 #include "realman_vision/capture.hpp"
 #include "realman_vision/camera/stream.hpp"
-#include "realman/arm.hpp"
-#include "realman/error.hpp"
-#include "realman/types.hpp"
+#include "realman/core/arm.hpp"
+#include "realman/core/error.hpp"
+#include "realman/motion/types.hpp"
 
 #include <opencv2/calib3d.hpp>
 #include <opencv2/highgui.hpp>
