@@ -61,12 +61,16 @@ constexpr auto kRotationThresholdRad = 30.0 * M_PI / 180.0;  // 30°
 class CalibDataCollector::Impl {
 public:
     explicit Impl(const CalibDataConfig& cfg)
-        : arm_cfg_{.ip = cfg.arm_ip, .tcp_port = 8080, .model = rm::ArmModel::RM_65}, arm_{arm_cfg_}, cam_{cfg.camera},
-          capture_{
-              rm::vision::CaptureConfig{.output_dir = cfg.output_dir, .total_images = cfg.total_images, .save_depth = false, .board_size = cfg.board_size}},
+        : arm_cfg_{.ip = cfg.arm_ip, .tcp_port = 8080, .model = rm::ArmModel::RM_65},
+          arm_{arm_cfg_}, cam_{cfg.camera},
+          capture_{rm::vision::CaptureConfig{.output_dir = cfg.output_dir,
+                                             .total_images = cfg.total_images,
+                                             .save_depth = false,
+                                             .board_size = cfg.board_size}},
           board_size_{cfg.board_size}, total_{cfg.total_images}, output_dir_{cfg.output_dir} {}
 
-    [[nodiscard]] auto run(std::vector<rm::JointPosition> waypoints) -> Result<CalibSession> {  // NOLINT(readability-function-size)
+    [[nodiscard]] auto run(std::vector<rm::JointPosition> waypoints)
+        -> Result<CalibSession> {  // NOLINT(readability-function-size)
         namespace fs = std::filesystem;
         fs::create_directories(output_dir_);
 
@@ -74,7 +78,8 @@ public:
         std::vector<cv::Point2f> corners;
         int saved_count = 0;
 
-        const bool has_display = (std::getenv("DISPLAY") != nullptr);  // NOLINT(concurrency-mt-unsafe)
+        const bool has_display =
+            (std::getenv("DISPLAY") != nullptr);  // NOLINT(concurrency-mt-unsafe)
 
         if (!waypoints.empty()) {
             // ========================================
@@ -125,8 +130,12 @@ public:
                 // Auto-capture on detection
                 if (found) {
                     auto pose = arm_.toolPose();
-                    rm::vision::ArmPose arm_pose{.tx = pose.x, .ty = pose.y, .tz = pose.z,
-                                                 .rx = pose.roll, .ry = pose.pitch, .rz = pose.yaw};
+                    rm::vision::ArmPose arm_pose{.tx = pose.x,
+                                                 .ty = pose.y,
+                                                 .tz = pose.z,
+                                                 .rx = pose.roll,
+                                                 .ry = pose.pitch,
+                                                 .rz = pose.yaw};
                     capture_.save_with_pose(frame, saved_count, arm_pose);
 
                     saved_poses.push_back(
@@ -141,7 +150,8 @@ public:
 
                 // Visual feedback (if display available)
                 if (has_display) {
-                    auto display = rm::vision::FrameCapture::draw_overlay(frame, corners, saved_count, total_);
+                    auto display =
+                        rm::vision::FrameCapture::draw_overlay(frame, corners, saved_count, total_);
                     auto pose = arm_.toolPose();
                     auto arm_text = std::format(
                         "Arm: x={:.3F} y={:.3F} z={:.3F} roll={:.1F} pitch={:.1F} yaw={:.1F}",
@@ -198,7 +208,8 @@ public:
                 int key = -1;
                 if (has_display) {
                     // draw overlay
-                    auto display = rm::vision::FrameCapture::draw_overlay(frame, corners, saved_count, total_);
+                    auto display =
+                        rm::vision::FrameCapture::draw_overlay(frame, corners, saved_count, total_);
 
                     // arm pose status text
                     auto pose = arm_.toolPose();
@@ -231,8 +242,12 @@ public:
                 // ── handle key input ──
                 if (key == 's' || key == 'S') {
                     auto pose = arm_.toolPose();
-                    rm::vision::ArmPose arm_pose{.tx = pose.x, .ty = pose.y, .tz = pose.z,
-                                                 .rx = pose.roll, .ry = pose.pitch, .rz = pose.yaw};
+                    rm::vision::ArmPose arm_pose{.tx = pose.x,
+                                                 .ty = pose.y,
+                                                 .tz = pose.z,
+                                                 .rx = pose.roll,
+                                                 .ry = pose.pitch,
+                                                 .rz = pose.yaw};
                     capture_.save_with_pose(frame, saved_count, arm_pose);
 
                     saved_poses.push_back(

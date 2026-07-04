@@ -31,8 +31,8 @@ public:
 
     // Draw corner overlay on color image. Returns viewable BGR image.
     [[nodiscard]] static auto draw_overlay(const camera::CameraFrame& frame,
-                                           const std::vector<cv::Point2f>& corners,
-                                           int saved_count, int total_required) -> cv::Mat;
+                                           const std::vector<cv::Point2f>& corners, int saved_count,
+                                           int total_required) -> cv::Mat;
 
     // Save raw color image (and depth if configured).
     void save(const camera::CameraFrame& frame, int index) const;

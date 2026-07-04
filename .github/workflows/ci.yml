@@ -89,7 +89,7 @@ jobs:
             realman:develop \
             bash -c '
               set -euo pipefail
-              find /ws/src -name "*.cpp" -o -name "*.hpp" -o -name "*.h" \
+              find /ws/src \( -name "*.cpp" -o -name "*.hpp" -o -name "*.h" \) \
                 ! -path "*/third_party/*" \
                 ! -path "*/build/*" \
                 | xargs clang-format --dry-run --Werror

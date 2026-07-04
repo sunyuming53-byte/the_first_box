@@ -227,6 +227,6 @@ int main(int argc, char* argv[]) {
     } catch (const std::exception& e) {
         std::cerr << std::format("Error: {}\n", e.what());
         return 1;
-        }
     }
-    // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+}
+// NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)

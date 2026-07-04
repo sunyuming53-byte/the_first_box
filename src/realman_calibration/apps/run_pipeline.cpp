@@ -75,9 +75,9 @@ int main(int argc, char* argv[]) {  // NOLINT(bugprone-exception-escape)
             cv::Mat img = cv::imread(entry.path().string(), cv::IMREAD_GRAYSCALE);
             if (!img.empty()) {
                 images.push_back(std::move(img));
+            }
         }
-    }
-    // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+        // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     }
 
     if (images.empty()) {

@@ -1,10 +1,11 @@
 #pragma once
 
+#include <vector>
+
 #include <opencv2/aruco/charuco.hpp>
 #include <opencv2/aruco/dictionary.hpp>
 #include <opencv2/core/mat.hpp>
 #include <opencv2/core/types.hpp>
-#include <vector>
 
 namespace rm::calib::test {
 
@@ -22,12 +23,8 @@ namespace rm::calib::test {
 /// @param dist        Distortion coefficients (CV_64F)
 /// @param image_size  Output image dimensions
 /// @return Vector of grayscale images suitable for CameraCalibrator
-std::vector<cv::Mat> generate_chessboard_images(int count,
-                                                cv::Size board_size,
-                                                float square_m,
-                                                cv::Mat K,
-                                                cv::Mat dist,
-                                                cv::Size image_size);
+std::vector<cv::Mat> generate_chessboard_images(int count, cv::Size board_size, float square_m,
+                                                cv::Mat K, cv::Mat dist, cv::Size image_size);
 
 /// Generate synthetic Charuco board images for testing calibration.
 ///
@@ -45,13 +42,8 @@ std::vector<cv::Mat> generate_chessboard_images(int count,
 /// @param dist        Distortion coefficients (CV_64F)
 /// @param image_size  Output image dimensions
 /// @return Vector of grayscale images
-std::vector<cv::Mat> generate_charuco_images(int count,
-                                              cv::Size squares_xy,
-                                              float square_len,
-                                              float marker_len,
-                                              cv::aruco::Dictionary dict,
-                                              cv::Mat K,
-                                              cv::Mat dist,
-                                              cv::Size image_size);
+std::vector<cv::Mat> generate_charuco_images(int count, cv::Size squares_xy, float square_len,
+                                             float marker_len, cv::aruco::Dictionary dict,
+                                             cv::Mat K, cv::Mat dist, cv::Size image_size);
 
 }  // namespace rm::calib::test

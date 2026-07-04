@@ -77,7 +77,7 @@ namespace {
                                         std::span<const cv::Mat> t_tool,
                                         std::span<const cv::Mat> R_cam,
                                         std::span<const cv::Mat> t_cam, const cv::Mat& R_X,
-                                         const cv::Mat& t_X, HandEyeMode /*mode*/) -> double {
+                                        const cv::Mat& t_X, HandEyeMode /*mode*/) -> double {
     if (R_tool.empty()) return 0.0;
 
     double total_err = 0.0;

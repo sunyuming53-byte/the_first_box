@@ -39,7 +39,9 @@ constexpr double kMaxT = 1.5;
 // Fixed seed for deterministic test outputs across runs
 std::mt19937 rng{42};  // NOLINT(cert-msc32-c,cert-msc51-cpp)
 
-double rand_sign() { return ((rng() % 2) != 0U) ? 1.0 : -1.0; }  // NOLINT(readability-implicit-bool-conversion)
+double rand_sign() {
+    return ((rng() % 2) != 0U) ? 1.0 : -1.0;
+}  // NOLINT(readability-implicit-bool-conversion)
 
 [[nodiscard]] auto bounded_random_poses(int num) -> std::vector<std::array<double, 6>> {
     std::uniform_real_distribution<double> ad(kMinAngleRad, kMaxAngleRad);
@@ -139,7 +141,6 @@ void decompose_4x4(const cv::Mat& T, cv::Mat& R, cv::Mat& t) {
     }
     return pts;
 }
-
 
 [[nodiscard]] auto camera_matrix() -> cv::Mat {  // NOLINT(modernize-return-braced-init-list)
     return (cv::Mat_<double>(3, 3) << 800.0, 0.0, 320.0, 0.0, 800.0, 240.0, 0.0, 0.0, 1.0);
@@ -467,7 +468,7 @@ TEST(HandEyeSolverTest, ConditionNumber) {
     // rank-deficient.  We verify the solver still produces a result and
     // that the resulting condition_number is finite.
     {
-    rng = std::mt19937{42};  // NOLINT(cert-msc32-c,cert-msc51-cpp)
+        rng = std::mt19937{42};  // NOLINT(cert-msc32-c,cert-msc51-cpp)
 
         // 1. Random H (ground truth)
         std::uniform_real_distribution<double> ad(10.0 * M_PI / 180.0, 50.0 * M_PI / 180.0);

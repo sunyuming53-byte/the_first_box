@@ -17,8 +17,12 @@ class Expected {
     std::variant<T, E> data_;
 
 public:
-    Expected(T val) : data_(std::move(val)) {}  // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
-    Expected(Unexpected<E> err) : data_(std::move(err.error)) {}  // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
+    Expected(T val)
+        : data_(std::move(val)) {
+    }  // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
+    Expected(Unexpected<E> err)
+        : data_(std::move(err.error)) {
+    }  // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
 
     [[nodiscard]] bool has_value() const { return data_.index() == 0; }
 

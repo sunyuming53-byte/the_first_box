@@ -1,7 +1,8 @@
 #pragma once
 
-#include <array>
 #include <cstdint>
+
+#include <array>
 #include <span>
 #include <string>
 #include <vector>

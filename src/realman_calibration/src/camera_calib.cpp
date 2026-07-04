@@ -16,9 +16,11 @@ namespace rm::calib {
 // CameraCalibrator
 // ──────────────────────────────────────────────────────────────
 
-CameraCalibrator::CameraCalibrator(const CameraCalibInput& input) : input_{input} {}  // NOLINT(modernize-pass-by-value)
+CameraCalibrator::CameraCalibrator(const CameraCalibInput& input)
+    : input_{input} {}  // NOLINT(modernize-pass-by-value)
 
-auto CameraCalibrator::compute() -> Result<CameraCalibResult> {  // NOLINT(readability-function-size)
+auto CameraCalibrator::compute()
+    -> Result<CameraCalibResult> {  // NOLINT(readability-function-size)
     if (input_.board_type == BoardType::Chessboard) {
         // ── build 3D object points for one chessboard pose ──
         std::vector<cv::Point3f> obj;
