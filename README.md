@@ -20,7 +20,7 @@ ros2 --version
 
 ```bash
 # 1. Clone with submodule
-git clone --recurse-submodules git@github.com:<your-org>/realman.git
+git clone --recurse-submodules git@github.com:ChiefTechLabs/pipeline.git
 cd realman
 
 # 2. Build
@@ -63,6 +63,8 @@ realman/                              # ROS2 workspace root
 │   │   │   ├── movel_test.cpp        #   → movel_test
 │   │   │   └── external_trigger.cpp  #   commented out in CMakeLists.txt
 │   │   ├── cmake/                    #   RealManSDKConfig.cmake, FindRealManSDK.cmake
+│   │   ├── third_party/
+│   │   │   └── RM_API2/              #   Git submodule — official RealMan C SDK
 │   │   ├── test/                     #   ament_cmake_gtest (BUILD_TESTING gate)
 │   │   ├── CMakeLists.txt
 │   │   └── package.xml
@@ -86,11 +88,15 @@ realman/                              # ROS2 workspace root
 │       ├── config/
 │       ├── CMakeLists.txt
 │       └── package.xml
-├── cmake/                            # Shared CMake modules (clang_tidy.cmake, etc.)
+├── .github/workflows/                 # CI/CD pipelines
+│   ├── ci.yml                          #   Build, test, lint on PR/push
+│   └── cd.yml                          #   Docker image publish on tag
+├── cmake/                              # Shared CMake modules (clang_tidy.cmake, etc.)
 ├── scripts/                          # Deployment scripts
 │   ├── deploy-remote                 #   Sync + restart services on robot
 │   ├── sync-remote                   #   Rsync install/ to runtime container
 │   ├── ssh-remote                    #   SSH into runtime (port 2022)
+│   ├── build-local                   #   Build workspace + compile_commands
 │   ├── generate-compile-commands.sh  #   Merge clangd compile_commands.json
 │   ├── entrypoint-dev.sh             #   Develop container entrypoint
 │   ├── entrypoint-runtime.sh         #   Runtime container entrypoint
@@ -100,14 +106,10 @@ realman/                              # ROS2 workspace root
 ├── Dockerfile                        # Multi-stage (develop + runtime)
 ├── docker-compose.yml
 ├── .env.example                      # Proxy + ROS_DOMAIN_ID config
-├── .clang-format                     # Google-based, 4-space indent, 100col
-├── .clang-tidy                       # C++23 target, GCC 11.4 toolchain
-├── third_party/
-│   └── RM_API2/                      # Git submodule — official RealMan C SDK
-│       └── C/
-│           ├── include/              #   rm_interface.h, etc.
-│           └── linux/                #   libapi_c.so (versioned: linux_x86_c_vv1.1.5/)
-└── docs/                             # Project documentation
+├── .clang-format                       # Google-based, 4-space indent, 100col
+├── .clang-tidy                         # C++23 target, GCC 11.4 toolchain
+├── .clangd                             # clangd LSP config (ROS2 header suppression)
+├── docs/                             # Project documentation
 ```
 
 ## Architecture
@@ -181,6 +183,35 @@ handles this via `APPEND_ENV`.
 `realman_calibration` has the most comprehensive test suite: camera calibration,
 pose processing, hand-eye solvers, TF integration, and synthetic data generators.
 
+## Static Analysis
+
+The workspace uses `clang-format` and `clang-tidy` for code quality. Config files
+are at the workspace root.
+
+```bash
+# Format all source files
+clang-format -i src/**/*.cpp src/**/*.hpp
+
+# Run clang-tidy during build (opt-in, zero warnings)
+colcon build --cmake-args -DCLANG_TIDY=ON
+```
+
+Style: Google-based, 4-space indent, 100col limit, `Attach` braces, `Left`
+pointer alignment. See `.clang-format` and `.clang-tidy` for full config.
+
+## CI / CD
+
+GitHub Actions workflows in `.github/workflows/`:
+
+| Workflow | Trigger | What it does |
+|---|---|---|
+| `ci.yml` | push / PR to `main` | Build + test + clang-tidy (non-blocking) + clang-format |
+| `cd.yml` | tag push (`v*`) | Build & push Docker images to `ghcr.io` |
+
+Images are published to GitHub Container Registry:
+- `ghcr.io/chieftechlabs/pipeline-develop` — dev image
+- `ghcr.io/chieftechlabs/pipeline-runtime` — runtime image
+
 ## Docker & Dev Container
 
 The project uses a multi-stage Dockerfile and VS Code dev container.
@@ -226,18 +257,18 @@ customize. `docker compose` reads proxy variables from `.env`.
 
 ## Updating the SDK
 
-The SDK is pinned as a git submodule at `third_party/RM_API2`. To update:
+The SDK is pinned as a git submodule at `src/realman_arm/third_party/RM_API2`. To update:
 
 ```bash
-cd third_party/RM_API2
+cd src/realman_arm/third_party/RM_API2
 git fetch
 git checkout <desired-tag-or-branch>
-cd ../..
-git add third_party/RM_API2
+cd -
+git add src/realman_arm/third_party/RM_API2
 git commit -m "chore: update RM_API2 submodule to <version>"
 ```
 
-The C SDK `.so` is versioned at `third_party/RM_API2/C/linux/linux_x86_c_vv1.1.5/libapi_c.so`.
+The C SDK `.so` is versioned at `src/realman_arm/third_party/RM_API2/C/linux/linux_x86_c_vv1.1.5/libapi_c.so`.
 If the versioned path changes, update the `COPY` commands in the Dockerfile.
 
 ## Supported Arm Models
