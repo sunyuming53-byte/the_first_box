@@ -10,8 +10,12 @@ fi
 
 echo "RealMan development container ready."
 echo "  Workspace:   /ws"
-echo "  SDK:         /opt/realman-sdk"
+echo "  SDK:         src/realman_arm/third_party/RM_API2 (submodule)"
 echo "  SSH key:     ~/.ssh/id_rsa  (deploy with: deploy-remote <robot-ip>)"
 echo ""
 
-exec zsh "$@"
+if [ $# -eq 0 ]; then
+    exec zsh
+else
+    exec "$@"
+fi

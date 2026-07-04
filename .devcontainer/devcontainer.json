@@ -9,7 +9,7 @@
 	"workspaceFolder": "/ws",
 
 	// Build workspace after container creation
-	"postCreateCommand": "bash -c 'source /opt/ros/humble/setup.bash && rm -rf /ws/build /ws/install /ws/log && colcon build --symlink-install --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON && generate-compile-commands.sh'",
+	"postCreateCommand": "build-local --clean",
 
 	// VS Code extensions for C++ / ROS2 / CMake development
 	"customizations": {
@@ -24,18 +24,39 @@
 				"llvm-vs-code-extensions.vscode-clangd"
 			],
 			"settings": {
-				"clangd.path": "/usr/bin/clangd-14",
-                "dev.containers.logLevel": "trace",
-                "remote.autoForwardPorts": false,
+				"dev.containers.logLevel": "trace",
+				"remote.autoForwardPorts": false,
 				"ros.distro": "humble",
 				"C_Cpp.default.cppStandard": "c++23",
-				"editor.formatOnSave": false,
 				"terminal.integrated.defaultProfile.linux": "zsh",
 				"terminal.integrated.profiles.linux": {
 					"zsh": {
 						"path": "/bin/zsh"
 					}
-				}
+				},
+
+				// ── Formatting: clang-format on save ──
+				"editor.formatOnSave": true,
+				"[cpp]": {
+					"editor.defaultFormatter": "xaver.clang-format"
+				},
+				"[c]": {
+					"editor.defaultFormatter": "xaver.clang-format"
+				},
+				"clang-format.executable": "/usr/bin/clang-format",
+				"clang-format.style": "file",
+
+				// ── C/C++ IntelliSense: clangd only, disable cpptools ──
+				"C_Cpp.intelliSenseEngine": "disabled",
+				"C_Cpp.formatting": "disabled",
+				"C_Cpp.autocomplete": "disabled",
+				"clangd.path": "/usr/bin/clangd",
+				"clangd.arguments": [
+					"--background-index",
+					"--clang-tidy=false",
+					"--completion-style=detailed",
+					"--header-insertion=iwyu"
+				]
 			}
 		}
 	},

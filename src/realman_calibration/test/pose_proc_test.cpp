@@ -1,10 +1,12 @@
+#include "realman_calibration/pose_proc.hpp"
+
+#include <cmath>
 #include <gtest/gtest.h>
 
 #include <array>
-#include <cmath>
-#include <opencv2/core.hpp>
 
-#include "realman_calibration/pose_proc.hpp"
+#include <opencv2/core.hpp>
+// NOLINTBEGIN(google-readability-braces-around-statements)
 
 using namespace rm::calib;
 
@@ -16,17 +18,16 @@ namespace {
 void expect_valid_rotation(const cv::Mat& R, double tol = 1e-6) {
     ASSERT_EQ(R.rows, 3);
     ASSERT_EQ(R.cols, 3);
-    EXPECT_NEAR(cv::determinant(R), 1.0, tol)
-        << "det(R) should be ≈ 1";
+    EXPECT_NEAR(cv::determinant(R), 1.0, tol) << "det(R) should be ≈ 1";
     cv::Mat should_be_I = R * R.t();
     EXPECT_NEAR(cv::norm(should_be_I - cv::Mat::eye(3, 3, CV_64F)), 0.0, tol)
         << "R * R^T should be ≈ I";
 }
 
 // Three known arm poses: {tx, ty, tz, rx, ry, rz} in meters and radians (RPY).
-constexpr std::array<double, 6> kPose0{0.4, 0.1, 0.3, 0.0, 0.0, 0.0};   // pure translation
-constexpr std::array<double, 6> kPose1{0.5, 0.2, 0.3, 0.0, 0.0, 0.5};   // + yaw rotation
-constexpr std::array<double, 6> kPose2{0.5, 0.3, 0.4, 0.2, 0.0, 0.0};   // + roll rotation
+constexpr std::array<double, 6> kPose0{0.4, 0.1, 0.3, 0.0, 0.0, 0.0};  // pure translation
+constexpr std::array<double, 6> kPose1{0.5, 0.2, 0.3, 0.0, 0.0, 0.5};  // + yaw rotation
+constexpr std::array<double, 6> kPose2{0.5, 0.3, 0.4, 0.2, 0.0, 0.0};  // + roll rotation
 
 }  // anonymous namespace
 
@@ -40,8 +41,8 @@ TEST(PoseProcessorTest, EyeInHandThreePoses) {
     auto result = proc.process(poses);
 
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(result->R_motions.size(), 2u);
-    EXPECT_EQ(result->t_motions.size(), 2u);
+    EXPECT_EQ(result->R_motions.size(), 2U);
+    EXPECT_EQ(result->t_motions.size(), 2U);
 
     // Verify each R is a valid rotation matrix.
     for (const auto& R : result->R_motions) {
@@ -69,8 +70,8 @@ TEST(PoseProcessorTest, EyeToHandThreePoses) {
     auto result_eth = proc_eth.process(poses);
     ASSERT_TRUE(result_eth.has_value());
 
-    EXPECT_EQ(result_eth->R_motions.size(), 2u);
-    EXPECT_EQ(result_eth->t_motions.size(), 2u);
+    EXPECT_EQ(result_eth->R_motions.size(), 2U);
+    EXPECT_EQ(result_eth->t_motions.size(), 2U);
 
     for (const auto& R : result_eth->R_motions) {
         expect_valid_rotation(R);
@@ -118,17 +119,16 @@ TEST(PoseProcessorTest, IdenticalPoses) {
     auto result = proc.process(poses);
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_EQ(result->R_motions.size(), 1u);
-    ASSERT_EQ(result->t_motions.size(), 1u);
+    ASSERT_EQ(result->R_motions.size(), 1U);
+    ASSERT_EQ(result->t_motions.size(), 1U);
 
     // R should be identity.
     cv::Mat I = cv::Mat::eye(3, 3, CV_64F);
     double R_diff = cv::norm(result->R_motions[0] - I, cv::NORM_L2);
-    EXPECT_LT(R_diff, 1e-6)
-        << "R should be identity for identical poses";
+    EXPECT_LT(R_diff, 1e-6) << "R should be identity for identical poses";
 
     // t should be zero vector.
     double t_norm = cv::norm(result->t_motions[0], cv::NORM_L2);
-    EXPECT_LT(t_norm, 1e-6)
-        << "t should be zero for identical poses";
+    EXPECT_LT(t_norm, 1e-6) << "t should be zero for identical poses";
 }
+// NOLINTEND(google-readability-braces-around-statements)

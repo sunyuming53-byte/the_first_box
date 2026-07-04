@@ -12,4 +12,4 @@ auto CameraFrame::point_3d(int u, int v) const -> std::array<double, 3> {
     return {x, y, z};
 }
 
-} // namespace rm::vision::camera
+}  // namespace rm::vision::camera

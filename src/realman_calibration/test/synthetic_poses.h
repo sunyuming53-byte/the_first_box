@@ -1,9 +1,10 @@
 #pragma once
 
 #include <array>
+#include <vector>
+
 #include <opencv2/core/mat.hpp>
 #include <opencv2/core/types.hpp>
-#include <vector>
 
 namespace rm::calib::test {
 
@@ -17,9 +18,7 @@ namespace rm::calib::test {
 /// up to 100 times if the constraint is not met.
 ///
 /// @throws std::runtime_error on persistent failure to meet diversity.
-[[nodiscard]] auto generate_random_poses(
-    int N,
-    double min_rotation_spread_deg = 30.0)
+[[nodiscard]] auto generate_random_poses(int N, double min_rotation_spread_deg = 30.0)
     -> std::vector<std::array<double, 6>>;
 
 /// Generate a random hand-eye (camera-to-flange) transform as a 4×4

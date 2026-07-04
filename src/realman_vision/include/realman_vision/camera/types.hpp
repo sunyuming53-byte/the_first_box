@@ -1,15 +1,17 @@
 #pragma once
 
 #include <cstdint>
+
 #include <array>
+
 #include <opencv2/core/mat.hpp>
 
 namespace rm::vision::camera {
 
 struct CameraConfig {
-    int  width{1280};
-    int  height{720};
-    int  fps{30};
+    int width{1280};
+    int height{720};
+    int fps{30};
     bool enable_depth{true};
 };
 
@@ -26,8 +28,8 @@ struct CameraIntrinsics {
 };
 
 struct CameraFrame {
-    cv::Mat color;               // (H, W) CV_8UC3, BGR
-    cv::Mat depth;               // (H, W) CV_16UC1, mm, aligned to color
+    cv::Mat color;  // (H, W) CV_8UC3, BGR
+    cv::Mat depth;  // (H, W) CV_16UC1, mm, aligned to color
     CameraIntrinsics depth_intrinsics;
     int64_t frame_id{0};
 
@@ -35,4 +37,4 @@ struct CameraFrame {
     [[nodiscard]] auto point_3d(int u, int v) const -> std::array<double, 3>;
 };
 
-} // namespace rm::vision::camera
+}  // namespace rm::vision::camera

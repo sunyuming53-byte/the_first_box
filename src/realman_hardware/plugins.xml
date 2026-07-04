@@ -1,0 +1,7 @@
+<library path="realman_hardware">
+  <class name="realman_hardware/ArmSystem"
+         type="realman_hardware::ArmSystem"
+         base_class_type="hardware_interface::SystemInterface">
+    <description>ros2_control hardware plugin for RealMan robot arms (RM65/75/ECO63/ECO65/RML63/GEN72)</description>
+  </class>
+</library>

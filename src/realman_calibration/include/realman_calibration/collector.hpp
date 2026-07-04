@@ -2,13 +2,15 @@
 
 #include "realman/motion/types.hpp"
 #include "realman_vision/camera/types.hpp"
+
 #include <array>
-#include "expected_polyfill.hpp"
 #include <filesystem>
 #include <memory>
-#include <opencv2/core/types.hpp>
 #include <string>
 #include <vector>
+
+#include "expected_polyfill.hpp"
+#include <opencv2/core/types.hpp>
 
 namespace rm::calib {
 
@@ -18,7 +20,7 @@ struct CalibDataConfig {
     std::string arm_ip{"192.168.1.18"};
     std::filesystem::path output_dir{"data/calib_session"};
     cv::Size board_size{11, 8};
-    float square_size_m{0.030f};
+    float square_size_m{0.030F};
 };
 
 struct CalibSession {
@@ -49,8 +51,7 @@ public:
     ///
     /// If @p waypoints is empty: interactive mode — displays live preview
     /// and waits for the user to press 's' to save each frame.
-    [[nodiscard]] auto run(std::vector<rm::JointPosition> waypoints = {})
-        -> Result<CalibSession>;
+    [[nodiscard]] auto run(std::vector<rm::JointPosition> waypoints = {}) -> Result<CalibSession>;
 
 private:
     class Impl;

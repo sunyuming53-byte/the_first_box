@@ -1,13 +1,15 @@
-#include <realman_calibration/collector.hpp>
-
 #include "realman_calibration/format_polyfill.hpp"
+
 #include <iostream>
 #include <string_view>
+
+#include <realman_calibration/collector.hpp>
 
 int main(int argc, char* argv[]) {
     rm::calib::CalibDataConfig cfg;
 
     // Parse CLI arguments
+    // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     for (int i = 1; i < argc; i += 2) {
         std::string_view arg = argv[i];
         if (arg == "--ip" && i + 1 < argc) {
@@ -24,6 +26,7 @@ int main(int argc, char* argv[]) {
             cfg.square_size_m = std::stof(argv[i + 1]);
         }
     }
+    // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 
     rm::calib::CalibDataCollector collector(cfg);
 

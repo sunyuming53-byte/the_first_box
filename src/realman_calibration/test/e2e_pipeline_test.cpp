@@ -9,27 +9,28 @@
 ///   6. Verify: reproj < 1.0, R within 1e-3 of truth, condition > 0, method not empty
 ///   7. Round-trip: save_yaml → HandEyeTransform::load → verify R/t match
 
+#include "realman_calibration/camera_calib.hpp"
+#include "realman_calibration/hand_eye.hpp"
+#include "realman_calibration/pose_proc.hpp"
+#include "realman_calibration/transform.hpp"
+
+#include <cmath>
 #include <gtest/gtest.h>
 
 #include <array>
-#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <random>
 #include <string>
 
+#include "synthetic_board.h"
+#include "synthetic_poses.h"
 #include <opencv2/aruco/charuco.hpp>
 #include <opencv2/aruco/dictionary.hpp>
 #include <opencv2/calib3d.hpp>
+// NOLINTBEGIN(readability-isolate-declaration,readability-math-missing-parentheses,google-readability-braces-around-statements,readability-implicit-bool-conversion,performance-unnecessary-value-param,modernize-return-braced-init-list)
 #include <opencv2/core.hpp>
 #include <opencv2/core/persistence.hpp>
-
-#include "realman_calibration/camera_calib.hpp"
-#include "realman_calibration/hand_eye.hpp"
-#include "realman_calibration/pose_proc.hpp"
-#include "realman_calibration/transform.hpp"
-#include "synthetic_board.h"
-#include "synthetic_poses.h"
 
 using namespace rm::calib;
 using namespace rm::calib::test;
@@ -40,52 +41,38 @@ namespace {
 // Constants
 // ──────────────────────────────────────────────────────────────
 
-constexpr int   kWidth       = 640;
-constexpr int   kHeight      = 480;
-constexpr float kFx          = 800.0f;
-constexpr float kFy          = 800.0f;
-constexpr float kCx          = 320.0f;
-constexpr float kCy          = 240.0f;
-constexpr int   kCharucoSqX  = 5;
-constexpr int   kCharucoSqY  = 7;
-constexpr float kSquareLenM  = 0.04f;
-constexpr float kMarkerLenM  = 0.02f;
-constexpr int   kDictId      = cv::aruco::DICT_6X6_250;
-constexpr int   kNumViews    = 15;
+constexpr int kWidth = 640;
+constexpr int kHeight = 480;
+constexpr float kFx = 800.0F;
+constexpr float kFy = 800.0F;
+constexpr float kCx = 320.0F;
+constexpr float kCy = 240.0F;
+constexpr int kCharucoSqX = 5;
+constexpr int kCharucoSqY = 7;
+constexpr float kSquareLenM = 0.04F;
+constexpr float kMarkerLenM = 0.02F;
+constexpr int kDictId = cv::aruco::DICT_6X6_250;
+constexpr int kNumViews = 15;
 
 // Number of Charuco images for camera calibration (use more for stability)
-constexpr int   kNumCharucoImages = 20;
+constexpr int kNumCharucoImages = 20;
 
 // ──────────────────────────────────────────────────────────────
 // Camera helpers
 // ──────────────────────────────────────────────────────────────
 
 cv::Mat ground_truth_K() {
-    return (cv::Mat_<double>(3, 3) <<
-        kFx, 0.0, kCx,
-        0.0, kFy, kCy,
-        0.0, 0.0, 1.0);
+    return (cv::Mat_<double>(3, 3) << kFx, 0.0, kCx, 0.0, kFy, kCy, 0.0, 0.0, 1.0);
 }
 
-cv::Mat ground_truth_dist() {
-    return (cv::Mat_<double>(1, 5) << 0.1, -0.05, 0.0, 0.0, 0.0);
-}
+cv::Mat ground_truth_dist() { return (cv::Mat_<double>(1, 5) << 0.1, -0.05, 0.0, 0.0, 0.0); }
 
-cv::aruco::Dictionary charuco_dict() {
-    return cv::aruco::getPredefinedDictionary(kDictId);
-}
+cv::aruco::Dictionary charuco_dict() { return cv::aruco::getPredefinedDictionary(kDictId); }
 
-std::vector<cv::Mat> make_charuco_images(int count,
-                                         cv::Size img_size = {kWidth, kHeight}) {
-    return generate_charuco_images(
-        count,
-        cv::Size{kCharucoSqX, kCharucoSqY},
-        kSquareLenM,
-        kMarkerLenM,
-        charuco_dict(),
-        ground_truth_K(),
-        ground_truth_dist(),
-        img_size);
+std::vector<cv::Mat> make_charuco_images(int count, cv::Size img_size = {kWidth, kHeight}) {
+    return generate_charuco_images(count, cv::Size{kCharucoSqX, kCharucoSqY}, kSquareLenM,
+                                   kMarkerLenM, charuco_dict(), ground_truth_K(),
+                                   ground_truth_dist(), img_size);
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -95,7 +82,8 @@ std::vector<cv::Mat> make_charuco_images(int count,
 thread_local std::mt19937 tl_rng{[] {
     std::random_device rd;
     std::array<std::random_device::result_type, 8> seeds{};
-    for (auto& s : seeds) s = rd();
+    for (auto& s : seeds)
+        s = rd();
     std::seed_seq seq(seeds.begin(), seeds.end());
     return std::mt19937{seq};
 }()};
@@ -147,10 +135,10 @@ cv::Mat pose6_to_4x4(const std::array<double, 6>& p) {
 // ──────────────────────────────────────────────────────────────
 
 struct E2ETestData {
-    std::vector<std::array<double, 6>> arm_poses;   // raw arm poses
-    std::vector<cv::Mat> rvecs;                      // camera→board rotations
-    std::vector<cv::Mat> tvecs;                      // camera→board translations
-    cv::Mat H_true;                                  // 4×4 ground-truth hand-eye
+    std::vector<std::array<double, 6>> arm_poses;  // raw arm poses
+    std::vector<cv::Mat> rvecs;                    // camera→board rotations
+    std::vector<cv::Mat> tvecs;                    // camera→board translations
+    cv::Mat H_true;                                // 4×4 ground-truth hand-eye
 };
 
 E2ETestData generate_consistent_data(int n_views) {
@@ -158,22 +146,24 @@ E2ETestData generate_consistent_data(int n_views) {
 
     // ── 1. Ground-truth H (camera→end-effector for EyeInHand) ──
     {
-        std::uniform_real_distribution<double> ad(
-            10.0 * M_PI / 180.0, 50.0 * M_PI / 180.0);
+        std::uniform_real_distribution<double> ad(10.0 * M_PI / 180.0, 50.0 * M_PI / 180.0);
         std::uniform_real_distribution<double> td(0.05, 0.5);
         std::uniform_real_distribution<double> axis_d(-1.0, 1.0);
 
         double ax = axis_d(tl_rng), ay = axis_d(tl_rng), az = axis_d(tl_rng);
         double len = std::sqrt(ax * ax + ay * ay + az * az);
-        if (len < 1e-12) { ax = 1.0; ay = 0.0; az = 0.0; len = 1.0; }
+        if (len < 1e-12) {
+            ax = 1.0;
+            ay = 0.0;
+            az = 0.0;
+            len = 1.0;
+        }
         cv::Mat axis = (cv::Mat_<double>(3, 1) << ax / len, ay / len, az / len);
         cv::Mat rvec_h = axis * ad(tl_rng) * rand_sign();
         cv::Mat R_gt;
         cv::Rodrigues(rvec_h, R_gt);
-        cv::Mat t_gt = (cv::Mat_<double>(3, 1) <<
-                        td(tl_rng) * rand_sign(),
-                        td(tl_rng) * rand_sign(),
-                        td(tl_rng) * rand_sign());
+        cv::Mat t_gt = (cv::Mat_<double>(3, 1) << td(tl_rng) * rand_sign(),
+                        td(tl_rng) * rand_sign(), td(tl_rng) * rand_sign());
         data.H_true = compose_4x4(R_gt, t_gt);
     }
     cv::Mat H_inv = data.H_true.inv();
@@ -182,28 +172,29 @@ E2ETestData generate_consistent_data(int n_views) {
     data.arm_poses = generate_random_poses(n_views, 30.0);
 
     // ── 3. Random board-to-base transform (fixed for all views) ──
-    std::uniform_real_distribution<double> ad_big(
-        5.0 * M_PI / 180.0, 85.0 * M_PI / 180.0);
+    std::uniform_real_distribution<double> ad_big(5.0 * M_PI / 180.0, 85.0 * M_PI / 180.0);
     std::uniform_real_distribution<double> td_big(0.5, 3.5);
     std::uniform_real_distribution<double> axis_d(-1.0, 1.0);
 
     double ax = axis_d(tl_rng), ay = axis_d(tl_rng), az = axis_d(tl_rng);
     double len = std::sqrt(ax * ax + ay * ay + az * az);
-    if (len < 1e-12) { ax = 1.0; ay = 0.0; az = 0.0; len = 1.0; }
+    if (len < 1e-12) {
+        ax = 1.0;
+        ay = 0.0;
+        az = 0.0;
+        len = 1.0;
+    }
     cv::Mat axis_t = (cv::Mat_<double>(3, 1) << ax / len, ay / len, az / len);
     cv::Mat rvec_t = axis_t * ad_big(tl_rng) * rand_sign();
     cv::Mat R_t2b;
     cv::Rodrigues(rvec_t, R_t2b);
-    cv::Mat t_t2b = (cv::Mat_<double>(3, 1) <<
-                     td_big(tl_rng) * rand_sign(),
-                     td_big(tl_rng) * rand_sign(),
-                     td_big(tl_rng) * rand_sign());
+    cv::Mat t_t2b = (cv::Mat_<double>(3, 1) << td_big(tl_rng) * rand_sign(),
+                     td_big(tl_rng) * rand_sign(), td_big(tl_rng) * rand_sign());
     cv::Mat T_t2b = compose_4x4(R_t2b, t_t2b);
 
     // ── 4. Camera views: T_cam = H_inv * T_arm.inv() * T_t2b ──
     for (int i = 0; i < n_views; ++i) {
-        cv::Mat T_arm = pose6_to_4x4(
-            data.arm_poses[static_cast<std::size_t>(i)]);
+        cv::Mat T_arm = pose6_to_4x4(data.arm_poses[static_cast<std::size_t>(i)]);
         cv::Mat T_cam = H_inv * T_arm.inv() * T_t2b;
 
         cv::Mat R, t, rvec;
@@ -225,9 +216,7 @@ class E2EPipelineTest : public ::testing::Test {
 protected:
     static constexpr auto kYamlPath = "/tmp/test_e2e_result.yaml";
 
-    void TearDown() override {
-        std::filesystem::remove(kYamlPath);
-    }
+    void TearDown() override { std::filesystem::remove(kYamlPath); }
 };
 
 TEST_F(E2EPipelineTest, CharucoEndToEnd) {
@@ -236,9 +225,9 @@ TEST_F(E2EPipelineTest, CharucoEndToEnd) {
     ASSERT_EQ(images.size(), static_cast<size_t>(kNumCharucoImages));
 
     CameraCalibInput cam_input;
-    cam_input.images        = std::move(images);
-    cam_input.board_type    = BoardType::Charuco;
-    cam_input.board_size    = cv::Size{kCharucoSqX, kCharucoSqY};
+    cam_input.images = std::move(images);
+    cam_input.board_type = BoardType::Charuco;
+    cam_input.board_size = cv::Size{kCharucoSqX, kCharucoSqY};
     cam_input.square_size_m = kSquareLenM;
     cam_input.marker_size_m = kMarkerLenM;
     cam_input.dictionary_id = kDictId;
@@ -249,14 +238,13 @@ TEST_F(E2EPipelineTest, CharucoEndToEnd) {
 
     // Verify camera calibration quality
     auto gt_K = ground_truth_K();
-    EXPECT_LT(cam_result->reproj_error, 5.0)
-        << "Charuco reprojection error should be < 5 px";
+    EXPECT_LT(cam_result->reproj_error, 5.0) << "Charuco reprojection error should be < 5 px";
     EXPECT_GE(cam_result->images_used, 3);
     for (int i = 0; i < 3; ++i) {
         double diff = std::abs(cam_result->K.at<double>(i, i) - gt_K.at<double>(i, i));
         EXPECT_LT(diff, 0.05 * gt_K.at<double>(i, i))
-            << "K(" << i << "," << i << ") off by " << diff
-            << " (expected " << gt_K.at<double>(i, i) << ")";
+            << "K(" << i << "," << i << ") off by " << diff << " (expected "
+            << gt_K.at<double>(i, i) << ")";
     }
 
     // ── Stage 2: Generate consistent hand-eye test data ──
@@ -269,8 +257,7 @@ TEST_F(E2EPipelineTest, CharucoEndToEnd) {
     {
         PoseProcessor pose_proc(HandEyeMode::EyeInHand);
         auto pose_result = pose_proc.process(he_data.arm_poses);
-        ASSERT_TRUE(pose_result.has_value())
-            << "Pose processing: " << pose_result.error();
+        ASSERT_TRUE(pose_result.has_value()) << "Pose processing: " << pose_result.error();
         EXPECT_EQ(pose_result->R_motions.size(), static_cast<size_t>(kNumViews - 1));
         EXPECT_EQ(pose_result->t_motions.size(), static_cast<size_t>(kNumViews - 1));
     }
@@ -291,28 +278,22 @@ TEST_F(E2EPipelineTest, CharucoEndToEnd) {
     }
 
     HandEyeSolver solver(HandEyeMode::EyeInHand);
-    auto he_result = solver.solve(
-        R_arm, t_arm,
-        he_data.rvecs, he_data.tvecs);  // Auto method
+    auto he_result = solver.solve(R_arm, t_arm, he_data.rvecs, he_data.tvecs);  // Auto method
 
-    ASSERT_TRUE(he_result.has_value())
-        << "Hand-eye solve: " << he_result.error();
+    ASSERT_TRUE(he_result.has_value()) << "Hand-eye solve: " << he_result.error();
 
     // ── Verification ──
 
     // reprojection_error < 10.0 on clean synthetic data
-    EXPECT_LT(he_result->reproj_error, 10.0)
-        << "Reprojection error should be finite on clean data";
+    EXPECT_LT(he_result->reproj_error, 10.0) << "Reprojection error should be finite on clean data";
 
     // condition_number > 0
     EXPECT_GT(he_result->condition_number, 0.0);
 
     // method not empty and matches a known name
     EXPECT_FALSE(he_result->method.empty());
-    EXPECT_TRUE(he_result->method == "Tsai" ||
-                he_result->method == "Park" ||
-                he_result->method == "Horaud" ||
-                he_result->method == "Daniilidis")
+    EXPECT_TRUE(he_result->method == "Tsai" || he_result->method == "Park" ||
+                he_result->method == "Horaud" || he_result->method == "Daniilidis")
         << "Unexpected method: " << he_result->method;
 
     EXPECT_NE(he_result->used_method, HandEyeMethod::Auto)
@@ -322,8 +303,7 @@ TEST_F(E2EPipelineTest, CharucoEndToEnd) {
     EXPECT_NEAR(cv::determinant(he_result->R), 1.0, 1e-6);
     {
         cv::Mat I_check = he_result->R * he_result->R.t();
-        EXPECT_NEAR(cv::norm(I_check - cv::Mat::eye(3, 3, CV_64F)),
-                    0.0, 1e-6);
+        EXPECT_NEAR(cv::norm(I_check - cv::Mat::eye(3, 3, CV_64F)), 0.0, 1e-6);
     }
 
     // H_true R comparison: verify solver output is roughly consistent
@@ -331,8 +311,7 @@ TEST_F(E2EPipelineTest, CharucoEndToEnd) {
         cv::Mat R_gt = he_data.H_true(cv::Rect(0, 0, 3, 3));
         cv::Mat R_diff_mat = he_result->R * R_gt.t();
         double rot_error = cv::norm(R_diff_mat - cv::Mat::eye(3, 3, CV_64F));
-        EXPECT_LT(rot_error, 0.5)
-            << "Solved R differs significantly from ground truth";
+        EXPECT_LT(rot_error, 0.5) << "Solved R differs significantly from ground truth";
     }
 
     // ── Stage 5: Round-trip save_yaml → load → verify R/t match ──
@@ -358,3 +337,4 @@ TEST_F(E2EPipelineTest, CharucoEndToEnd) {
 }
 
 }  // namespace
+// NOLINTEND(readability-isolate-declaration,readability-math-missing-parentheses,google-readability-braces-around-statements,readability-implicit-bool-conversion,performance-unnecessary-value-param,modernize-return-braced-init-list)

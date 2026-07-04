@@ -1,0 +1,110 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build & Test
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: network=host
+
+      - name: Build develop image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: realman-develop
+          load: true
+          tags: realman:develop
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build workspace
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}/src:/ws/src \
+            realman:develop \
+            bash -c "
+              set -euo pipefail
+              set +u; source /opt/ros/humble/setup.bash; set -u
+              colcon build --symlink-install
+            "
+
+      - name: Run tests
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}/src:/ws/src \
+            realman:develop \
+            bash -c "
+              set -euo pipefail
+              set +u; source /opt/ros/humble/setup.bash; set -u
+              colcon build --cmake-args -DBUILD_TESTING=ON
+              colcon test --return-code-on-test-failure
+            "
+
+  lint:
+    name: Lint (non-blocking)
+    runs-on: ubuntu-22.04
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: network=host
+
+      - name: Build develop image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: realman-develop
+          load: true
+          tags: realman:develop
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: clang-format (blocking)
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}/src:/ws/src \
+            realman:develop \
+            bash -c '
+              set -euo pipefail
+              find /ws/src \( -name "*.cpp" -o -name "*.hpp" -o -name "*.h" \) \
+                ! -path "*/third_party/*" \
+                ! -path "*/build/*" \
+                | xargs clang-format --dry-run --Werror
+            '
+
+      - name: clang-tidy (non-blocking, info only)
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}/src:/ws/src \
+            realman:develop \
+            bash -c '
+              set -euo pipefail
+              set +u; source /opt/ros/humble/setup.bash; set -u
+              colcon build --cmake-args \
+                -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+                -DCLANG_TIDY=ON
+            ' || true

@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>realman_hardware</name>
+  <version>0.1.0</version>
+  <description>ros2_control hardware plugin for RealMan robot arms</description>
+  <maintainer email="dev@realman-driver.com">RealMan Driver Team</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>hardware_interface</depend>
+  <depend>pluginlib</depend>
+  <depend>rclcpp</depend>
+  <depend>realman_arm</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

@@ -4,6 +4,8 @@ project(realman_calibration VERSION 0.1.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+include(${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/clang_tidy.cmake OPTIONAL)
+
 find_package(ament_cmake REQUIRED)
 find_package(OpenCV REQUIRED COMPONENTS core calib3d highgui imgproc imgcodecs objdetect aruco)
 find_package(realsense2 REQUIRED)
@@ -16,19 +18,7 @@ find_package(tf2_ros REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 
-# ── RealMan SDK ──
-list(APPEND CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../cmake")
-find_package(RealManSDK REQUIRED)
-
-# Find the built realman_driver library
-find_package(realman_driver REQUIRED)
-# The installed lib is alongside the cmake config dir: .../share/realman_driver/cmake/ → lib is at .../lib/
-get_filename_component(_REALMAN_DRIVER_PREFIX "${realman_driver_DIR}/../../.." ABSOLUTE)
-find_library(REALMAN_DRIVER_LIB realman_driver PATHS "${_REALMAN_DRIVER_PREFIX}/lib" NO_DEFAULT_PATH REQUIRED)
-
-# Include paths for realman_driver
-set(REALMAN_DRIVER_INCLUDE "${_REALMAN_DRIVER_PREFIX}/include"
-    "${CMAKE_CURRENT_SOURCE_DIR}/../realman_driver/include")
+find_package(realman_arm REQUIRED)
 
 # ── Libraries ──
 add_library(realman_calibration SHARED
@@ -41,12 +31,10 @@ add_library(realman_calibration SHARED
 target_include_directories(realman_calibration PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
-    ${REALMAN_DRIVER_INCLUDE}
 )
 target_link_libraries(realman_calibration PUBLIC
     realman_vision::realman_vision
-    ${REALMAN_DRIVER_LIB}
-    RealManSDK::RealManSDK
+    realman_arm::realman_arm
     ${OpenCV_LIBS}
 )
 

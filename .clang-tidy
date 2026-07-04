@@ -1,0 +1,124 @@
+# RealMan ROS2 Workspace — clang-tidy configuration
+# C++23 target, GCC 11.4.0 toolchain, ROS2 Humble
+#
+# Usage:
+#   clang-tidy --config-file=.clang-tidy src/file.cpp
+#
+# Or via CMake (opt-in):
+#   colcon build --cmake-args -DCLANG_TIDY=ON
+
+Checks: >
+  -*,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-narrowing-conversions,
+  -bugprone-implicit-widening-of-multiplication-result,
+  cert-*,
+  -cert-err58-cpp,
+  -cert-msc30-c,
+  -cert-msc50-cpp,
+  concurrency-*,
+  misc-*,
+  -misc-const-correctness,
+  -misc-include-cleaner,
+  -misc-non-private-member-variables-in-classes,
+  -misc-no-recursion,
+  -misc-use-anonymous-namespace,
+  modernize-*,
+  -modernize-avoid-c-arrays,
+  -modernize-loop-convert,
+  -modernize-use-trailing-return-type,
+  performance-*,
+  -performance-avoid-endl,
+  -performance-no-int-to-ptr,
+  portability-*,
+  readability-*,
+  -readability-avoid-unconditional-preprocessor-if,
+  -readability-function-cognitive-complexity,
+  -readability-identifier-length,
+  -readability-identifier-naming,
+  -readability-magic-numbers,
+  -readability-named-parameter,
+  -readability-redundant-access-specifiers,
+  -readability-suspicious-call-argument,
+  cppcoreguidelines-*,
+  -cppcoreguidelines-avoid-c-arrays,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -cppcoreguidelines-avoid-non-const-global-variables,
+  -cppcoreguidelines-macro-usage,
+  -cppcoreguidelines-narrowing-conversions,
+  -cppcoreguidelines-owning-memory,
+  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+  -cppcoreguidelines-pro-type-vararg,
+  -cppcoreguidelines-special-member-functions,
+  google-*,
+  -google-build-using-namespace,
+  -google-readability-avoid-underscore-in-googletest-name,
+  -google-readability-todo,
+  -google-runtime-references,
+  -google-runtime-int,
+  hicpp-*,
+  -hicpp-avoid-c-arrays,
+  -hicpp-braces-around-statements,
+  -hicpp-no-array-decay,
+  -hicpp-signed-bitwise,
+  -hicpp-special-member-functions,
+  -hicpp-use-auto,
+  -hicpp-use-equals-default,
+  -hicpp-use-noexcept,
+  -hicpp-use-override,
+  -hicpp-vararg,
+
+CheckOptions:
+  # ── Naming conventions ──
+  - key: readability-identifier-naming.ClassCase
+    value: CamelCase
+  - key: readability-identifier-naming.StructCase
+    value: CamelCase
+  - key: readability-identifier-naming.FunctionCase
+    value: camelBack
+  - key: readability-identifier-naming.MethodCase
+    value: camelBack
+  - key: readability-identifier-naming.VariableCase
+    value: camelBack
+  - key: readability-identifier-naming.MemberCase
+    value: camelBack
+  - key: readability-identifier-naming.ConstantCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.EnumCase
+    value: CamelCase
+  - key: readability-identifier-naming.EnumConstantCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.NamespaceCase
+    value: lower_case
+
+  # ── Modernize ──
+  - key: modernize-use-nullptr.NullPointerMacros
+    value: 'NULL'
+
+  # ── Readability ──
+  - key: readability-function-size.LineThreshold
+    value: '200'
+  - key: readability-function-size.StatementThreshold
+    value: '100'
+  - key: readability-braces-around-statements.ShortStatementLines
+    value: '2'
+
+  # ── Bugprone ──
+  - key: bugprone-argument-comment.CommentBoolLiterals
+    value: '1'
+  - key: bugprone-argument-comment.CommentStringLiterals
+    value: '1'
+
+  # ── Misc ──
+  - key: misc-throw-by-value-catch-by-reference.CheckThrowTemporaries
+    value: '1'
+
+HeaderFilterRegex: 'src/(realman_arm|realman_vision|realman_calibration|realman_hardware)/.*\.(h|hpp|hxx)$'
+
+# C++23 target — clang-tidy-14 supports up to -std=c++20
+# clang-tidy-19 (LLVM toolchain) adds c++23/c++2c support
+# Note: AnalyzeTemporaryDtors was removed in clang-tidy 19
+
+# Ignore third-party and build artifacts
+ExcludeHeaderFilterRegex: '(third_party|build|install|opt/ros)/.*'

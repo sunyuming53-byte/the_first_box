@@ -1,7 +1,8 @@
+#include "realman_calibration/format_polyfill.hpp"
 #include "realman_calibration/pose_proc.hpp"
 
 #include <cmath>
-#include "realman_calibration/format_polyfill.hpp"
+
 #include <span>
 
 namespace rm::calib {
@@ -16,38 +17,47 @@ namespace {
     // R = Rz(yaw) * Ry(pitch) * Rx(roll)
     cv::Mat R = cv::Mat::eye(3, 3, CV_64F);
 
-    double cr = std::cos(roll), sr = std::sin(roll);
-    double cp = std::cos(pitch), sp = std::sin(pitch);
-    double cy = std::cos(yaw),  sy = std::sin(yaw);
+    double cr = std::cos(roll);
+    double sr = std::sin(roll);
+    double cp = std::cos(pitch);
+    double sp = std::sin(pitch);
+    double cy = std::cos(yaw);
+    double sy = std::sin(yaw);
 
     // Rx(roll)
-    double r11 = 1.0, r12 = 0.0,  r13 = 0.0;
-    double r21 = 0.0, r22 = cr,    r23 = -sr;
-    double r31 = 0.0, r32 = sr,    r33 = cr;
+    double r11 = 1.0;
+    double r12 = 0.0;
+    double r13 = 0.0;
+    double r21 = 0.0;
+    double r22 = cr;
+    double r23 = -sr;
+    double r31 = 0.0;
+    double r32 = sr;
+    double r33 = cr;
 
     // Ry(pitch) * Rx(roll)
-    double c11 = cp * r11 + sp * r31;
-    double c12 = cp * r12 + sp * r32;
-    double c13 = cp * r13 + sp * r33;
+    double c11 = (cp * r11) + (sp * r31);
+    double c12 = (cp * r12) + (sp * r32);
+    double c13 = (cp * r13) + (sp * r33);
     double c21 = r21;
     double c22 = r22;
     double c23 = r23;
-    double c31 = -sp * r11 + cp * r31;
-    double c32 = -sp * r12 + cp * r32;
-    double c33 = -sp * r13 + cp * r33;
+    double c31 = (-sp * r11) + (cp * r31);
+    double c32 = (-sp * r12) + (cp * r32);
+    double c33 = (-sp * r13) + (cp * r33);
 
     // Rz(yaw) * (Ry * Rx)
     // Rz = [[cy, -sy, 0], [sy, cy, 0], [0, 0, 1]]
 
-    R.at<double>(0, 0) = cy * c11 - sy * c21;   // c11=cp, c21=0
-    R.at<double>(0, 1) = cy * c12 - sy * c22;   // c12=cp*0+sp*sr=sp*sr, c22=cr
-    R.at<double>(0, 2) = cy * c13 - sy * c23;   // c13=cp*0+sp*cr=sp*cr, c23=-sr
+    R.at<double>(0, 0) = cy * c11 - sy * c21;  // c11=cp, c21=0
+    R.at<double>(0, 1) = cy * c12 - sy * c22;  // c12=cp*0+sp*sr=sp*sr, c22=cr
+    R.at<double>(0, 2) = cy * c13 - sy * c23;  // c13=cp*0+sp*cr=sp*cr, c23=-sr
     R.at<double>(1, 0) = sy * c11 + cy * c21;
     R.at<double>(1, 1) = sy * c12 + cy * c22;
     R.at<double>(1, 2) = sy * c13 + cy * c23;
-    R.at<double>(2, 0) = c31;                   // -sp
-    R.at<double>(2, 1) = c32;                   // cp*sr
-    R.at<double>(2, 2) = c33;                   // cp*cr
+    R.at<double>(2, 0) = c31;  // -sp
+    R.at<double>(2, 1) = c32;  // cp*sr
+    R.at<double>(2, 2) = c33;  // cp*cr
 
     return R;
 }
@@ -71,7 +81,7 @@ namespace {
     return {R, t};
 }
 
-} // anonymous namespace
+}  // anonymous namespace
 
 // ──────────────────────────────────────────────────────────────
 // PoseProcessor
@@ -80,11 +90,9 @@ namespace {
 PoseProcessor::PoseProcessor(HandEyeMode mode) : mode_{mode} {}
 
 auto PoseProcessor::process(std::span<const std::array<double, 6>> poses)
-    -> Result<PoseProcResult>
-{
+    -> Result<PoseProcResult> {
     if (poses.size() < 2) {
-        return Unexpected<std::string>(
-            std::format("Need at least 2 poses (got {})", poses.size()));
+        return Unexpected<std::string>(std::format("Need at least 2 poses (got {})", poses.size()));
     }
 
     const auto N = poses.size();
@@ -93,35 +101,35 @@ auto PoseProcessor::process(std::span<const std::array<double, 6>> poses)
     result.t_motions.reserve(N - 1);
 
     switch (mode_) {
-    case HandEyeMode::EyeInHand: {
-        // poses are T_end2base
-        // A_i = inv(T_{i+1}) * T_i   (i.e. relative motion of end-effector)
-        for (auto i = 0uz; i < N - 1; ++i) {
-            auto T_i   = pose_to_homogeneous(poses[i]);
-            auto T_i1  = pose_to_homogeneous(poses[i + 1]);
-            auto A = T_i1.inv() * T_i;
-            auto [R, t] = extract_R_t(A);
-            result.R_motions.push_back(std::move(R));
-            result.t_motions.push_back(std::move(t));
+        case HandEyeMode::EyeInHand: {
+            // poses are T_end2base
+            // A_i = inv(T_{i+1}) * T_i   (i.e. relative motion of end-effector)
+            for (auto i = 0UZ; i < N - 1; ++i) {
+                auto T_i = pose_to_homogeneous(poses[i]);
+                auto T_i1 = pose_to_homogeneous(poses[i + 1]);
+                auto A = T_i1.inv() * T_i;
+                auto [R, t] = extract_R_t(A);
+                result.R_motions.push_back(std::move(R));
+                result.t_motions.push_back(std::move(t));
+            }
+            break;
         }
-        break;
-    }
-    case HandEyeMode::EyeToHand: {
-        // poses are T_end2base
-        // A_i = T_{i+1} * inv(T_i)
-        for (auto i = 0uz; i < N - 1; ++i) {
-            auto T_i  = pose_to_homogeneous(poses[i]);
-            auto T_i1 = pose_to_homogeneous(poses[i + 1]);
-            auto A = T_i1 * T_i.inv();
-            auto [R, t] = extract_R_t(A);
-            result.R_motions.push_back(std::move(R));
-            result.t_motions.push_back(std::move(t));
+        case HandEyeMode::EyeToHand: {
+            // poses are T_end2base
+            // A_i = T_{i+1} * inv(T_i)
+            for (auto i = 0UZ; i < N - 1; ++i) {
+                auto T_i = pose_to_homogeneous(poses[i]);
+                auto T_i1 = pose_to_homogeneous(poses[i + 1]);
+                auto A = T_i1 * T_i.inv();
+                auto [R, t] = extract_R_t(A);
+                result.R_motions.push_back(std::move(R));
+                result.t_motions.push_back(std::move(t));
+            }
+            break;
         }
-        break;
-    }
     }
 
     return result;
 }
 
-} // namespace rm::calib
+}  // namespace rm::calib

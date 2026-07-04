@@ -1,35 +1,38 @@
 #pragma once
 
+#include <cstdint>
+
+#include <string>
+#include <vector>
+
 #include "expected_polyfill.hpp"
 #include <opencv2/aruco/dictionary.hpp>
 #include <opencv2/core/mat.hpp>
 #include <opencv2/core/types.hpp>
-#include <string>
-#include <vector>
 
 namespace rm::calib {
 
-enum class BoardType {
+enum class BoardType : uint8_t {
     Chessboard,
     Charuco,
 };
 
 struct CameraCalibInput {
-    std::vector<cv::Mat> images;   // grayscale (CV_8UC1)
+    std::vector<cv::Mat> images;  // grayscale (CV_8UC1)
     cv::Size board_size;
-    float square_size_m{0.030f};
+    float square_size_m{0.030F};
     BoardType board_type{BoardType::Chessboard};
-    float marker_size_m{0.02f};
+    float marker_size_m{0.02F};
     int dictionary_id{cv::aruco::DICT_6X6_250};
 };
 
 struct CameraCalibResult {
-    cv::Mat K;                          // 3×3, CV_64F  — camera matrix
-    cv::Mat dist;                       // distortion coefficients
-    std::vector<cv::Mat> rvecs;         // per-image rotation vectors
-    std::vector<cv::Mat> tvecs;         // per-image translation vectors
-    double reproj_error{0.0};           // RMS re-projection error (px)
-    int images_used{0};                 // number of images that passed corner detection
+    cv::Mat K;                   // 3×3, CV_64F  — camera matrix
+    cv::Mat dist;                // distortion coefficients
+    std::vector<cv::Mat> rvecs;  // per-image rotation vectors
+    std::vector<cv::Mat> tvecs;  // per-image translation vectors
+    double reproj_error{0.0};    // RMS re-projection error (px)
+    int images_used{0};          // number of images that passed corner detection
 };
 
 /// Single-camera intrinsic calibration via chessboard or Charuco board.

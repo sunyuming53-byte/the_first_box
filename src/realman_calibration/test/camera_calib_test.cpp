@@ -1,28 +1,27 @@
 #include "realman_calibration/camera_calib.hpp"
-#include "synthetic_board.h"
 
-#include <gtest/gtest.h>
-#include <opencv2/aruco/charuco.hpp>
 #include <cmath>
+#include <gtest/gtest.h>
+
+#include "synthetic_board.h"
+#include <opencv2/aruco/charuco.hpp>
+// NOLINTBEGIN(performance-unnecessary-value-param,performance-unnecessary-copy-initialization)
 
 namespace {
 
 // ── Ground-truth intrinsics for synthetic image generation ──
-constexpr int   kWidth  = 640;
-constexpr int   kHeight = 480;
-constexpr float kFx     = 800.0f;
-constexpr float kFy     = 800.0f;
-constexpr float kCx     = 320.0f;
-constexpr float kCy     = 240.0f;
-constexpr int   kBoardW = 8;   // inner corners (cols)
-constexpr int   kBoardH = 5;   // inner corners (rows)
-constexpr float kSquareM = 0.030f;
+constexpr int kWidth = 640;
+constexpr int kHeight = 480;
+constexpr float kFx = 800.0F;
+constexpr float kFy = 800.0F;
+constexpr float kCx = 320.0F;
+constexpr float kCy = 240.0F;
+constexpr int kBoardW = 8;  // inner corners (cols)
+constexpr int kBoardH = 5;  // inner corners (rows)
+constexpr float kSquareM = 0.030F;
 
 cv::Mat ground_truth_K() {
-    cv::Mat K = (cv::Mat_<double>(3, 3) <<
-        kFx, 0.0, kCx,
-        0.0, kFy, kCy,
-        0.0, 0.0, 1.0);
+    cv::Mat K = (cv::Mat_<double>(3, 3) << kFx, 0.0, kCx, 0.0, kFy, kCy, 0.0, 0.0, 1.0);
     return K;
 }
 
@@ -33,13 +32,9 @@ cv::Mat ground_truth_dist() {
 }
 
 std::vector<cv::Mat> make_images(int count, cv::Size img_size = {kWidth, kHeight}) {
-    return rm::calib::test::generate_chessboard_images(
-        count,
-        cv::Size{kBoardW, kBoardH},
-        kSquareM,
-        ground_truth_K(),
-        ground_truth_dist(),
-        img_size);
+    return rm::calib::test::generate_chessboard_images(count, cv::Size{kBoardW, kBoardH}, kSquareM,
+                                                       ground_truth_K(), ground_truth_dist(),
+                                                       img_size);
 }
 
 // ─────────────────────────────────────────────────────────
@@ -47,11 +42,11 @@ std::vector<cv::Mat> make_images(int count, cv::Size img_size = {kWidth, kHeight
 // ─────────────────────────────────────────────────────────
 TEST(CameraCalibTest, HappyPath) {
     auto images = make_images(10);
-    ASSERT_EQ(images.size(), 10u);
+    ASSERT_EQ(images.size(), 10U);
 
     rm::calib::CameraCalibInput input;
-    input.images       = std::move(images);
-    input.board_size   = cv::Size{kBoardW, kBoardH};
+    input.images = std::move(images);
+    input.board_size = cv::Size{kBoardW, kBoardH};
     input.square_size_m = kSquareM;
 
     rm::calib::CameraCalibrator calibrator(input);
@@ -81,11 +76,11 @@ TEST(CameraCalibTest, HappyPath) {
 // ─────────────────────────────────────────────────────────
 TEST(CameraCalibTest, InsufficientImages) {
     auto images = make_images(2);
-    ASSERT_EQ(images.size(), 2u);
+    ASSERT_EQ(images.size(), 2U);
 
     rm::calib::CameraCalibInput input;
-    input.images       = std::move(images);
-    input.board_size   = cv::Size{kBoardW, kBoardH};
+    input.images = std::move(images);
+    input.board_size = cv::Size{kBoardW, kBoardH};
     input.square_size_m = kSquareM;
 
     rm::calib::CameraCalibrator calibrator(input);
@@ -104,7 +99,7 @@ TEST(CameraCalibTest, InsufficientImages) {
 TEST(CameraCalibTest, EmptyInput) {
     rm::calib::CameraCalibInput input;
     input.images.clear();
-    input.board_size   = cv::Size{kBoardW, kBoardH};
+    input.board_size = cv::Size{kBoardW, kBoardH};
     input.square_size_m = kSquareM;
 
     rm::calib::CameraCalibrator calibrator(input);
@@ -118,17 +113,17 @@ TEST(CameraCalibTest, EmptyInput) {
 // ─────────────────────────────────────────────────────────
 TEST(CameraCalibTest, MixedResolution) {
     // generate half at 800×600, half at 640×480
-    auto big   = make_images(5, cv::Size{800, 600});
+    auto big = make_images(5, cv::Size{800, 600});
     auto small = make_images(5, cv::Size{640, 480});
 
     std::vector<cv::Mat> mixed;
     mixed.insert(mixed.end(), big.begin(), big.end());
     mixed.insert(mixed.end(), small.begin(), small.end());
-    ASSERT_EQ(mixed.size(), 10u);
+    ASSERT_EQ(mixed.size(), 10U);
 
     rm::calib::CameraCalibInput input;
-    input.images       = std::move(mixed);
-    input.board_size   = cv::Size{kBoardW, kBoardH};
+    input.images = std::move(mixed);
+    input.board_size = cv::Size{kBoardW, kBoardH};
     input.square_size_m = kSquareM;
 
     rm::calib::CameraCalibrator calibrator(input);
@@ -144,28 +139,19 @@ TEST(CameraCalibTest, MixedResolution) {
 
 // ── Charuco helpers ────────────────────────────────────────
 
-constexpr int   kCharucoSqX = 5;
-constexpr int   kCharucoSqY = 7;
-constexpr float kSquareLenM  = 0.04f;
-constexpr float kMarkerLenM  = 0.02f;
+constexpr int kCharucoSqX = 5;
+constexpr int kCharucoSqY = 7;
+constexpr float kSquareLenM = 0.04F;
+constexpr float kMarkerLenM = 0.02F;
 
 constexpr int kCharucoDict = cv::aruco::DICT_6X6_250;
 
-cv::aruco::Dictionary charuco_dict() {
-    return cv::aruco::getPredefinedDictionary(kCharucoDict);
-}
+cv::aruco::Dictionary charuco_dict() { return cv::aruco::getPredefinedDictionary(kCharucoDict); }
 
-std::vector<cv::Mat> make_charuco_images(int count,
-                                         cv::Size img_size = {kWidth, kHeight}) {
+std::vector<cv::Mat> make_charuco_images(int count, cv::Size img_size = {kWidth, kHeight}) {
     return rm::calib::test::generate_charuco_images(
-        count,
-        cv::Size{kCharucoSqX, kCharucoSqY},
-        kSquareLenM,
-        kMarkerLenM,
-        charuco_dict(),
-        ground_truth_K(),
-        ground_truth_dist(),
-        img_size);
+        count, cv::Size{kCharucoSqX, kCharucoSqY}, kSquareLenM, kMarkerLenM, charuco_dict(),
+        ground_truth_K(), ground_truth_dist(), img_size);
 }
 
 // ─────────────────────────────────────────────────────────
@@ -173,15 +159,15 @@ std::vector<cv::Mat> make_charuco_images(int count,
 // ─────────────────────────────────────────────────────────
 TEST(CameraCalibTest, CharucoHappyPath) {
     auto images = make_charuco_images(10);
-    ASSERT_EQ(images.size(), 10u);
+    ASSERT_EQ(images.size(), 10U);
 
     rm::calib::CameraCalibInput input;
-    input.images         = std::move(images);
-    input.board_type     = rm::calib::BoardType::Charuco;
-    input.board_size     = cv::Size{kCharucoSqX, kCharucoSqY};
-    input.square_size_m  = kSquareLenM;
-    input.marker_size_m  = kMarkerLenM;
-    input.dictionary_id  = kCharucoDict;
+    input.images = std::move(images);
+    input.board_type = rm::calib::BoardType::Charuco;
+    input.board_size = cv::Size{kCharucoSqX, kCharucoSqY};
+    input.square_size_m = kSquareLenM;
+    input.marker_size_m = kMarkerLenM;
+    input.dictionary_id = kCharucoDict;
 
     rm::calib::CameraCalibrator calibrator(input);
     auto result = calibrator.compute();
@@ -208,13 +194,13 @@ TEST(CameraCalibTest, BoardTypeDetection) {
     // Chessboard input → Chessboard mode
     {
         auto images = make_images(10);
-        ASSERT_EQ(images.size(), 10u);
+        ASSERT_EQ(images.size(), 10U);
 
         rm::calib::CameraCalibInput input;
-        input.images       = std::move(images);
-        input.board_size   = cv::Size{kBoardW, kBoardH};
+        input.images = std::move(images);
+        input.board_size = cv::Size{kBoardW, kBoardH};
         input.square_size_m = kSquareM;
-        input.board_type   = rm::calib::BoardType::Chessboard;
+        input.board_type = rm::calib::BoardType::Chessboard;
 
         rm::calib::CameraCalibrator calibrator(input);
         auto result = calibrator.compute();
@@ -226,12 +212,12 @@ TEST(CameraCalibTest, BoardTypeDetection) {
     // Charuco input → Charuco mode
     {
         auto images = make_charuco_images(10);
-        ASSERT_EQ(images.size(), 10u);
+        ASSERT_EQ(images.size(), 10U);
 
         rm::calib::CameraCalibInput input;
-        input.images        = std::move(images);
-        input.board_type    = rm::calib::BoardType::Charuco;
-        input.board_size    = cv::Size{kCharucoSqX, kCharucoSqY};
+        input.images = std::move(images);
+        input.board_type = rm::calib::BoardType::Charuco;
+        input.board_size = cv::Size{kCharucoSqX, kCharucoSqY};
         input.square_size_m = kSquareLenM;
         input.marker_size_m = kMarkerLenM;
         input.dictionary_id = kCharucoDict;
@@ -249,7 +235,7 @@ TEST(CameraCalibTest, BoardTypeDetection) {
 // ─────────────────────────────────────────────────────────
 TEST(CameraCalibTest, PartialOcclusion) {
     auto images = make_charuco_images(10);
-    ASSERT_EQ(images.size(), 10u);
+    ASSERT_EQ(images.size(), 10U);
 
     // zero out the top 30 % of each image (set to white)
     for (auto& img : images) {
@@ -258,9 +244,9 @@ TEST(CameraCalibTest, PartialOcclusion) {
     }
 
     rm::calib::CameraCalibInput input;
-    input.images        = std::move(images);
-    input.board_type    = rm::calib::BoardType::Charuco;
-    input.board_size    = cv::Size{kCharucoSqX, kCharucoSqY};
+    input.images = std::move(images);
+    input.board_type = rm::calib::BoardType::Charuco;
+    input.board_size = cv::Size{kCharucoSqX, kCharucoSqY};
     input.square_size_m = kSquareLenM;
     input.marker_size_m = kMarkerLenM;
     input.dictionary_id = kCharucoDict;
@@ -276,12 +262,12 @@ TEST(CameraCalibTest, PartialOcclusion) {
 // ─────────────────────────────────────────────────────────
 TEST(CameraCalibTest, WrongDictionary) {
     auto images = make_charuco_images(10);
-    ASSERT_EQ(images.size(), 10u);
+    ASSERT_EQ(images.size(), 10U);
 
     rm::calib::CameraCalibInput input;
-    input.images        = std::move(images);
-    input.board_type    = rm::calib::BoardType::Charuco;
-    input.board_size    = cv::Size{kCharucoSqX, kCharucoSqY};
+    input.images = std::move(images);
+    input.board_type = rm::calib::BoardType::Charuco;
+    input.board_size = cv::Size{kCharucoSqX, kCharucoSqY};
     input.square_size_m = kSquareLenM;
     input.marker_size_m = kMarkerLenM;
     input.dictionary_id = cv::aruco::DICT_4X4_50;  // wrong dict
@@ -293,3 +279,4 @@ TEST(CameraCalibTest, WrongDictionary) {
 }
 
 }  // namespace
+// NOLINTEND(performance-unnecessary-value-param,performance-unnecessary-copy-initialization)

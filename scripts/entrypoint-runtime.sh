@@ -15,7 +15,7 @@ service ssh start
 
 echo "RealMan runtime starting..."
 echo "  sshd:22     — remote access"
-echo "  arm_node    — arm control + stop service"
+echo "  controller_manager — ros2_control arm driver"
 echo "  calib_node  — calibration pipeline services"
 echo ""
 

@@ -1,4 +1,5 @@
 /// calib_node — ROS2 node wrapping the realman_calibration pipeline.
+// NOLINTBEGIN(performance-unnecessary-value-param,bugprone-exception-escape,readability-function-size,readability-math-missing-parentheses,cppcoreguidelines-pro-bounds-pointer-arithmetic,readability-implicit-bool-conversion,readability-make-member-function-const)
 ///
 /// Exposes:
 ///   ~/run         (Trigger)   Run full pipeline from a pre-collected session.
@@ -8,41 +9,39 @@
 ///
 /// All paths and board parameters are configured via ROS2 params.
 
+#include "realman_calibration/format_polyfill.hpp"
+
+#include <tf2/LinearMath/Matrix3x3.h>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2_ros/static_transform_broadcaster.h>
+
+#include <filesystem>
+#include <mutex>
+#include <string>
+
+#include <geometry_msgs/msg/transform_stamped.hpp>
+#include <opencv2/calib3d.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/imgproc.hpp>
+#include <rclcpp/rclcpp.hpp>
+#include <realman/core/arm.hpp>
+#include <realman/motion/types.hpp>
 #include <realman_calibration/camera_calib.hpp>
 #include <realman_calibration/collector.hpp>
 #include <realman_calibration/hand_eye.hpp>
 #include <realman_calibration/pose_proc.hpp>
 #include <realman_calibration/transform.hpp>
-
-#include <realman/core/arm.hpp>
-#include <realman/motion/types.hpp>
-
-#include <geometry_msgs/msg/transform_stamped.hpp>
-#include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/image.hpp>
 #include <std_msgs/msg/string.hpp>
 #include <std_srvs/srv/trigger.hpp>
-#include <tf2/LinearMath/Matrix3x3.h>
-#include <tf2/LinearMath/Quaternion.h>
-#include <tf2_ros/static_transform_broadcaster.h>
 #include <visualization_msgs/msg/marker.hpp>
-
-#include <filesystem>
-#include "realman_calibration/format_polyfill.hpp"
-#include <mutex>
-#include <opencv2/highgui.hpp>
-#include <opencv2/imgcodecs.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/calib3d.hpp>
-#include <string>
 
 namespace rm::calib {
 
 class CalibNode : public rclcpp::Node {
 public:
-    explicit CalibNode(const rclcpp::NodeOptions& options)
-        : rclcpp::Node("calib_node", options)
-    {
+    explicit CalibNode(const rclcpp::NodeOptions& options) : rclcpp::Node("calib_node", options) {
         // ── ROS2 parameters ────────────────────────────────────────────
         declare_parameter("arm_ip", "192.168.1.18");
         declare_parameter("session_dir", "data/calib_session");
@@ -62,25 +61,24 @@ public:
         }
 
         // Build config from params
-        cfg_.arm_ip        = get_parameter("arm_ip").as_string();
-        cfg_.output_dir    = get_parameter("session_dir").as_string();
-        cfg_.board_size    = cv::Size(get_parameter("board_w").as_int(),
-                                       get_parameter("board_h").as_int());
+        cfg_.arm_ip = get_parameter("arm_ip").as_string();
+        cfg_.output_dir = get_parameter("session_dir").as_string();
+        cfg_.board_size =
+            cv::Size(get_parameter("board_w").as_int(), get_parameter("board_h").as_int());
         cfg_.square_size_m = static_cast<float>(get_parameter("square_size_m").as_double());
 
         // Reconnect arm with configured IP
         arm_ = rm::Arm(rm::ArmConfig{.ip = cfg_.arm_ip});
 
         RCLCPP_INFO(get_logger(),
-            "CalibNode ready — arm=%s mode=%s board=%dx%d sq=%.3fm session=%s",
-            cfg_.arm_ip.c_str(), mode_str.c_str(),
-            cfg_.board_size.width, cfg_.board_size.height,
-            cfg_.square_size_m, cfg_.output_dir.string().c_str());
+                    "CalibNode ready — arm=%s mode=%s board=%dx%d sq=%.3fm session=%s",
+                    cfg_.arm_ip.c_str(), mode_str.c_str(), cfg_.board_size.width,
+                    cfg_.board_size.height, cfg_.square_size_m, cfg_.output_dir.string().c_str());
 
         // ── Monitoring publishers ──────────────────────────────────────
-        img_pub_        = create_publisher<sensor_msgs::msg::Image>("~/camera_image", 10);
-        corners_pub_    = create_publisher<visualization_msgs::msg::Marker>("~/detected_corners", 10);
-        arm_state_pub_  = create_publisher<std_msgs::msg::String>("~/arm_state", 10);
+        img_pub_ = create_publisher<sensor_msgs::msg::Image>("~/camera_image", 10);
+        corners_pub_ = create_publisher<visualization_msgs::msg::Marker>("~/detected_corners", 10);
+        arm_state_pub_ = create_publisher<std_msgs::msg::String>("~/arm_state", 10);
 
         setupServices();
         tf_broadcaster_ = std::make_shared<tf2_ros::StaticTransformBroadcaster>(this);
@@ -91,8 +89,7 @@ private:
         using Trigger = std_srvs::srv::Trigger;
 
         run_svc_ = create_service<Trigger>(
-            "~/run",
-            [this](const Trigger::Request::SharedPtr, Trigger::Response::SharedPtr res) {
+            "~/run", [this](const Trigger::Request::SharedPtr, Trigger::Response::SharedPtr res) {
                 res->success = true;
                 std::string msg;
                 {
@@ -102,9 +99,9 @@ private:
                 res->message = msg;
             });
 
-        cam_calib_svc_ = create_service<Trigger>(
-            "~/calibrate",
-            [this](const Trigger::Request::SharedPtr, Trigger::Response::SharedPtr res) {
+        cam_calib_svc_ =
+            create_service<Trigger>("~/calibrate", [this](const Trigger::Request::SharedPtr,
+                                                          Trigger::Response::SharedPtr res) {
                 res->success = true;
                 std::string msg;
                 {
@@ -114,9 +111,9 @@ private:
                 res->message = msg;
             });
 
-        hand_eye_svc_ = create_service<Trigger>(
-            "~/hand_eye",
-            [this](const Trigger::Request::SharedPtr, Trigger::Response::SharedPtr res) {
+        hand_eye_svc_ =
+            create_service<Trigger>("~/hand_eye", [this](const Trigger::Request::SharedPtr,
+                                                         Trigger::Response::SharedPtr res) {
                 res->success = true;
                 std::string msg;
                 {
@@ -127,8 +124,7 @@ private:
             });
 
         stop_svc_ = create_service<Trigger>(
-            "~/stop",
-            [this](const Trigger::Request::SharedPtr, Trigger::Response::SharedPtr res) {
+            "~/stop", [this](const Trigger::Request::SharedPtr, Trigger::Response::SharedPtr res) {
                 std::lock_guard lock{mtx_};
                 try {
                     arm_.stop();
@@ -166,13 +162,13 @@ private:
         for (size_t i = 0; i < images.size(); ++i) {
             // ── camera_image ──
             auto img_msg = std::make_unique<sensor_msgs::msg::Image>();
-            img_msg->header.stamp    = this->now();
+            img_msg->header.stamp = this->now();
             img_msg->header.frame_id = "camera_frame";
-            img_msg->height          = images[i].rows;
-            img_msg->width           = images[i].cols;
-            img_msg->encoding        = "mono8";
-            img_msg->is_bigendian    = false;
-            img_msg->step            = static_cast<unsigned int>(images[i].cols);
+            img_msg->height = images[i].rows;
+            img_msg->width = images[i].cols;
+            img_msg->encoding = "mono8";
+            img_msg->is_bigendian = false;
+            img_msg->step = static_cast<unsigned int>(images[i].cols);
             img_msg->data.assign(images[i].data, images[i].data + images[i].rows * images[i].cols);
             img_pub_->publish(std::move(img_msg));
 
@@ -180,8 +176,9 @@ private:
             if (i < session.arm_poses.size()) {
                 const auto& pose = session.arm_poses[i];
                 auto state_msg = std::make_unique<std_msgs::msg::String>();
-                state_msg->data = std::format("pose[{}]: tx={:.4f} ty={:.4f} tz={:.4f} rx={:.4f} ry={:.4f} rz={:.4f}",
-                                              i, pose[0], pose[1], pose[2], pose[3], pose[4], pose[5]);
+                state_msg->data = std::format(
+                    "pose[{}]: tx={:.4F} ty={:.4F} tz={:.4F} rx={:.4F} ry={:.4F} rz={:.4F}", i,
+                    pose[0], pose[1], pose[2], pose[3], pose[4], pose[5]);
                 arm_state_pub_->publish(std::move(state_msg));
 
                 // ── detected_corners ──
@@ -190,19 +187,19 @@ private:
                 bool found = cv::findChessboardCorners(images[i], cfg_.board_size, corners);
 
                 auto marker = std::make_unique<visualization_msgs::msg::Marker>();
-                marker->header.stamp    = this->now();
+                marker->header.stamp = this->now();
                 marker->header.frame_id = "camera_frame";
-                marker->ns     = "detected_corners";
-                marker->id     = static_cast<int>(i);
-                marker->type   = visualization_msgs::msg::Marker::SPHERE_LIST;
+                marker->ns = "detected_corners";
+                marker->id = static_cast<int>(i);
+                marker->type = visualization_msgs::msg::Marker::SPHERE_LIST;
                 marker->action = visualization_msgs::msg::Marker::ADD;
                 marker->scale.x = 2.0;
                 marker->scale.y = 2.0;
                 marker->scale.z = 2.0;
-                marker->color.r = 1.0f;
-                marker->color.g = 0.0f;
-                marker->color.b = 0.0f;
-                marker->color.a = 1.0f;
+                marker->color.r = 1.0F;
+                marker->color.g = 0.0F;
+                marker->color.b = 0.0F;
+                marker->color.a = 1.0F;
                 marker->lifetime = rclcpp::Duration::from_seconds(60.0);
 
                 if (found) {
@@ -213,59 +210,53 @@ private:
                         p.z = 0.0;
                         marker->points.push_back(p);
                     }
-                    RCLCPP_DEBUG(get_logger(),
-                        "Published %zu detected corners for image %zu", corners.size(), i);
+                    RCLCPP_DEBUG(get_logger(), "Published %zu detected corners for image %zu",
+                                 corners.size(), i);
                 }
                 corners_pub_->publish(std::move(marker));
             }
 
             rclcpp::sleep_for(std::chrono::milliseconds(20));
         }
-        RCLCPP_INFO(get_logger(),
-            "Published monitoring data: %zu images, %zu poses", images.size(), session.arm_poses.size());
+        RCLCPP_INFO(get_logger(), "Published monitoring data: %zu images, %zu poses", images.size(),
+                    session.arm_poses.size());
     }
 
     /// Stage 2: Camera intrinsic calibration only.
     auto runCameraCalib() -> std::string {
         auto images = loadSessionImages();
-        if (images.empty())
-            return std::format("no images in {}", cfg_.output_dir.string());
+        if (images.empty()) return std::format("no images in {}", cfg_.output_dir.string());
 
         CameraCalibInput input;
-        input.images       = std::move(images);
-        input.board_size   = cfg_.board_size;
+        input.images = std::move(images);
+        input.board_size = cfg_.board_size;
         input.square_size_m = cfg_.square_size_m;
 
         CameraCalibrator calibrator(input);
         auto result = calibrator.compute();
-        if (!result)
-            return std::format("camera calibration failed: {}", result.error());
+        if (!result) return std::format("camera calibration failed: {}", result.error());
 
         // Persist for hand-eye stage
         last_cam_rvecs_ = result->rvecs;
         last_cam_tvecs_ = result->tvecs;
 
-        return std::format("camera OK — reproj {:.4f} px, {} images",
-                           result->reproj_error, result->images_used);
+        return std::format("camera OK — reproj {:.4F} px, {} images", result->reproj_error,
+                           result->images_used);
     }
 
     /// Stage 3+4: Pose processing + hand-eye solve (requires camera result first).
     auto runHandEye() -> std::string {
-        if (last_cam_rvecs_.empty())
-            return "run ~/calibrate first — no camera result cached";
-        if (last_arm_poses_.empty())
-            return "no arm poses cached — run ~/run (full pipeline) first";
+        if (last_cam_rvecs_.empty()) return "run ~/calibrate first — no camera result cached";
+        if (last_arm_poses_.empty()) return "no arm poses cached — run ~/run (full pipeline) first";
 
         PoseProcessor pose_proc(mode_);
         auto pose_result = pose_proc.process(last_arm_poses_);
-        if (!pose_result)
-            return std::format("pose processing failed: {}", pose_result.error());
+        if (!pose_result) return std::format("pose processing failed: {}", pose_result.error());
 
         HandEyeSolver solver(mode_);
-        auto he = solver.solve(pose_result->R_motions, pose_result->t_motions,
-                               last_cam_rvecs_, last_cam_tvecs_);
-        if (!he)
-            return std::format("hand-eye failed: {}", he.error());
+        auto he = solver.solve(pose_result->R_motions, pose_result->t_motions, last_cam_rvecs_,
+                               last_cam_tvecs_);
+        if (!he) return std::format("hand-eye failed: {}", he.error());
 
         auto result_path = cfg_.output_dir / "calibration_result.yaml";
         he->save_yaml(result_path);
@@ -292,25 +283,24 @@ private:
             rot.getRotation(q);
 
             geometry_msgs::msg::TransformStamped tf;
-            tf.header.stamp       = this->now();
-            tf.header.frame_id    = get_parameter("parent_frame_id").as_string();
-            tf.child_frame_id     = get_parameter("child_frame_id").as_string();
+            tf.header.stamp = this->now();
+            tf.header.frame_id = get_parameter("parent_frame_id").as_string();
+            tf.child_frame_id = get_parameter("child_frame_id").as_string();
             tf.transform.translation.x = t_inv.at<double>(0);
             tf.transform.translation.y = t_inv.at<double>(1);
             tf.transform.translation.z = t_inv.at<double>(2);
-            tf.transform.rotation.x    = q.x();
-            tf.transform.rotation.y    = q.y();
-            tf.transform.rotation.z    = q.z();
-            tf.transform.rotation.w    = q.w();
+            tf.transform.rotation.x = q.x();
+            tf.transform.rotation.y = q.y();
+            tf.transform.rotation.z = q.z();
+            tf.transform.rotation.w = q.w();
 
             tf_broadcaster_->sendTransform(tf);
-            RCLCPP_INFO(get_logger(),
-                "Broadcasted static TF: %s → %s", tf.header.frame_id.c_str(),
-                tf.child_frame_id.c_str());
+            RCLCPP_INFO(get_logger(), "Broadcasted static TF: %s → %s", tf.header.frame_id.c_str(),
+                        tf.child_frame_id.c_str());
         }
 
-        return std::format("hand-eye OK — method={} reproj={:.4f} px → {}",
-                           he->method, he->reproj_error, result_path.string());
+        return std::format("hand-eye OK — method={} reproj={:.4F} px → {}", he->method,
+                           he->reproj_error, result_path.string());
     }
 
     /// Full pipeline: collect → camera calib → poses → hand-eye.
@@ -321,8 +311,7 @@ private:
         CalibDataCollector collector(cfg_);
         auto session = collector.run();
         collecting_ = false;
-        if (!session)
-            return std::format("collect failed: {}", session.error());
+        if (!session) return std::format("collect failed: {}", session.error());
 
         // Publish monitoring topics from collected data
         publishMonitoringData(*session);
@@ -346,23 +335,23 @@ private:
     }
 
     // ── State ──────────────────────────────────────────────────────────
-    rm::Arm             arm_{rm::ArmConfig{.ip = "192.168.1.18"}};
-    CalibDataConfig     cfg_;
-    HandEyeMode         mode_{HandEyeMode::EyeInHand};
-    std::mutex          mtx_;
-    bool                collecting_{false};
+    rm::Arm arm_{rm::ArmConfig{.ip = "192.168.1.18"}};
+    CalibDataConfig cfg_;
+    HandEyeMode mode_{HandEyeMode::EyeInHand};
+    std::mutex mtx_;
+    bool collecting_{false};
 
     // TF broadcaster for hand-eye result
     std::shared_ptr<tf2_ros::StaticTransformBroadcaster> tf_broadcaster_;
 
     // Monitoring publishers (active only during collection phase)
-    rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr          img_pub_;
-    rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr  corners_pub_;
-    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr            arm_state_pub_;
+    rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr img_pub_;
+    rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr corners_pub_;
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr arm_state_pub_;
 
     // Cached results for staged execution
-    std::vector<cv::Mat>              last_cam_rvecs_;
-    std::vector<cv::Mat>              last_cam_tvecs_;
+    std::vector<cv::Mat> last_cam_rvecs_;
+    std::vector<cv::Mat> last_cam_tvecs_;
     std::vector<std::array<double, 6>> last_arm_poses_;
 
     // ROS2 services
@@ -382,3 +371,4 @@ int main(int argc, char* argv[]) {
     rclcpp::shutdown();
     return 0;
 }
+// NOLINTEND(performance-unnecessary-value-param,bugprone-exception-escape,readability-function-size,readability-math-missing-parentheses,cppcoreguidelines-pro-bounds-pointer-arithmetic,readability-implicit-bool-conversion,readability-make-member-function-const)

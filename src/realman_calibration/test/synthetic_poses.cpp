@@ -1,6 +1,7 @@
 #include "synthetic_poses.h"
 
 #include <cmath>
+
 #include <random>
 #include <stdexcept>
 
@@ -19,7 +20,9 @@ namespace {
         std::random_device rd;
         // seed_seq from multiple random_device values for good entropy
         std::array<std::random_device::result_type, 8> seeds{};
-        for (auto& s : seeds) s = rd();
+        for (auto& s : seeds) {
+            s = rd();
+        }
         std::seed_seq seq(seeds.begin(), seeds.end());
         return std::mt19937{seq};
     }();
@@ -27,28 +30,28 @@ namespace {
 }
 
 /// Check rotation diversity: max-min ≥ min_spread_rad in all 3 axes (rx,ry,rz).
-[[nodiscard]] auto has_rotation_spread(
-    const std::vector<std::array<double, 6>>& poses,
-    double min_spread_rad) -> bool
-{
+[[nodiscard]] auto has_rotation_spread(const std::vector<std::array<double, 6>>& poses,
+                                       double min_spread_rad) -> bool {
     if (poses.size() < 3) return false;
 
-    double min_rx = poses[0][3], max_rx = poses[0][3];
-    double min_ry = poses[0][4], max_ry = poses[0][4];
-    double min_rz = poses[0][5], max_rz = poses[0][5];
+    double min_rx = poses[0][3];
+    double max_rx = poses[0][3];
+    double min_ry = poses[0][4];
+    double max_ry = poses[0][4];
+    double min_rz = poses[0][5];
+    double max_rz = poses[0][5];
 
     for (const auto& p : poses) {
-        if (p[3] < min_rx) min_rx = p[3];
-        if (p[3] > max_rx) max_rx = p[3];
-        if (p[4] < min_ry) min_ry = p[4];
-        if (p[4] > max_ry) max_ry = p[4];
-        if (p[5] < min_rz) min_rz = p[5];
-        if (p[5] > max_rz) max_rz = p[5];
+        min_rx = std::min(min_rx, p[3]);
+        max_rx = std::max(max_rx, p[3]);
+        min_ry = std::min(min_ry, p[4]);
+        max_ry = std::max(max_ry, p[4]);
+        min_rz = std::min(min_rz, p[5]);
+        max_rz = std::max(max_rz, p[5]);
     }
 
-    return (max_rx - min_rx) >= min_spread_rad
-        && (max_ry - min_ry) >= min_spread_rad
-        && (max_rz - min_rz) >= min_spread_rad;
+    return (max_rx - min_rx) >= min_spread_rad && (max_ry - min_ry) >= min_spread_rad &&
+           (max_rz - min_rz) >= min_spread_rad;
 }
 
 }  // anonymous namespace
@@ -58,13 +61,12 @@ namespace {
 // ──────────────────────────────────────────────────────────────
 
 auto generate_random_poses(int N, double min_rotation_spread_deg)
-    -> std::vector<std::array<double, 6>>
-{
+    -> std::vector<std::array<double, 6>> {
     if (N < 1) return {};
 
-    constexpr double kTransLimit  = 0.3;       // meters
-    constexpr double kRotLimit    = M_PI;       // radians
-    const     double kMinSpread   = min_rotation_spread_deg * M_PI / 180.0;
+    constexpr double kTransLimit = 0.3;  // meters
+    constexpr double kRotLimit = M_PI;   // radians
+    const double kMinSpread = min_rotation_spread_deg * M_PI / 180.0;
 
     auto& gen = rng();
     std::uniform_real_distribution<double> trans_dist(-kTransLimit, kTransLimit);
@@ -78,12 +80,12 @@ auto generate_random_poses(int N, double min_rotation_spread_deg)
 
         for (int i = 0; i < N; ++i) {
             poses.push_back({
-                trans_dist(gen),   // tx
-                trans_dist(gen),   // ty
-                trans_dist(gen),   // tz
-                rot_dist(gen),     // rx
-                rot_dist(gen),     // ry
-                rot_dist(gen)      // rz
+                trans_dist(gen),  // tx
+                trans_dist(gen),  // ty
+                trans_dist(gen),  // tz
+                rot_dist(gen),    // rx
+                rot_dist(gen),    // ry
+                rot_dist(gen)     // rz
             });
         }
 
@@ -97,15 +99,15 @@ auto generate_random_poses(int N, double min_rotation_spread_deg)
 
     throw std::runtime_error(
         "generate_random_poses: failed to meet rotation diversity "
-        "constraint after " + std::to_string(kMaxRetries) + " attempts");
+        "constraint after " +
+        std::to_string(kMaxRetries) + " attempts");
 }
 
 // ──────────────────────────────────────────────────────────────
 // generate_random_handeye_transform
 // ──────────────────────────────────────────────────────────────
 
-auto generate_random_handeye_transform() -> cv::Mat
-{
+auto generate_random_handeye_transform() -> cv::Mat {
     constexpr double kTransLimit = 0.2;  // meters
 
     auto& gen = rng();
@@ -116,8 +118,13 @@ auto generate_random_handeye_transform() -> cv::Mat
     double ax = normal(gen);
     double ay = normal(gen);
     double az = normal(gen);
-    double len = std::sqrt(ax * ax + ay * ay + az * az);
-    if (len < 1e-12) { ax = 1.0; ay = 0.0; az = 0.0; len = 1.0; }
+    double len = std::sqrt((ax * ax) + (ay * ay) + (az * az));
+    if (len < 1e-12) {
+        ax = 1.0;
+        ay = 0.0;
+        az = 0.0;
+        len = 1.0;
+    }
 
     cv::Mat axis = (cv::Mat_<double>(3, 1) << ax / len, ay / len, az / len);
 
@@ -149,8 +156,7 @@ auto generate_random_handeye_transform() -> cv::Mat
 // inject_noise
 // ──────────────────────────────────────────────────────────────
 
-void inject_noise(std::vector<cv::Point2f>& points, double sigma)
-{
+void inject_noise(std::vector<cv::Point2f>& points, double sigma) {
     if (sigma <= 0.0 || points.empty()) return;
 
     auto& gen = rng();
