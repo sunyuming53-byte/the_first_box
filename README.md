@@ -114,18 +114,22 @@ realman/                              # ROS2 workspace root
 
 ## Architecture
 
-```
-  Your code (ROS2 node, ros2_control, or plain C++)
-  └── arm.moveJ()     (arm control)
-        │
-        ▼
-  rm::Arm             (PIMPL, non-ROS — single worker thread + command queue)
-        │  C API
-        ▼
-  libapi_c.so         (RM_API2 SDK)
-        │  TCP
-        ▼
-  RealMan Robot Arm
+```mermaid
+flowchart TD
+    subgraph User["Your Application"]
+        ROS["ROS2 Node / ros2_control"]
+        PLAIN["Plain C++"]
+    end
+
+    ROS --> Arm
+    PLAIN --> Arm
+
+    Arm["rm::Arm<br/><i>PIMPL facade — zero ROS deps</i>"]
+    Arm --> Impl["Arm::Impl<br/><i>worker thread + cmd queue</i>"]
+    Impl --> SDK["libapi_c.so<br/><i>RM_API2 C SDK</i>"]
+    SDK -->|TCP| HW["RealMan Robot Arm"]
+
+    Arm -.->|Lazy connect| Impl
 ```
 
 `rm::Arm` is a plain C++ class (not an `rclcpp::Node`) with **zero ROS dependency**.
@@ -148,9 +152,22 @@ Override SDK path:
 colcon build --cmake-args -DREALMAN_SDK=/custom/path
 ```
 
-### Build order (automatic with colcon)
+### Build order
 
-`realman_vision` → `realman_arm` → `realman_calibration` / `realman_hardware` → `realman_bringup`
+```mermaid
+graph TD
+    vision["realman_vision<br/><i>ament_cmake</i>"]
+    arm["realman_arm<br/><i>plain CMake</i>"]
+    calib["realman_calibration<br/><i>ament_cmake</i>"]
+    hw["realman_hardware<br/><i>ament_cmake</i>"]
+    bringup["realman_bringup<br/><i>launch only</i>"]
+
+    vision --> calib
+    arm --> calib
+    arm --> hw
+    calib --> bringup
+    hw --> bringup
+```
 
 `colcon build` resolves this automatically, but it matters when building packages individually or adding cross-package dependencies.
 
@@ -201,7 +218,21 @@ pointer alignment. See `.clang-format` and `.clang-tidy` for full config.
 
 ## CI / CD
 
-GitHub Actions workflows in `.github/workflows/`:
+```mermaid
+flowchart LR
+    subgraph CI["ci.yml — PR / push"]
+        B["Build<br/>colcon build"] --> T["Test<br/>colcon test"]
+        F["clang-format<br/>blocking"] 
+        CT["clang-tidy<br/>non-blocking"]
+    end
+
+    subgraph CD["cd.yml — tag v*"]
+        DEV["Build develop image"] --> PUSH1["Push to ghcr.io"]
+        RT["Build runtime image"] --> PUSH2["Push to ghcr.io"]
+    end
+
+    CI -.->|tag push| CD
+```
 
 | Workflow | Trigger | What it does |
 |---|---|---|
@@ -215,6 +246,20 @@ Images are published to GitHub Container Registry:
 ## Docker & Dev Container
 
 The project uses a multi-stage Dockerfile and VS Code dev container.
+
+```mermaid
+flowchart TD
+    subgraph Base["Stage 1 — Base"]
+        B1["realman-base-dev<br/>ros:humble-desktop + OpenCV + realsense2"]
+        B2["realman-base<br/>ros:humble + OpenCV + realsense2"]
+    end
+
+    B1 --> Dev["realman-develop<br/>+ build tools + dev user + clangd"]
+    B2 --> Runtime["realman-runtime<br/>+ supervisor + sshd"]
+
+    Dev -->|ssh-keygen| Key["~/.ssh/id_rsa"]
+    Key -->|COPY --from| Runtime
+```
 
 ### Develop container (GUI + build tools)
 
