@@ -8,7 +8,7 @@ find_package(ament_cmake REQUIRED)
 find_package(hardware_interface REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(rclcpp REQUIRED)
-find_package(realman_driver REQUIRED)
+find_package(realman_arm REQUIRED)
 
 add_library(${PROJECT_NAME} SHARED
     src/arm_system.cpp
@@ -18,8 +18,9 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     $<INSTALL_INTERFACE:include>
 )
 ament_target_dependencies(${PROJECT_NAME}
-    hardware_interface pluginlib rclcpp realman_driver
+    hardware_interface pluginlib rclcpp
 )
+target_link_libraries(${PROJECT_NAME} realman_arm::realman_arm)
 
 pluginlib_export_plugin_description_file(hardware_interface plugins.xml)
 
