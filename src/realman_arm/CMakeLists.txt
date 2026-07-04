@@ -17,7 +17,9 @@ file(GLOB_RECURSE ARM_SOURCES CONFIGURE_DEPENDS
 add_library(realman_arm SHARED ${ARM_SOURCES})
 target_include_directories(realman_arm PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${REALMAN_SDK}/include>
     $<INSTALL_INTERFACE:include>
+    $<INSTALL_INTERFACE:include/sdk>
 )
 target_include_directories(realman_arm PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
@@ -41,10 +43,11 @@ target_link_libraries(joint_test realman_arm)
 add_executable(movel_test examples/movel_test.cpp)
 target_link_libraries(movel_test realman_arm)
 
-install(TARGETS realman_arm
+install(TARGETS realman_arm movej_test gripper_test joint_test movel_test
     EXPORT realman_armTargets
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION lib/${PROJECT_NAME}
 )
 install(EXPORT realman_armTargets
     FILE realman_armTargets.cmake
@@ -52,6 +55,13 @@ install(EXPORT realman_armTargets
     DESTINATION share/realman_arm/cmake
 )
 install(DIRECTORY include/ DESTINATION include)
-install(FILES cmake/realman_armConfig.cmake
+install(FILES
+    cmake/realman_armConfig.cmake
+    cmake/RealManSDKConfig.cmake
     DESTINATION share/realman_arm/cmake
 )
+
+# ── Bundle SDK artifacts for downstream consumers ──
+get_filename_component(_rm_sdk_lib_dir "${_rm_sdk_lib}" DIRECTORY)
+install(DIRECTORY "${REALMAN_SDK}/include/" DESTINATION include/sdk)
+install(FILES "${_rm_sdk_lib}" DESTINATION lib)

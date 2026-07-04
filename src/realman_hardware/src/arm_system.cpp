@@ -2,6 +2,8 @@
 #include <pluginlib/class_list_macros.hpp>
 #include <cmath>
 
+using hardware_interface::CallbackReturn;
+
 namespace realman_hardware {
 
 CallbackReturn ArmSystem::on_init(const hardware_interface::HardwareInfo& info) {
@@ -108,8 +110,9 @@ hardware_interface::return_type ArmSystem::read(
         }
         // Velocity and effort are not provided by the current SDK — leave as 0
     } catch (const rm::ArmError& e) {
+        rclcpp::Clock steady_clock(RCL_STEADY_TIME);
         RCLCPP_ERROR_THROTTLE(rclcpp::get_logger("ArmSystem"),
-            *rclcpp::get_clock_by_name("steady"), 5000,
+            steady_clock, 5000,
             "read() failed: %s", e.what());
     }
 
@@ -142,8 +145,9 @@ hardware_interface::return_type ArmSystem::write(
         arm_->moveJ(rm::JointPosition(std::move(target)), 100, false);
         hw_position_cmd_prev_ = hw_position_cmd_;
     } catch (const rm::ArmError& e) {
+        rclcpp::Clock steady_clock(RCL_STEADY_TIME);
         RCLCPP_ERROR_THROTTLE(rclcpp::get_logger("ArmSystem"),
-            *rclcpp::get_clock_by_name("steady"), 5000,
+            steady_clock, 5000,
             "write() failed: %s", e.what());
     }
 

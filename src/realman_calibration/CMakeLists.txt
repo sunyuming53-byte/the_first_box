@@ -16,10 +16,6 @@ find_package(tf2_ros REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 
-# ── RealMan SDK ──
-list(APPEND CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../cmake")
-find_package(RealManSDK REQUIRED)
-
 find_package(realman_arm REQUIRED)
 
 # ── Libraries ──
