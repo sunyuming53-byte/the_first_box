@@ -6,7 +6,8 @@
   <maintainer email="dev@realman-driver.com">RealMan Driver Team</maintainer>
   <license>MIT</license>
   <buildtool_depend>ament_cmake</buildtool_depend>
-  <exec_depend>realman_driver</exec_depend>
+  <exec_depend>realman_arm</exec_depend>
+  <exec_depend>realman_hardware</exec_depend>
   <exec_depend>realman_calibration</exec_depend>
   <exec_depend>realman_vision</exec_depend>
   <exec_depend>rclcpp</exec_depend>

@@ -18,16 +18,17 @@ def generate_launch_description():
         DeclareLaunchArgument('calibration_file', default_value='',
                               description='Path to hand-eye calibration transform file'),
 
-        # ── Arm driver ────────────────────────────────────────────
+        # ── Controller manager (ros2_control) ────────────────────
         Node(
-            package='realman_driver',
-            executable='arm_node',
-            name='arm_node',
+            package='controller_manager',
+            executable='ros2_control_node',
+            name='controller_manager',
             parameters=[{
                 'arm_ip': LaunchConfiguration('arm_ip'),
                 'calibration_file': LaunchConfiguration('calibration_file'),
             }],
             condition=IfCondition(LaunchConfiguration('launch_arm')),
+            output='screen',
         ),
 
         # ── RealSense camera ──────────────────────────────────────
