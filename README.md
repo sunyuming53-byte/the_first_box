@@ -1,7 +1,7 @@
 # RealMan Robot Arm — ROS2 Workspace
 
 ROS2 Humble workspace for controlling [RealMan](https://www.realman-robot.com/) robot arms
-(RM65, RM75, ECO65, RML63, GEN72, etc.) via the official RM_API2 SDK.
+(RM65, RM75, ECO65, ECO63, RML63, RML63-III, GEN72, GEN72-II) via the official RM_API2 SDK.
 
 ## Prerequisites
 
@@ -36,52 +36,76 @@ ros2 run realman_driver gripper_test
 ## Project Structure
 
 ```
-realman/                         # ROS2 workspace root
+realman/                              # ROS2 workspace root
 ├── src/
-│   ├── realman_driver/          # ROS2 package — C++ arm driver library
-│   │   ├── include/realman/    # Public headers
-│   │   │   ├── arm.hpp         #   rm::Arm — main control interface
-│   │   │   ├── types.hpp       #   JointPosition, CartesianPose, ArmConfig, etc.
-│   │   │   ├── error.hpp       #   rm::ArmError exception
-│   │   │   └── arm_node.hpp    #   rm::ArmNode — ROS2 node wrapper
-│   │   ├── src/                # Implementation
-│   │   │   ├── arm.cpp         #   PIMPL + worker thread + RM_API2 calls
-│   │   │   ├── error.cpp       #   Error formatting
-│   │   │   └── arm_node.cpp    #   Node with stop service
-│   │   ├── examples/           # Usage examples
-│   │   │   ├── hello_arm.cpp
-│   │   │   ├── external_trigger.cpp
-│   │   │   ├── arm_node.cpp
-│   │   │   └── gripper_test.cpp
+│   ├── realman_vision/               # Shared lib — RealSense D435 capture
+│   │   ├── include/realman_vision/
+│   │   ├── src/
 │   │   ├── CMakeLists.txt
 │   │   └── package.xml
-│   └── realman_calibration/    # ROS2 package — hand-eye calibration
-│       ├── include/
-│       ├── src/
-│       ├── apps/               # Calibration node executables
+│   ├── realman_driver/               # Shared lib — arm control via RM_API2 SDK
+│   │   ├── include/realman/          # Public headers (subdirectories by domain)
+│   │   │   ├── core/                 #   Arm, ArmConfig, ArmState, ArmError
+│   │   │   ├── motion/               #   JointPosition, CartesianPose, SpeedRatio
+│   │   │   ├── gripper/              #   Gripper types
+│   │   │   ├── node/                 #   ArmNode — rclcpp::Node wrapper
+│   │   │   └── hal/                  #   Hardware abstraction types
+│   │   ├── src/                      # Implementation (subdirectories)
+│   │   │   ├── core/                 #   arm.cpp, arm_impl.hpp (private), error.cpp
+│   │   │   ├── motion/               #   move functions
+│   │   │   ├── gripper/              #   gripper functions
+│   │   │   ├── state/                #   pollState, cached state
+│   │   │   └── node/                 #   ArmNode implementation
+│   │   ├── examples/                 # Executables
+│   │   │   ├── hello_arm.cpp         #   → movej_test
+│   │   │   ├── arm_node.cpp          #   → arm_node (ROS2 standalone node)
+│   │   │   ├── gripper_test.cpp      #   → gripper_test
+│   │   │   ├── joint_test.cpp        #   → joint_test
+│   │   │   ├── movel_test.cpp        #   → movel_test
+│   │   │   └── external_trigger.cpp  #   commented out in CMakeLists.txt
+│   │   ├── test/                     # ament_cmake_gtest (BUILD_TESTING gate)
+│   │   ├── CMakeLists.txt
+│   │   └── package.xml
+│   ├── realman_calibration/          # Shared lib + executables — hand-eye calibration
+│   │   ├── include/realman_calibration/
+│   │   ├── src/
+│   │   ├── apps/                     # Pipeline executables + calib_node
+│   │   ├── config/                   # Board config YAML
+│   │   ├── CMakeLists.txt
+│   │   └── package.xml
+│   ├── realman_hardware/             # ros2_control plugin
+│   │   ├── include/
+│   │   ├── src/
+│   │   ├── plugins.xml
+│   │   ├── CMakeLists.txt
+│   │   └── package.xml
+│   └── realman_bringup/              # Launch + config only (no compiled code)
+│       ├── launch/
+│       ├── config/
 │       ├── CMakeLists.txt
 │       └── package.xml
 ├── cmake/
-│   └── RealManSDKConfig.cmake   # CMake find module for libapi_c.so
-├── scripts/                     # Deployment scripts
-│   ├── deploy-remote           #   Sync + restart services on robot
-│   ├── sync-remote             #   Rsync /ws/install to runtime container
-│   ├── ssh-remote              #   SSH into runtime container
-│   ├── entrypoint-dev.sh       #   Develop container entrypoint
-│   ├── entrypoint-runtime.sh   #   Runtime container entrypoint
-│   └── supervisord.conf        #   Supervisor config (runtime)
+│   └── RealManSDKConfig.cmake        # CMake find module for libapi_c.so
+├── scripts/                          # Deployment scripts
+│   ├── deploy-remote                 #   Sync + restart services on robot
+│   ├── sync-remote                   #   Rsync install/ to runtime container
+│   ├── ssh-remote                    #   SSH into runtime (port 2022)
+│   ├── generate-compile-commands.sh  #   Merge clangd compile_commands.json
+│   ├── entrypoint-dev.sh             #   Develop container entrypoint
+│   ├── entrypoint-runtime.sh         #   Runtime container entrypoint
+│   └── supervisord.conf              #   Supervisor config (auto-starts arm_node + calib_node)
 ├── .devcontainer/
-│   └── devcontainer.json       # VS Code dev container config
-├── .dockerignore
-├── Dockerfile                   # Multi-stage build (develop + runtime)
+│   └── devcontainer.json             # VS Code dev container config
+├── Dockerfile                        # Multi-stage (develop + runtime)
+├── docker-compose.yml
+├── .env.example                      # Proxy + ROS_DOMAIN_ID config
 ├── third_party/
-│   └── RM_API2/                 # Git submodule — official RealMan SDK
-│       └── C/                   # C SDK (headers + shared libs)
-├── docs/                        # Project documentation
-├── knowledge-base/              # Notes & references
-├── build/                       # colcon build output (git-ignored)
-├── install/                     # colcon install output (git-ignored)
-└── log/                         # colcon build logs (git-ignored)
+│   └── RM_API2/                      # Git submodule — official RealMan C SDK
+│       └── C/
+│           ├── include/              #   rm_interface.h, etc.
+│           └── linux/                #   libapi_c.so (versioned: linux_x86_c_vv1.1.5/)
+├── docs/                             # Project documentation
+└── knowledge-base/                   # Notes & references
 ```
 
 ## Architecture
@@ -119,43 +143,87 @@ colcon build
 ```
 
 Override SDK path:
+```bash
+colcon build --cmake-args -DREALMAN_SDK=/custom/path
+```
+
+### Build order (automatic with colcon)
+
+`realman_vision` → `realman_driver` → `realman_calibration` / `realman_hardware` → `realman_bringup`
+
+`colcon build` resolves this automatically, but it matters when building packages individually or adding cross-package dependencies.
+
+### clangd IntelliSense
+
+For IDE support, build with compile_commands and merge across packages:
 
 ```bash
-colcon build --cmake-args -DREALMAN_SDK=/opt/realman-sdk
+colcon build --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+generate-compile-commands.sh
 ```
+
+This produces `build/compile_commands.json` at the workspace root, which clangd
+uses for go-to-definition, diagnostics, and completions. The dev container runs
+this automatically on creation.
+
+## Testing
+
+Tests use `ament_cmake_gtest` and are gated behind `BUILD_TESTING`:
+
+```bash
+colcon build --cmake-args -DBUILD_TESTING=ON
+colcon test
+```
+
+Test binaries need the SDK library on `LD_LIBRARY_PATH` — the CMake config
+handles this via `APPEND_ENV`.
 
 ## Docker & Dev Container
 
-The project includes a multi-stage Dockerfile and VS Code dev container config.
+The project uses a multi-stage Dockerfile and VS Code dev container.
+
+### Develop container (GUI + build tools)
 
 ```bash
-# Build and run development container (GUI tools, RViz, build tools)
+# Via docker compose (recommended):
+docker compose up develop
+
+# Or manual build:
 docker build . --target realman-develop -t realman:develop
 docker run -it --network host --device /dev \
-    -v $(pwd)/src:/ws/src -v /tmp/.X11-unix:/tmp/.X11-unix -e DISPLAY \
+    -v $(pwd):/ws -v /tmp/.X11-unix:/tmp/.X11-unix -e DISPLAY \
     realman:develop
-
-# Or open in VS Code: "Reopen in Container" → uses .devcontainer/devcontainer.json
 ```
 
-**VS Code Dev Container** (`.devcontainer/devcontainer.json`):
-- Sets up X11 forwarding, host networking, ROS2 environment
-- Auto-builds workspace on creation (`colcon build --symlink-install`)
-- Includes C/C++, CMake, ROS2, Python extensions
+Or open in VS Code → "Reopen in Container" (uses `.devcontainer/devcontainer.json`).
 
-**Deploy to robot** from develop container:
+### Runtime container (robot MiniPC — headless)
+
 ```bash
-sync-remote <robot-ip>      # rsync /ws/install to runtime container
-deploy-remote <robot-ip>    # sync + restart ROS2 nodes
-ssh-remote <robot-ip>       # SSH into the runtime container
+docker compose up runtime -d
 ```
 
-The runtime container (`realman-runtime` stage) runs on the robot MiniPC
-with supervisor + sshd, receiving built artifacts via rsync.
+The runtime container runs supervisor with auto-starting `arm_node` + `calib_node`,
+plus an SSH server on port 2022 for receiving built artifacts.
+
+### Deploy to robot
+
+From the develop container:
+
+```bash
+sync-remote <robot-ip>      # rsync install/ to runtime container (SSH port 2022)
+deploy-remote <robot-ip>    # sync + supervisor restart
+ssh-remote <robot-ip>       # SSH into runtime
+```
+
+### Proxy config
+
+If behind a local proxy (Clash, v2ray, etc.), copy `.env.example` to `.env` and
+customize. `docker compose` reads proxy variables from `.env`.
 
 ## Updating the SDK
 
-The SDK is pinned as a git submodule. To update to the latest upstream:
+The SDK is pinned as a git submodule at `third_party/RM_API2`. To update:
 
 ```bash
 cd third_party/RM_API2
@@ -166,10 +234,13 @@ git add third_party/RM_API2
 git commit -m "chore: update RM_API2 submodule to <version>"
 ```
 
+The C SDK `.so` is versioned at `third_party/RM_API2/C/linux/linux_x86_c_vv1.1.5/libapi_c.so`.
+If the versioned path changes, update the `COPY` commands in the Dockerfile.
+
 ## Supported Arm Models
 
 RM65 · RM75 · ECO65 · ECO63 · RML63 · RML63-III · GEN72 · GEN72-II
 
 ## License
 
-MIT — see [LICENSE](LICENSE) 
+MIT — see [LICENSE](LICENSE)
