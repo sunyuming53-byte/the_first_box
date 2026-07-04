@@ -59,8 +59,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # RealMan SDK — placed at submodule-relative paths so cmake config resolves naturally
 COPY cmake/RealManSDKConfig.cmake   cmake/
-COPY third_party/RM_API2/C/include  third_party/RM_API2/C/include/
-COPY third_party/RM_API2/C/linux/linux_x86_c_vv1.1.5/libapi_c.so third_party/RM_API2/C/linux/linux_x86_c_vv1.1.5/
+COPY src/realman_arm/third_party/RM_API2/C/include  third_party/RM_API2/C/include/
+COPY src/realman_arm/third_party/RM_API2/C/linux/linux_x86_c_vv1.1.5/libapi_c.so third_party/RM_API2/C/linux/linux_x86_c_vv1.1.5/
 
 # rosdep — install ROS2 deps declared in package.xml without embedding source
 RUN --mount=type=bind,source=src,target=/tmp/src,readonly \
@@ -112,8 +112,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY cmake/RealManSDKConfig.cmake   cmake/
-COPY third_party/RM_API2/C/include  third_party/RM_API2/C/include/
-COPY third_party/RM_API2/C/linux/linux_x86_c_vv1.1.5/libapi_c.so third_party/RM_API2/C/linux/linux_x86_c_vv1.1.5/
+COPY src/realman_arm/third_party/RM_API2/C/include  third_party/RM_API2/C/include/
+COPY src/realman_arm/third_party/RM_API2/C/linux/linux_x86_c_vv1.1.5/libapi_c.so third_party/RM_API2/C/linux/linux_x86_c_vv1.1.5/
 
 RUN --mount=type=bind,source=src,target=/tmp/src,readonly \
     apt-get update && \
