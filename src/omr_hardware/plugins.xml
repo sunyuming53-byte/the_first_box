@@ -1,0 +1,12 @@
+<library path="omr_hardware">
+  <class name="omr_hardware/ArmSystem"
+         type="omr_hardware::ArmSystem"
+         base_class_type="hardware_interface::SystemInterface">
+    <description>ros2_control hardware plugin for RealMan robot arms (RM65/75/ECO63/ECO65/RML63/GEN72)</description>
+  </class>
+  <class name="omr_hardware/DaisHardware"
+         type="omr_hardware::DaisHardware"
+         base_class_type="hardware_interface::SystemInterface">
+    <description>ros2_control hardware plugin for D-AIS motor via Modbus RTU (RS-485)</description>
+  </class>
+</library>

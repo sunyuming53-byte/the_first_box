@@ -7,7 +7,7 @@ ROS2 Humble workspace for controlling [RealMan](https://www.realman-robot.com/) 
 
 - **Ubuntu 22.04** (Jammy)
 - **ROS2 Humble** — [install guide](https://docs.ros.org/en/humble/Installation.html)
-- **Git** + **SSH key** registered with GitHub (the SDK submodule uses SSH)
+- **Git** + **SSH key** registered with GitHub (private submodules under `omr_hardware/third_party/` use SSH)
 
 Check your ROS2 setup:
 
@@ -21,7 +21,7 @@ ros2 --version
 ```bash
 # 1. Clone with submodule
 git clone --recurse-submodules git@github.com:ChiefTechLabs/pipeline.git
-cd realman
+cd pipeline
 
 # 2. Build
 source /opt/ros/humble/setup.bash
@@ -29,46 +29,21 @@ colcon build
 
 # 3. Launch the ros2_control pipeline
 source install/setup.bash
-ros2 launch realman_bringup bringup.launch.py arm_ip:=192.168.1.18
+ros2 launch omr_bringup bringup.launch.py arm_ip:=192.168.1.18
 
-# Or run standalone examples (no ros2_control)
-ros2 run realman_arm movej_test
-ros2 run realman_arm gripper_test
+# Arm examples removed; use ros2_control pipeline instead
 ```
 
 ## Project Structure
 
 ```
-realman/                              # ROS2 workspace root
+pipeline/                            # ROS2 workspace root
 ├── src/
-│   ├── realman_vision/               # ament_cmake — RealSense D435 capture (no ROS deps)
-│   │   ├── include/realman_vision/
+│   ├── omr_vision/                   # ament_cmake — RealSense D435 capture (no ROS deps)
+│   │   ├── include/omr_vision/
 │   │   │   ├── camera/               #   CameraStream, CameraConfig
 │   │   │   └── capture.hpp           #   Capture abstraction
 │   │   ├── src/
-│   │   ├── CMakeLists.txt
-│   │   └── package.xml
-│   ├── realman_arm/                  # Plain CMake — arm control via RM_API2 SDK (ZERO ROS deps)
-│   │   ├── include/realman/          # Public headers (subdirectories by domain)
-│   │   │   ├── core/                 #   Arm (PIMPL), ArmConfig, ArmState, ArmError
-│   │   │   ├── motion/               #   JointPosition, CartesianPose, SpeedRatio
-│   │   │   ├── gripper/              #   GripperState, GripperAction
-│   │   │   └── hal/                  #   Hardware abstraction types
-│   │   ├── src/                      # Implementation (subdirectories)
-│   │   │   ├── core/                 #   arm_facade.cpp, arm_impl.hpp (private), connection.cpp, error.cpp
-│   │   │   ├── motion/               #   motion.cpp (moveJ, moveL, moveC, moveJ_P)
-│   │   │   ├── gripper/              #   gripper.cpp
-│   │   │   └── state/                #   state.cpp (pollState, cached state)
-│   │   ├── examples/                 # Executables
-│   │   │   ├── hello_arm.cpp         #   → movej_test
-│   │   │   ├── gripper_test.cpp      #   → gripper_test
-│   │   │   ├── joint_test.cpp        #   → joint_test
-│   │   │   ├── movel_test.cpp        #   → movel_test
-│   │   │   └── external_trigger.cpp  #   commented out in CMakeLists.txt
-│   │   ├── cmake/                    #   RealManSDKConfig.cmake, FindRealManSDK.cmake
-│   │   ├── third_party/
-│   │   │   └── RM_API2/              #   Git submodule — official RealMan C SDK
-│   │   ├── test/                     #   ament_cmake_gtest (BUILD_TESTING gate)
 │   │   ├── CMakeLists.txt
 │   │   └── package.xml
 │   ├── realman_calibration/          # ament_cmake — hand-eye calibration
@@ -80,13 +55,21 @@ realman/                              # ROS2 workspace root
 │   │   ├── test/                     # Comprehensive test suite
 │   │   ├── CMakeLists.txt
 │   │   └── package.xml
-│   ├── realman_hardware/             # ament_cmake — ros2_control plugin
-│   │   ├── include/
+│   ├── omr_hardware/                 # ament_cmake — ros2_control plugins
+│   │   ├── third_party/
+│   │   │   ├── realman_arm/          #   Git submodule — pure C++ arm control (zero ROS deps)
+│   │   │   │   └── third_party/RM_API2/  # Nested submodule — RealMan C SDK
+│   │   │   └── dais_motor/           #   Git submodule — pure C++ Modbus RTU driver (zero ROS deps)
+│   │   ├── include/omr_hardware/
+│   │   │   ├── arm_system.hpp        #   ArmSystem plugin (wraps rm::Arm)
+│   │   │   └── dais_hardware.hpp     #   DaisHardware plugin (wraps dais::Motor)
 │   │   ├── src/
-│   │   ├── plugins.xml
+│   │   │   ├── arm_system.cpp
+│   │   │   └── dais_hardware.cpp
+│   │   ├── plugins.xml               #   ArmSystem + DaisHardware registration
 │   │   ├── CMakeLists.txt
 │   │   └── package.xml
-│   └── realman_bringup/              # ament_cmake — launch + config + URDF (no compiled code)
+│   └── omr_bringup/                  # ament_cmake — launch + config + URDF (no compiled code)
 │       ├── launch/
 │       │   ├── bringup.launch.py      #   ros2_control pipeline (RSP + CM + JSB + JTC + camera + calib)
 │       │   └── calibration.launch.py
@@ -157,20 +140,24 @@ flowchart TD
 **Data flow:** `ArmSystem.read()` → joint_state_broadcaster → `/joint_states` topic. Your controller sends a `FollowJointTrajectory` action goal → joint_trajectory_controller → `ArmSystem.write()` → `rm::Arm::moveJ()` → arm.
 
 `rm::Arm` is a plain C++ class (not an `rclcpp::Node`) with **zero ROS dependency**.
+It lives in the `realman_arm` git submodule under `omr_hardware/third_party/`.
 It can be used in any context — embedded in your own ROS2 node, linked into a
 `ros2_control` hardware interface, or used standalone outside ROS2.
+
+`dais::Motor` follows the same pattern — a pure C++ Modbus RTU driver (zero ROS deps)
+in the `dais_motor` submodule, wrapped by the `DaisHardware` plugin in `omr_hardware`.
 
 ### Bringup
 
 ```bash
 # Start ros2_control pipeline (arm driver + controllers)
-ros2 launch realman_bringup bringup.launch.py arm_ip:=192.168.1.18
+ros2 launch omr_bringup bringup.launch.py arm_ip:=192.168.1.18
 
 # Start with camera + calibration
-ros2 launch realman_bringup bringup.launch.py
+ros2 launch omr_bringup bringup.launch.py
 
 # Arm-only (no camera or calibration)
-ros2 launch realman_bringup bringup.launch.py launch_camera:=false launch_calib:=false
+ros2 launch omr_bringup bringup.launch.py launch_camera:=false launch_calib:=false
 ```
 
 The bringup loads the RM65 URDF (kinematics + meshes), starts ros2_control_node with
@@ -180,7 +167,7 @@ The bringup loads the RM65 URDF (kinematics + meshes), starts ros2_control_node 
 ## Building
 
 The SDK is discovered at `/opt/realman-sdk` (or `$REALMAN_SDK`) via
-`find_package(RealManSDK REQUIRED)` backed by `src/realman_arm/cmake/RealManSDKConfig.cmake`.
+`find_package(RealManSDK REQUIRED)` backed by `src/omr_hardware/third_party/realman_arm/cmake/RealManSDKConfig.cmake`.
 The Docker build copies SDK files from the submodule to this location.
 
 ```bash
@@ -197,17 +184,19 @@ colcon build --cmake-args -DREALMAN_SDK=/custom/path
 
 ```mermaid
 graph TD
-    vision["realman_vision<br/><i>ament_cmake</i>"]
-    arm["realman_arm<br/><i>plain CMake</i>"]
+    vision["omr_vision<br/><i>ament_cmake</i>"]
+    hw["omr_hardware<br/><i>ament_cmake</i>"]
+    arm["realman_arm<br/><i>submodule (plain CMake)</i>"]
+    motor["dais_motor<br/><i>submodule (plain CMake)</i>"]
     calib["realman_calibration<br/><i>ament_cmake</i>"]
-    hw["realman_hardware<br/><i>ament_cmake</i>"]
-    bringup["realman_bringup<br/><i>launch only</i>"]
+    bringup["omr_bringup<br/><i>launch only</i>"]
 
     vision --> calib
-    arm --> calib
-    arm --> hw
-    calib --> bringup
+    hw -.->|embeds| arm
+    hw -.->|embeds| motor
+    hw --> calib
     hw --> bringup
+    calib --> bringup
 ```
 
 `colcon build` resolves this automatically, but it matters when building packages individually or adding cross-package dependencies.
@@ -343,18 +332,18 @@ customize. `docker compose` reads proxy variables from `.env`.
 
 ## Updating the SDK
 
-The SDK is pinned as a git submodule at `src/realman_arm/third_party/RM_API2`. To update:
+The SDK is pinned as a git submodule at `src/omr_hardware/third_party/realman_arm/third_party/RM_API2`. To update:
 
 ```bash
-cd src/realman_arm/third_party/RM_API2
+cd src/omr_hardware/third_party/realman_arm/third_party/RM_API2
 git fetch
 git checkout <desired-tag-or-branch>
 cd -
-git add src/realman_arm/third_party/RM_API2
+git add src/omr_hardware/third_party/realman_arm/third_party/RM_API2
 git commit -m "chore: update RM_API2 submodule to <version>"
 ```
 
-The C SDK `.so` is versioned at `src/realman_arm/third_party/RM_API2/C/linux/linux_x86_c_vv1.1.5/libapi_c.so`.
+The C SDK `.so` is versioned at `src/omr_hardware/third_party/realman_arm/third_party/RM_API2/C/linux/linux_x86_c_vv1.1.5/libapi_c.so`.
 If the versioned path changes, update the `COPY` commands in the Dockerfile.
 
 ## Supported Arm Models

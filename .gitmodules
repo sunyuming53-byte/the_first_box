@@ -1,3 +1,6 @@
-[submodule "realman_arm/third_party/RM_API2"]
-	path = src/realman_arm/third_party/RM_API2
-	url = git@github.com:RealManRobot/RM_API2.git
+[submodule "src/omr_hardware/third_party/dais_motor"]
+	path = src/omr_hardware/third_party/dais_motor
+	url = git@github.com:ChiefTechLabs/dais_motor.git
+[submodule "src/omr_hardware/third_party/realman_arm"]
+	path = src/omr_hardware/third_party/realman_arm
+	url = git@github.com:ChiefTechLabs/realman_arm.git

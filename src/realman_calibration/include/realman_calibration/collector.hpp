@@ -1,7 +1,7 @@
 #pragma once
 
+#include "omr_vision/camera/types.hpp"
 #include "realman/motion/types.hpp"
-#include "realman_vision/camera/types.hpp"
 
 #include <array>
 #include <filesystem>
@@ -16,7 +16,7 @@ namespace rm::calib {
 
 struct CalibDataConfig {
     int total_images{18};
-    rm::vision::camera::CameraConfig camera;
+    omr_vision::camera::CameraConfig camera;
     std::string arm_ip{"192.168.1.18"};
     std::filesystem::path output_dir{"data/calib_session"};
     cv::Size board_size{11, 8};

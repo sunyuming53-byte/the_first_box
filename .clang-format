@@ -19,7 +19,7 @@ SortIncludes: CaseSensitive
 IncludeBlocks: Regroup
 IncludeCategories:
   # Project headers first (quoted includes)
-  - Regex: '^"(realman|realman_arm|realman_vision|realman_hardware|realman_calibration|core|motion|gripper|state|node|camera)/.*"'
+  - Regex: '^"(realman|realman_arm|omr_vision|omr_hardware|realman_calibration|core|motion|gripper|state|node|camera|dais_motor)/.*"'
     Priority: 0
   # C system headers
   - Regex: '^<.*\.h>'

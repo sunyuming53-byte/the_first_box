@@ -10,7 +10,7 @@ fi
 
 echo "RealMan development container ready."
 echo "  Workspace:   /ws"
-echo "  SDK:         src/realman_arm/third_party/RM_API2 (submodule)"
+echo "  SDK:         src/omr_hardware/third_party/realman_arm/third_party/RM_API2 (submodule)"
 echo "  SSH key:     ~/.ssh/id_rsa  (deploy with: deploy-remote <robot-ip>)"
 echo ""
 
