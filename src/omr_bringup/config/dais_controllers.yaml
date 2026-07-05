@@ -1,0 +1,26 @@
+controller_manager:
+  ros__parameters:
+    update_rate: 50
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    joint_trajectory_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+joint_trajectory_controller:
+  ros__parameters:
+    joints:
+      - joint_dais
+    command_interfaces:
+      - velocity
+    state_interfaces:
+      - position
+      - velocity
+    state_publish_rate: 50.0
+    action_monitor_rate: 20.0
+    open_loop_control: false
+    pid: {p: 1.0, i: 0.1, d: 0.01, i_clamp: 1.0}  # TODO: tune PID gains on hardware
+    command_joints:
+      - joint_dais
+    allow_integration_in_goal_trajectories: true
