@@ -1,10 +1,9 @@
 #pragma once
-#include "dais/motor.hpp"
-
 #include <memory>
 #include <string>
 #include <vector>
 
+#include "dais/motor.hpp"
 #include <hardware_interface/system_interface.hpp>
 #include <hardware_interface/types/hardware_interface_type_values.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -32,7 +31,7 @@ private:
     std::string joint_name_;
     double hw_position_state_ = 0.0;
     double hw_velocity_state_ = 0.0;
-    double hw_velocity_cmd_   = 0.0;
+    double hw_velocity_cmd_ = 0.0;
 };
 
 }  // namespace omr_hardware
