@@ -9,7 +9,6 @@
 services:
   develop:
     image: realman:develop
-    container_name: realman-develop
     build:
       context: .
       target: realman-develop
@@ -42,7 +41,6 @@ services:
 
   runtime:
     image: realman:runtime
-    container_name: realman-runtime
     build:
       context: .
       target: realman-runtime
