@@ -1,10 +1,10 @@
+#include "omr_vision/camera/stream.hpp"
+#include "omr_vision/capture.hpp"
 #include "realman/core/arm.hpp"
 #include "realman/core/error.hpp"
 #include "realman/motion/types.hpp"
 #include "realman_calibration/collector.hpp"
 #include "realman_calibration/format_polyfill.hpp"
-#include "omr_vision/camera/stream.hpp"
-#include "omr_vision/capture.hpp"
 
 #include <cmath>
 #include <cstdlib>

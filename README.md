@@ -7,7 +7,7 @@ ROS2 Humble workspace for controlling [RealMan](https://www.realman-robot.com/) 
 
 - **Ubuntu 22.04** (Jammy)
 - **ROS2 Humble** — [install guide](https://docs.ros.org/en/humble/Installation.html)
-- **Git** + **SSH key** registered with GitHub (the SDK submodule uses SSH)
+- **Git** + **SSH key** registered with GitHub (private submodules under `omr_hardware/third_party/` use SSH)
 
 Check your ROS2 setup:
 
@@ -21,7 +21,7 @@ ros2 --version
 ```bash
 # 1. Clone with submodule
 git clone --recurse-submodules git@github.com:ChiefTechLabs/pipeline.git
-cd realman
+cd pipeline
 
 # 2. Build
 source /opt/ros/humble/setup.bash
@@ -37,9 +37,9 @@ ros2 launch omr_bringup bringup.launch.py arm_ip:=192.168.1.18
 ## Project Structure
 
 ```
-realman/                              # ROS2 workspace root
+pipeline/                            # ROS2 workspace root
 ├── src/
-│   ├── omr_vision/               # ament_cmake — RealSense D435 capture (no ROS deps)
+│   ├── omr_vision/                   # ament_cmake — RealSense D435 capture (no ROS deps)
 │   │   ├── include/omr_vision/
 │   │   │   ├── camera/               #   CameraStream, CameraConfig
 │   │   │   └── capture.hpp           #   Capture abstraction
@@ -55,13 +55,21 @@ realman/                              # ROS2 workspace root
 │   │   ├── test/                     # Comprehensive test suite
 │   │   ├── CMakeLists.txt
 │   │   └── package.xml
-│   ├── omr_hardware/                 # ament_cmake — ros2_control plugins (embeds realman_arm submodule)
-│   │   ├── include/
+│   ├── omr_hardware/                 # ament_cmake — ros2_control plugins
+│   │   ├── third_party/
+│   │   │   ├── realman_arm/          #   Git submodule — pure C++ arm control (zero ROS deps)
+│   │   │   │   └── third_party/RM_API2/  # Nested submodule — RealMan C SDK
+│   │   │   └── dais_motor/           #   Git submodule — pure C++ Modbus RTU driver (zero ROS deps)
+│   │   ├── include/omr_hardware/
+│   │   │   ├── arm_system.hpp        #   ArmSystem plugin (wraps rm::Arm)
+│   │   │   └── dais_hardware.hpp     #   DaisHardware plugin (wraps dais::Motor)
 │   │   ├── src/
-│   │   ├── plugins.xml
+│   │   │   ├── arm_system.cpp
+│   │   │   └── dais_hardware.cpp
+│   │   ├── plugins.xml               #   ArmSystem + DaisHardware registration
 │   │   ├── CMakeLists.txt
 │   │   └── package.xml
-│   └── omr_bringup/              # ament_cmake — launch + config + URDF (no compiled code)
+│   └── omr_bringup/                  # ament_cmake — launch + config + URDF (no compiled code)
 │       ├── launch/
 │       │   ├── bringup.launch.py      #   ros2_control pipeline (RSP + CM + JSB + JTC + camera + calib)
 │       │   └── calibration.launch.py
@@ -132,8 +140,12 @@ flowchart TD
 **Data flow:** `ArmSystem.read()` → joint_state_broadcaster → `/joint_states` topic. Your controller sends a `FollowJointTrajectory` action goal → joint_trajectory_controller → `ArmSystem.write()` → `rm::Arm::moveJ()` → arm.
 
 `rm::Arm` is a plain C++ class (not an `rclcpp::Node`) with **zero ROS dependency**.
+It lives in the `realman_arm` git submodule under `omr_hardware/third_party/`.
 It can be used in any context — embedded in your own ROS2 node, linked into a
 `ros2_control` hardware interface, or used standalone outside ROS2.
+
+`dais::Motor` follows the same pattern — a pure C++ Modbus RTU driver (zero ROS deps)
+in the `dais_motor` submodule, wrapped by the `DaisHardware` plugin in `omr_hardware`.
 
 ### Bringup
 
@@ -173,14 +185,16 @@ colcon build --cmake-args -DREALMAN_SDK=/custom/path
 ```mermaid
 graph TD
     vision["omr_vision<br/><i>ament_cmake</i>"]
-    arm["realman_arm<br/><i>plain CMake (submodule of omr_hardware)</i>"]
-    calib["realman_calibration<br/><i>ament_cmake</i>"]
     hw["omr_hardware<br/><i>ament_cmake</i>"]
+    arm["realman_arm<br/><i>submodule (plain CMake)</i>"]
+    motor["dais_motor<br/><i>submodule (plain CMake)</i>"]
+    calib["realman_calibration<br/><i>ament_cmake</i>"]
     bringup["omr_bringup<br/><i>launch only</i>"]
 
     vision --> calib
-    arm --> calib
     hw -.->|embeds| arm
+    hw -.->|embeds| motor
+    hw --> calib
     hw --> bringup
     calib --> bringup
 ```

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "realman/motion/types.hpp"
 #include "omr_vision/camera/types.hpp"
+#include "realman/motion/types.hpp"
 
 #include <array>
 #include <filesystem>
