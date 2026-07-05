@@ -72,6 +72,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-humble-visualization-msgs \
     && rm -rf /var/lib/apt/lists/*
 
+# RealMan SDK — copy from submodule to /opt/realman-sdk
+RUN mkdir -p /opt/realman-sdk/lib
+COPY src/omr_hardware/third_party/realman_arm/third_party/RM_API2/C/include/ /opt/realman-sdk/include/
+COPY src/omr_hardware/third_party/realman_arm/third_party/RM_API2/C/linux/linux_x86_c_vv1.1.5/libapi_c.so /opt/realman-sdk/lib/
+
 # oh-my-zsh + powerlevel10k + plugins (as root; copied to ubuntu user in develop stage)
 RUN sh -c "$(curl -fsSL --retry 5 --retry-delay 10 https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended \
     && git clone --depth=1 https://github.com/romkatv/powerlevel10k.git \
@@ -114,6 +119,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     zsh curl git \
     ros-humble-rmw-cyclonedds-cpp \
     && rm -rf /var/lib/apt/lists/*
+
+# SDK runtime — libapi_c.so for arm control at runtime
+RUN mkdir -p /opt/realman-sdk/lib
+COPY src/omr_hardware/third_party/realman_arm/third_party/RM_API2/C/linux/linux_x86_c_vv1.1.5/libapi_c.so /opt/realman-sdk/lib/
 
 RUN --mount=type=bind,source=src,target=/tmp/src,readonly \
     apt-get update && \
