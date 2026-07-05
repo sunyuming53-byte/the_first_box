@@ -27,8 +27,11 @@ cd realman
 source /opt/ros/humble/setup.bash
 colcon build
 
-# 3. Source and run examples
+# 3. Launch the ros2_control pipeline
 source install/setup.bash
+ros2 launch realman_bringup bringup.launch.py arm_ip:=192.168.1.18
+
+# Or run standalone examples (no ros2_control)
 ros2 run realman_arm movej_test
 ros2 run realman_arm gripper_test
 ```
@@ -83,9 +86,17 @@ realman/                              # ROS2 workspace root
 │   │   ├── plugins.xml
 │   │   ├── CMakeLists.txt
 │   │   └── package.xml
-│   └── realman_bringup/              # ament_cmake — launch + config only (no compiled code)
+│   └── realman_bringup/              # ament_cmake — launch + config + URDF (no compiled code)
 │       ├── launch/
+│       │   ├── bringup.launch.py      #   ros2_control pipeline (RSP + CM + JSB + JTC + camera + calib)
+│       │   └── calibration.launch.py
 │       ├── config/
+│       │   └── realman_controllers.yaml  # JSB + JTC config (100Hz, open-loop)
+│       ├── urdf/
+│       │   ├── realman.urdf.xacro     #   Main entry (kinematics + ros2_control)
+│       │   ├── realman.ros2_control.xacro  # <ros2_control> wrapper for ArmSystem
+│       │   ├── rm_65.urdf.xacro       #   Vendored upstream RM65 kinematics
+│       │   └── meshes/rm_65_arm/      #   STL meshes
 │       ├── CMakeLists.txt
 │       └── package.xml
 ├── .github/workflows/                 # CI/CD pipelines
@@ -116,25 +127,55 @@ realman/                              # ROS2 workspace root
 
 ```mermaid
 flowchart TD
-    subgraph User["Your Application"]
-        ROS["ROS2 Node / ros2_control"]
-        PLAIN["Plain C++"]
+    subgraph ROS2["ROS2 Control Loop"]
+        RSP["robot_state_publisher<br/><i>TF + /robot_description</i>"]
+        CM["controller_manager<br/><i>ros2_control_node</i>"]
+        JSB["joint_state_broadcaster<br/><i>→ /joint_states</i>"]
+        JTC["joint_trajectory_controller<br/><i>/follow_joint_trajectory</i>"]
+        HW["ArmSystem<br/><i>hardware_interface plugin</i>"]
     end
 
-    ROS --> Arm
-    PLAIN --> Arm
+    subgraph User["Your Controller (ROS2 Node)"]
+        CTRL["Custom Controller"]
+    end
+
+    JSB -->|reads state| HW
+    JTC -->|writes command| HW
+    HW --> Arm
+
+    CTRL -->|subscribes| JSB
+    CTRL -->|action goal| JTC
 
     Arm["rm::Arm<br/><i>PIMPL facade — zero ROS deps</i>"]
     Arm --> Impl["Arm::Impl<br/><i>worker thread + cmd queue</i>"]
     Impl --> SDK["libapi_c.so<br/><i>RM_API2 C SDK</i>"]
-    SDK -->|TCP| HW["RealMan Robot Arm"]
+    SDK -->|TCP| HW2["RealMan Robot Arm"]
 
     Arm -.->|Lazy connect| Impl
 ```
 
+**Data flow:** `ArmSystem.read()` → joint_state_broadcaster → `/joint_states` topic. Your controller sends a `FollowJointTrajectory` action goal → joint_trajectory_controller → `ArmSystem.write()` → `rm::Arm::moveJ()` → arm.
+
 `rm::Arm` is a plain C++ class (not an `rclcpp::Node`) with **zero ROS dependency**.
 It can be used in any context — embedded in your own ROS2 node, linked into a
 `ros2_control` hardware interface, or used standalone outside ROS2.
+
+### Bringup
+
+```bash
+# Start ros2_control pipeline (arm driver + controllers)
+ros2 launch realman_bringup bringup.launch.py arm_ip:=192.168.1.18
+
+# Start with camera + calibration
+ros2 launch realman_bringup bringup.launch.py
+
+# Arm-only (no camera or calibration)
+ros2 launch realman_bringup bringup.launch.py launch_camera:=false launch_calib:=false
+```
+
+The bringup loads the RM65 URDF (kinematics + meshes), starts ros2_control_node with
+`joint_state_broadcaster` and `joint_trajectory_controller`, then publishes TF via
+`robot_state_publisher`. All arm nodes are conditioned on `launch_arm:=true`.
 
 ## Building
 
