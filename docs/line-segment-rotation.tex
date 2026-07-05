@@ -1,0 +1,484 @@
+% !TEX program = pdflatex
+\documentclass[12pt,a4paper]{article}
+
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{float}
+\usepackage{fancyhdr}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+
+\geometry{left=2.5cm,right=2.5cm,top=3cm,bottom=2.5cm,headheight=15pt,headsep=8mm}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!60!black,
+  urlcolor=blue!60!black,
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small ChiefTechLabs}
+\fancyhead[R]{\small Nanjing Ugen Robot Co., Ltd}
+\fancyfoot[C]{\thepage}
+
+\title{\Huge\textbf{Track of a Line Segment}\\[4pt]
+       \Huge\textbf{on a Rotating Rectangle}\\[12pt]
+       \large Kinematic Analysis \& Coordinate Transformation\\[8pt]
+       \normalsize Classification: Internal}
+\author{Lorenzo Feng}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\vspace{1.5cm}
+
+\begin{center}
+\begin{minipage}{0.75\textwidth}
+\large
+\textbf{Objective:} Derive the parametric trajectory of a line segment
+mounted on a rotating rectangle, subject to a secondary pivot rotation
+about its top endpoint. Compute the homogeneous transformation matrix
+from the world frame to a body-fixed target frame attached to the
+segment center.
+\end{minipage}
+\end{center}
+
+\vfill
+
+\clearpage
+\tableofcontents
+\clearpage
+
+\section{Problem Setup}
+
+A rectangle rotates about its left vertical edge, which coincides with the $z$-axis.
+A line segment (perpendicular to the rectangle plane, i.e.\ parallel to the $z$-axis)
+is attached to the rectangle. The segment then undergoes a second rotation
+around an axis passing through its top endpoint.
+
+\begin{itemize}[leftmargin=*]
+  \item The rectangle's rotation edge is the $z$-axis $(0,0,z)$.
+  \item At $\theta=0$ the rectangle lies in the $xz$-plane; the segment center
+    is at $(r,\,0,\,h)$, at distance $r$ from the $z$-axis.
+  \item The rectangle rotates by an angle $\theta$ about the $z$-axis.
+  \item $h$ is the height of the center point of the segment.
+  \item Let the segment have half-length $L$ (so its full length is $2L$).
+  \item The segment rotates by an angle $\phi$ about an axis passing through
+    its \emph{top} endpoint, with unit direction vector
+    $\mathbf{u} = (\cos\theta,\; \sin\theta,\; 0)$
+    (the direction of the rectangle plane at angle $\theta$).
+\end{itemize}
+
+We seek the parametric equation of the \emph{center point} of the segment after both rotations,
+as a function of $\theta$ and $\phi$.
+
+\section{Visual Overview}
+
+Figure~\ref{fig:views} shows the configuration at four values of $\theta$
+with $\phi=24^\circ$ fixed ($r=2$, $L=1.5$, $h=0$).
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[b]{0.45\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{fig_theta0.png}
+    \caption{$\theta=0^\circ$}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.45\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{fig_theta30.png}
+    \caption{$\theta=30^\circ$}
+  \end{subfigure}
+  \vskip\baselineskip
+  \begin{subfigure}[b]{0.45\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{fig_theta60.png}
+    \caption{$\theta=60^\circ$}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.45\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{fig_theta90.png}
+    \caption{$\theta=90^\circ$}
+  \end{subfigure}
+  \caption{Configuration at $\phi=24^\circ$ for four values of $\theta$.
+    The blue dotted curve is the $\theta$-sweep of $C(\theta,\phi)$;
+    the target frame $\{\hat{\mathbf{x}}_T,\hat{\mathbf{y}}_T,\hat{\mathbf{z}}_T\}$
+    is shown at the segment center.}
+  \label{fig:views}
+\end{figure}
+
+\section{Numerical Verification}
+
+Table~\ref{tab:verify} lists $C(\theta,\phi)$ at 16 $(\theta,\phi)$ combinations,
+computed by the script with $r=2$, $L=1.5$, $h=0$.
+These values satisfy all five verification cases from Section~\ref{sec:verify}.
+
+\begin{table}[H]
+  \centering
+  \caption{Center point $C(\theta,\phi)$ at selected angles.\label{tab:verify}}
+  \begin{tabular}{@{}rrrrrr@{}}
+    \toprule
+    $\theta$ & $\phi$ & $C_x$ & $C_y$ & $C_z$ & Checks \\
+    \midrule
+    $0^\circ$  & $0^\circ$   & $2.0000$ & $0.0000$ & $0.0000$ & $\phi=0\colon C_z=h$ \\
+    $0^\circ$  & $45^\circ$  & $2.0000$ & $1.0607$ & $0.4393$ & $\theta=0\colon C_x=r$ \\
+    $0^\circ$  & $90^\circ$  & $2.0000$ & $1.5000$ & $1.5000$ & $\phi=90^\circ\colon C_z=h+L$ \\
+    $0^\circ$  & $180^\circ$ & $2.0000$ & $0.0000$ & $3.0000$ & $\phi=180^\circ\colon C_z=h+2L$ \\
+    $30^\circ$ & $0^\circ$   & $1.7321$ & $1.0000$ & $0.0000$ & $|(C_x,C_y)|=r=2$ \\
+    $30^\circ$ & $45^\circ$  & $1.2017$ & $1.9186$ & $0.4393$ & \\
+    $30^\circ$ & $90^\circ$  & $0.9821$ & $2.2990$ & $1.5000$ & \\
+    $30^\circ$ & $180^\circ$ & $1.7321$ & $1.0000$ & $3.0000$ & $C(\theta,\pi)=P(\theta)+(0,0,2L)$ \\
+    $60^\circ$ & $0^\circ$   & $1.0000$ & $1.7321$ & $0.0000$ & $|(C_x,C_y)|=r=2$ \\
+    $60^\circ$ & $45^\circ$  & $0.0814$ & $2.2624$ & $0.4393$ & \\
+    $60^\circ$ & $90^\circ$  & $-0.2990$& $2.4821$ & $1.5000$ & \\
+    $60^\circ$ & $180^\circ$ & $1.0000$ & $1.7321$ & $3.0000$ & \\
+    $90^\circ$ & $0^\circ$   & $0.0000$ & $2.0000$ & $0.0000$ & $\theta=90^\circ\colon C_x=0$ \\
+    $90^\circ$ & $45^\circ$  & $-1.0607$& $2.0000$ & $0.4393$ & \\
+    $90^\circ$ & $90^\circ$  & $-1.5000$& $2.0000$ & $1.5000$ & \\
+    $90^\circ$ & $180^\circ$ & $-0.0000$& $2.0000$ & $3.0000$ & \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\section{Function Surface}
+
+Figure~\ref{fig:surface} shows the 2-parameter surface $C(\theta,\phi)$ as
+both $\theta$ and $\phi$ vary over $[0,2\pi]$, with $r=2$, $L=1.5$, $h=0$.
+The surface is a torus-like shape: $\theta$ sweeps a circle of radius $r$ around
+the $z$-axis, modulated by a sinusoidal ripple of amplitude $L\sin\phi$ from the
+segment tilt. The right panel shows the $XY$ projection at fixed $\phi$ values:
+at $\phi=0$ the curve is a circle of radius $r$; as $\phi$ increases the curve
+flattens into a nephroid-like shape with maximum radial excursion $r+L$.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{fig_surface.png}
+  \caption{$C(\theta,\phi)$ parametric surface (left) and $XY$ projection at
+    selected $\phi$ values (right).}
+  \label{fig:surface}
+\end{figure}
+
+\section{Reference Positions}
+
+\subsection{Center point after rectangle rotation only}
+
+At $\theta=0$ the segment center is at $(r,0,h)$. Rotating counterclockwise by $\theta$
+about the $z$-axis:
+\begin{equation}\label{eq:P}
+  P(\theta) = \big( r\cos\theta,\; r\sin\theta,\; h \big).
+\end{equation}
+The distance from this point to the $z$-axis is $\sqrt{(r\cos\theta)^2+(r\sin\theta)^2}=r$,
+consistent with the definition of $r$.
+
+\subsection{Top endpoint}
+
+Since the segment is vertical (parallel to the $z$-axis), the top endpoint
+is displaced by $+L$ from the center:
+\begin{equation}\label{eq:top}
+  T(\theta) = P(\theta) + (0,\; 0,\; L)
+            = \big( r\cos\theta,\; r\sin\theta,\; h+L \big).
+\end{equation}
+
+\subsection{Vector from top to center}
+
+\begin{equation}\label{eq:d}
+  \mathbf{d} = P - T = (0,\; 0,\; -L).
+\end{equation}
+
+\section{Derivation via Rodrigues' Rotation Formula}
+
+The segment rotates by angle $\phi$ around the axis through $T$ with unit
+direction $\mathbf{u} = (\cos\theta,\; \sin\theta,\; 0)$.
+Let $P'$ be the new position of the center point after this rotation.
+
+Rodrigues' formula for rotating a vector $\mathbf{d}$ by angle $\phi$ about a
+unit axis $\mathbf{u}$ is
+\begin{equation}\label{eq:rodrigues}
+  \mathbf{R}_{\mathbf{u}}(\phi)\, \mathbf{d}
+  = \mathbf{d}\cos\phi
+    + (\mathbf{u}\times\mathbf{d})\sin\phi
+    + \mathbf{u}\,(\mathbf{u}\cdot\mathbf{d})\,(1-\cos\phi).
+\end{equation}
+
+Since $P' = T + \mathbf{R}_{\mathbf{u}}(\phi)\,\mathbf{d}$,
+we compute each term.
+
+\subsection{Dot product term}
+
+\[
+  \mathbf{u}\cdot\mathbf{d} = (\cos\theta)(0) + (\sin\theta)(0) + (0)(-L) = 0.
+\]
+The projection term vanishes.
+
+\subsection{Cross product term}
+
+\[
+\mathbf{u}\times\mathbf{d}
+= \begin{vmatrix}
+    \mathbf{i} & \mathbf{j} & \mathbf{k} \\
+    \cos\theta & \sin\theta & 0 \\
+    0 & 0 & -L
+  \end{vmatrix}
+= \big( -L\sin\theta,\; L\cos\theta,\; 0 \big).
+\]
+
+\subsection{Assembling the result}
+
+\begin{align}
+  P' &= T + \mathbf{d}\cos\phi + (\mathbf{u}\times\mathbf{d})\sin\phi
+        + \mathbf{u}\,(\mathbf{u}\cdot\mathbf{d})\,(1-\cos\phi) \nonumber \\
+     &= T + (0,0,-L)\cos\phi + (-L\sin\theta,\; L\cos\theta,\; 0)\sin\phi + \mathbf{0} \nonumber \\
+     &= \begin{pmatrix}
+          r\cos\theta \\
+          r\sin\theta \\
+          h+L
+        \end{pmatrix}
+        + \begin{pmatrix} 0 \\ 0 \\ -L\cos\phi \end{pmatrix}
+        + \begin{pmatrix} -L\sin\theta\sin\phi \\ L\cos\theta\sin\phi \\ 0 \end{pmatrix}.
+\end{align}
+
+\section{Result}
+
+The track of the center point $C(\theta,\phi)$ is the parametric surface:
+
+\begin{equation}\label{eq:result}
+\boxed{
+C(\theta,\phi)
+= \begin{pmatrix}
+    r\cos\theta - L\sin\theta\,\sin\phi \\[6pt]
+    r\sin\theta + L\cos\theta\,\sin\phi \\[6pt]
+    h + L\,(1 - \cos\phi)
+  \end{pmatrix}.
+}
+\end{equation}
+
+\begin{table}[htbp]
+  \centering
+  \caption{Parameter definitions}
+  \begin{tabular}{@{}ll@{}}
+    \toprule
+    Symbol & Meaning \\
+    \midrule
+    $\theta$ & Rotation angle of the rectangle about the $z$-axis \\
+    $\phi$   & Rotation angle of the segment about its top-end axis \\
+    $r$      & Distance from segment to the $z$-axis \\
+    $h$      & Height of the segment center point \\
+    $L$      & Half-length of the segment \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\section{Verification}\label{sec:verify}
+
+\subsection*{Case 1: $\phi = 0$ (no segment rotation)}
+
+\[
+C(\theta, 0) = \big( r\cos\theta,\; r\sin\theta,\; h \big) = P(\theta).
+\]
+The center returns to its position on the rotating rectangle. 
+
+\subsection*{Case 2: $\phi = \pi$ (segment flipped 180$^\circ$)}
+
+\[
+C(\theta, \pi) = \big( r\cos\theta,\; r\sin\theta,\; h+2L \big).
+\]
+The center moves to a point $L$ \emph{above} the original top endpoint,
+consistent with a half-turn about the top. 
+
+\subsection*{Case 3: $\phi = \pi/2$ (segment horizontal)}
+
+The $z$-coordinate becomes $h + L$, and the horizontal displacement has
+magnitude $L$ in the direction perpendicular to $\mathbf{u}$.
+This corresponds to the segment lying flat, perpendicular to the plane
+containing $\mathbf{u}$ and the $z$-axis. 
+
+\subsection*{Case 4: $\theta = 0$ (rectangle in $xz$-plane)}
+
+\[
+C(0, \phi) = \big( r,\; L\sin\phi,\; h + L(1-\cos\phi) \big).
+\]
+The center traces a circle of radius $L$ in the $yz$-plane, centered at $(r,\,0,\,h+L)$,
+which is exactly the top endpoint of the segment at $\theta=0$. 
+
+\subsection*{Case 5: distance preservation}
+
+For any $\theta$, the distance from $C(\theta,\phi)$ to the $z$-axis varies
+between $\lvert r-L\sin\phi\rvert$ and $r+L\sin\phi$, never exceeding $r+L$.
+At $\phi=\pi/2$, the segment lies flat and the center is at its farthest
+horizontal reach. 
+
+\section{Interpretation}
+
+For a fixed $\theta$, the curve traced by varying $\phi$ is a circle of radius $L$ in
+the plane perpendicular to the axis $\mathbf{u} = (\cos\theta, \sin\theta, 0)$.
+The center of this circle is at $T(\theta)$ — the top endpoint of the segment.
+
+For a fixed $\phi$, varying $\theta$ traces a curve on a cylindrical surface of
+radius $\approx r$ around the $z$-axis, with a sinusoidal ripple of amplitude
+$L\sin\phi$ from the segment tilt.
+The $z$-coordinate depends only on $\phi$, so horizontal slices at constant $\phi$
+all lie in the same $z$-plane.
+
+\section{Transformation from World to Target Frame}
+
+\subsection{Target frame definition}
+
+Attach a right-handed coordinate frame $\{T\}$ to the segment:
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Origin}: the segment center point $C(\theta,\phi)$.
+  \item \textbf{$\hat{\mathbf{x}}_T$}: along the segment, pointing from bottom to top.
+    Obtained by rotating the unit vertical $(0,0,1)$ by $\phi$ about $\mathbf{u}$.
+  \item \textbf{$\hat{\mathbf{y}}_T$}: parallel to the top-end rotation axis
+    $\mathbf{u} = (\cos\theta,\;\sin\theta,\;0)$.
+  \item \textbf{$\hat{\mathbf{z}}_T$}: $\hat{\mathbf{x}}_T \times \hat{\mathbf{y}}_T$
+    (completing the right-handed system).
+\end{itemize}
+
+The axes in world-frame coordinates are:
+
+\begin{align}
+  \hat{\mathbf{x}}_T &=
+  \mathbf{R}_{\mathbf{u}}(\phi)
+  \begin{pmatrix} 0 \\ 0 \\ 1 \end{pmatrix}
+  = \begin{pmatrix}
+      \sin\theta\,\sin\phi \\
+      -\cos\theta\,\sin\phi \\
+      \cos\phi
+    \end{pmatrix}
+  \label{eq:x-target} \\[8pt]
+  \hat{\mathbf{y}}_T &= \mathbf{u}
+  = \begin{pmatrix} \cos\theta \\ \sin\theta \\ 0 \end{pmatrix}
+  \label{eq:y-target} \\[8pt]
+  \hat{\mathbf{z}}_T &= \hat{\mathbf{x}}_T \times \hat{\mathbf{y}}_T
+  = \begin{pmatrix}
+      -\cos\phi\,\sin\theta \\
+      \cos\phi\,\cos\theta \\
+      \sin\phi
+    \end{pmatrix}
+  \label{eq:z-target}
+\end{align}
+
+\subsection{Rotation matrix}
+
+Assemble the rotation matrix $\mathbf{R}_T$ with these axes as columns
+(the matrix that maps target-frame coordinates to world-frame coordinates):
+\begin{equation}\label{eq:R}
+  \mathbf{R}_T
+  = \begin{bmatrix}
+      \hat{\mathbf{x}}_T & \hat{\mathbf{y}}_T & \hat{\mathbf{z}}_T
+    \end{bmatrix}
+  = \begin{bmatrix}
+      \sin\theta\sin\phi     & \cos\theta & -\cos\phi\sin\theta \\[2pt]
+      -\cos\theta\sin\phi    & \sin\theta & \cos\phi\cos\theta \\[2pt]
+      \cos\phi               & 0          & \sin\phi
+    \end{bmatrix}.
+\end{equation}
+
+For a world-frame vector $\mathbf{w}$, its target-frame representation is
+$\mathbf{w}_T = \mathbf{R}_T^{\top}\,\mathbf{w}$, since $\mathbf{R}_T$ is
+orthogonal.
+
+The translation vector $-\mathbf{R}_T^{\top}C$ describes the world origin
+as seen from the target frame. Its $y$-component is constant $-r$;
+its $x$ and $z$ components trace a circle of radius $h+L$ centered at $(L,0)$
+in the target $xz$-plane as $\phi$ varies (Figure~\ref{fig:transform}):
+
+\[
+-\mathbf{R}_T^{\top}C
+= \begin{pmatrix}
+    L - (h+L)\cos\phi \\
+    -r \\
+    -(h+L)\sin\phi
+  \end{pmatrix}.
+\]
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.85\textwidth]{fig_transform.png}
+  \caption{Translation vector $-\mathbf{R}_T^{\top}C$ as a function of $\phi$
+    ($r=2$, $L=1.5$, $h=0$). Left: trajectory in the target $xz$-plane (a circle
+    of radius $h+L$ centered at $(L,0)$). Right: components vs.\ $\phi$.}
+  \label{fig:transform}
+\end{figure}
+
+\subsection{Translation component}
+
+The target origin in world coordinates is $C(\theta,\phi)$.
+A point $\mathbf{p}$ in world coordinates maps to target coordinates as:
+\[
+  \mathbf{p}_T = \mathbf{R}_T^{\top}\big(\mathbf{p} - C(\theta,\phi)\big).
+\]
+
+Computing $\mathbf{R}_T^{\top}\,C(\theta,\phi)$:
+
+\begin{align}
+  \mathbf{R}_T^{\top}\,C &=
+  \begin{bmatrix}
+      \sin\theta\sin\phi     & -\cos\theta\sin\phi    & \cos\phi \\
+      \cos\theta             & \sin\theta             & 0 \\
+      -\cos\phi\sin\theta    & \cos\phi\cos\theta     & \sin\phi
+  \end{bmatrix}
+  \begin{pmatrix}
+      r\cos\theta - L\sin\theta\sin\phi \\
+      r\sin\theta + L\cos\theta\sin\phi \\
+      h + L(1-\cos\phi)
+  \end{pmatrix}
+  \nonumber \\[8pt]
+  &= \begin{pmatrix}
+      h\cos\phi + L(\cos\phi - 1) \\
+      r \\
+      (h+L)\sin\phi
+    \end{pmatrix}.
+  \label{eq:RtC}
+\end{align}
+
+\subsection{Homogeneous transformation matrix}
+
+The $4\times4$ homogeneous transformation matrix
+${}^{\text{world}}\mathbf{T}_{\text{target}}$ maps world-frame coordinates to
+target-frame coordinates:
+
+\begin{equation}\label{eq:Tmat}
+\boxed{
+{}^{\text{world}}\mathbf{T}_{\text{target}}
+= \begin{bmatrix}
+    \mathbf{R}_T^{\top} & -\mathbf{R}_T^{\top}C \\[2pt]
+    \mathbf{0}_{1\times 3} & 1
+  \end{bmatrix}
+= \left[\begin{array}{@{}ccc|c@{}}
+    \sin\theta\sin\phi     & -\cos\theta\sin\phi    & \cos\phi
+      & L - (h+L)\cos\phi \\[2pt]
+    \cos\theta             & \sin\theta             & 0
+      & -r \\[2pt]
+    -\cos\phi\sin\theta    & \cos\phi\cos\theta     & \sin\phi
+      & -(h+L)\sin\phi \\[2pt]
+    \hline
+    0 & 0 & 0 & 1
+  \end{array}\right].
+}
+\end{equation}
+
+\subsection{Verification}
+
+\begin{itemize}[leftmargin=*]
+  \item The origin $C$ maps to $(0,0,0)$: $\mathbf{R}_T^{\top}(C-C)=\mathbf{0}$. 
+  \item The bottom endpoint $B = C - L\,\hat{\mathbf{x}}_T$ maps to $(-L,0,0)$. 
+  \item The top endpoint $T = C + L\,\hat{\mathbf{x}}_T$ maps to $(L,0,0)$. 
+  \item A point $C + \hat{\mathbf{y}}_T$ (one unit along the rotation axis)
+    maps to $(0,1,0)$. 
+  \item At $\phi=0$: $\mathbf{R}_T = \bigl[\,\mathbf{e}_z \;\; \mathbf{u} \;\; \mathbf{e}_z\!\times\!\mathbf{u}\,\bigr]$
+    with origin at $P(\theta)$; the $z$-axis is aligned with the segment. 
+\end{itemize}
+
+\end{document}
