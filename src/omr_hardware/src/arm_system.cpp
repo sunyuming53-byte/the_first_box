@@ -1,4 +1,4 @@
-#include "realman_hardware/arm_system.hpp"
+#include "omr_hardware/arm_system.hpp"
 
 #include <cmath>
 
@@ -6,7 +6,7 @@
 
 using hardware_interface::CallbackReturn;
 
-namespace realman_hardware {
+namespace omr_hardware {
 
 CallbackReturn ArmSystem::on_init(const hardware_interface::HardwareInfo& info) {
     if (hardware_interface::SystemInterface::on_init(info) != CallbackReturn::SUCCESS) {
@@ -151,6 +151,6 @@ hardware_interface::return_type ArmSystem::write(const rclcpp::Time& /*time*/,
     return hardware_interface::return_type::OK;
 }
 
-}  // namespace realman_hardware
+}  // namespace omr_hardware
 
-PLUGINLIB_EXPORT_CLASS(realman_hardware::ArmSystem, hardware_interface::SystemInterface)
+PLUGINLIB_EXPORT_CLASS(omr_hardware::ArmSystem, hardware_interface::SystemInterface)

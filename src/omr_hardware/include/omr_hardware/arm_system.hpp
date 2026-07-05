@@ -9,7 +9,7 @@
 #include <hardware_interface/types/hardware_interface_type_values.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-namespace realman_hardware {
+namespace omr_hardware {
 
 class ArmSystem : public hardware_interface::SystemInterface {
 public:
@@ -42,4 +42,4 @@ private:
     std::vector<double> hw_position_cmd_prev_;
 };
 
-}  // namespace realman_hardware
+}  // namespace omr_hardware

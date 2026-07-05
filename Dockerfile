@@ -53,6 +53,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends gnupg2 && \
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libopencv-dev \
     librealsense2-dev \
+    libmodbus-dev \
     zsh curl git \
     ros-humble-rmw-cyclonedds-cpp \
     ros-humble-rclcpp \
@@ -109,6 +110,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends gnupg2 && \
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libopencv-dev \
     librealsense2-dev \
+    libmodbus-dev \
     zsh curl git \
     ros-humble-rmw-cyclonedds-cpp \
     && rm -rf /var/lib/apt/lists/*
@@ -116,7 +118,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN --mount=type=bind,source=src,target=/tmp/src,readonly \
     apt-get update && \
     rosdep update && \
-    rosdep install --from-paths /tmp/src --ignore-src -r -y --skip-keys realman_arm && \
+    rosdep install --from-paths /tmp/src --ignore-src -r -y --skip-keys realman_arm omr_hardware && \
     rm -rf /var/lib/apt/lists/*
 
 # oh-my-zsh + powerlevel10k + plugins for root (runtime container)

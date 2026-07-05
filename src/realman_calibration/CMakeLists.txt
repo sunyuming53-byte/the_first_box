@@ -18,7 +18,7 @@ find_package(tf2_ros REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 
-find_package(realman_arm REQUIRED)
+find_package(omr_hardware REQUIRED)
 
 # ── Libraries ──
 add_library(realman_calibration SHARED
@@ -32,9 +32,19 @@ target_include_directories(realman_calibration PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
 )
+# realman_arm (submodule of omr_hardware) is installed alongside omr_hardware
+get_filename_component(_omr_hw_prefix "${omr_hardware_DIR}/../../.." ABSOLUTE)
+target_include_directories(realman_calibration PUBLIC
+    $<BUILD_INTERFACE:${_omr_hw_prefix}/include/realman_arm>
+)
+find_library(_realman_arm_lib realman_arm
+    PATHS "${_omr_hw_prefix}/lib"
+    NO_DEFAULT_PATH
+)
 target_link_libraries(realman_calibration PUBLIC
     realman_vision::realman_vision
-    realman_arm::realman_arm
+    ${omr_hardware_LIBRARIES}
+    ${_realman_arm_lib}
     ${OpenCV_LIBS}
 )
 

@@ -19,8 +19,8 @@ The Dockerfile copies the SDK from the submodule to `/opt/realman-sdk/` at
 build time.
 
 **Build order matters**: `realman_vision` (ament_cmake, no ROS deps) →
-`realman_arm` (plain CMake, no ROS deps) → `realman_calibration` (depends on
-both arm + vision) / `realman_hardware` (depends on arm) → `realman_bringup`
+`omr_hardware` (ament_cmake, embeds `realman_arm` as submodule) →
+`realman_calibration` (depends on both vision + arm) → `realman_bringup`
 (launch/config only). `colcon build` handles this automatically.
 
 ### clangd IntelliSense
@@ -40,14 +40,13 @@ system includes). `UnusedIncludes` is disabled.
 | Package | Build system | Purpose |
 |---|---|---|
 | `realman_vision` | ament_cmake | RealSense D435 capture (OpenCV + librealsense2). No ROS deps. |
-| `realman_arm` | **Plain CMake** | Arm control via RM_API2 C SDK. **Zero ROS dependency.** Deployable anywhere. |
-| `realman_calibration` | ament_cmake | Hand-eye calibration pipeline. Depends on both arm + vision. |
-| `realman_hardware` | ament_cmake | ros2_control hardware interface plugin. Depends on arm. |
+| `realman_calibration` | ament_cmake | Hand-eye calibration pipeline. Depends on vision + arm. |
+| `omr_hardware` | ament_cmake | ros2_control hardware interface plugins. Embeds `realman_arm` as submodule. |
 | `realman_bringup` | ament_cmake | Launch files + config only. No compiled code. |
 
-**Critical**: `realman_arm` is a **plain CMake project** (NOT `ament_cmake`).
-It has no ROS dependencies and can be used outside ROS2. Do NOT add
-`ament_cmake`, `rclcpp`, or any ROS dependency to it.
+**Note**: `realman_arm` is a **plain CMake project** (NOT `ament_cmake`) with
+no ROS dependencies. It is embedded as a submodule under `omr_hardware`.
+Do NOT add `ament_cmake`, `rclcpp`, or any ROS dependency to it.
 
 ## Architecture
 
@@ -118,7 +117,7 @@ Built: `movej_test` (hello_arm.cpp), `gripper_test`, `joint_test`, `movel_test`.
 `external_trigger.cpp` is commented out in CMakeLists.txt — uncomment to build it.
 Do NOT modify `package.xml` to declare these as dependencies.
 
-Run: `ros2 run realman_arm <executable>` (after `source install/setup.bash`).
+Run examples via ros2_control pipeline (see `realman_bringup`). Standalone `ros2 run realman_arm` executables have been removed.
 
 ## C++ standard
 
@@ -200,9 +199,9 @@ customize. `docker compose` reads proxy vars from `.env`.
 
 ## Dependencies not in workspace
 
-`realman_calibration` depends on both `realman_vision` and `realman_arm` — these
-**are** workspace packages (`src/realman_vision/`, `src/realman_arm/`), not
-external dependencies. They must be built before the calibration package.
+`realman_calibration` depends on `realman_vision` and the arm SDK (via `omr_hardware`'s submodule).
+`realman_vision` is a workspace package at `src/realman_vision/`. `realman_arm` is
+embedded as a submodule under `omr_hardware`. They must be built before the calibration package.
 
 **When adding a new ROS2 `<depend>` in any `package.xml`**: also add the
 corresponding `ros-humble-*` apt package to the `RUN apt-get install` blocks in
