@@ -1,6 +1,6 @@
 #pragma once
 
-#include "realman_vision/camera/types.hpp"
+#include "omr_vision/camera/types.hpp"
 
 #include <array>
 #include <filesystem>
@@ -8,7 +8,7 @@
 
 #include <opencv2/core/types.hpp>
 
-namespace rm::vision {
+namespace omr_vision {
 
 struct ArmPose {
     double tx{}, ty{}, tz{};  // meters
@@ -48,4 +48,4 @@ private:
     CaptureConfig cfg_;
 };
 
-}  // namespace rm::vision
+}  // namespace omr_vision

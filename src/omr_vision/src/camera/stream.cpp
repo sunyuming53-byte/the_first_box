@@ -1,4 +1,4 @@
-#include "realman_vision/camera/stream.hpp"
+#include "omr_vision/camera/stream.hpp"
 
 #include <cstring>
 #include <exception>
@@ -6,7 +6,7 @@
 #include <librealsense2/rs.hpp>
 #include <opencv2/core.hpp>
 
-namespace rm::vision::camera {
+namespace omr_vision::camera {
 
 // ──────────────────────────────────────────────────────────────
 // CameraStream::Impl — PIMPL hiding librealsense2 from public API
@@ -145,4 +145,4 @@ auto CameraStream::depth_intrinsics() const -> CameraIntrinsics {
 
 CameraStream::operator bool() const { return impl_ != nullptr && impl_->active(); }
 
-}  // namespace rm::vision::camera
+}  // namespace omr_vision::camera

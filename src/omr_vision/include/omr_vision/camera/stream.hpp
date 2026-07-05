@@ -1,11 +1,11 @@
 #pragma once
 
-#include "realman_vision/camera/types.hpp"
+#include "omr_vision/camera/types.hpp"
 
 #include <memory>
 #include <optional>
 
-namespace rm::vision::camera {
+namespace omr_vision::camera {
 
 class CameraStream {
 public:
@@ -31,4 +31,4 @@ private:
     std::unique_ptr<Impl> impl_;
 };
 
-}  // namespace rm::vision::camera
+}  // namespace omr_vision::camera

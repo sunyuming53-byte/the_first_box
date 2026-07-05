@@ -18,9 +18,9 @@ with `include/` and `lib/libapi_c.so` underneath. Discovery happens via
 The Dockerfile copies the SDK from the submodule to `/opt/realman-sdk/` at
 build time.
 
-**Build order matters**: `realman_vision` (ament_cmake, no ROS deps) →
+**Build order matters**: `omr_vision` (ament_cmake, no ROS deps) →
 `omr_hardware` (ament_cmake, embeds `realman_arm` as submodule) →
-`realman_calibration` (depends on both vision + arm) → `realman_bringup`
+`realman_calibration` (depends on both vision + arm) → `omr_bringup`
 (launch/config only). `colcon build` handles this automatically.
 
 ### clangd IntelliSense
@@ -39,10 +39,10 @@ system includes). `UnusedIncludes` is disabled.
 
 | Package | Build system | Purpose |
 |---|---|---|
-| `realman_vision` | ament_cmake | RealSense D435 capture (OpenCV + librealsense2). No ROS deps. |
+| `omr_vision` | ament_cmake | RealSense D435 capture (OpenCV + librealsense2). No ROS deps. |
 | `realman_calibration` | ament_cmake | Hand-eye calibration pipeline. Depends on vision + arm. |
 | `omr_hardware` | ament_cmake | ros2_control hardware interface plugins. Embeds `realman_arm` as submodule. |
-| `realman_bringup` | ament_cmake | Launch files + config only. No compiled code. |
+| `omr_bringup` | ament_cmake | Launch files + config only. No compiled code. |
 
 **Note**: `realman_arm` is a **plain CMake project** (NOT `ament_cmake`) with
 no ROS dependencies. It is embedded as a submodule under `omr_hardware`.
@@ -117,7 +117,7 @@ Built: `movej_test` (hello_arm.cpp), `gripper_test`, `joint_test`, `movel_test`.
 `external_trigger.cpp` is commented out in CMakeLists.txt — uncomment to build it.
 Do NOT modify `package.xml` to declare these as dependencies.
 
-Run examples via ros2_control pipeline (see `realman_bringup`). Standalone `ros2 run realman_arm` executables have been removed.
+Run examples via ros2_control pipeline (see `omr_bringup`). Standalone `ros2 run realman_arm` executables have been removed.
 
 ## C++ standard
 
@@ -199,8 +199,8 @@ customize. `docker compose` reads proxy vars from `.env`.
 
 ## Dependencies not in workspace
 
-`realman_calibration` depends on `realman_vision` and the arm SDK (via `omr_hardware`'s submodule).
-`realman_vision` is a workspace package at `src/realman_vision/`. `realman_arm` is
+`realman_calibration` depends on `omr_vision` and the arm SDK (via `omr_hardware`'s submodule).
+`omr_vision` is a workspace package at `src/omr_vision/`. `realman_arm` is
 embedded as a submodule under `omr_hardware`. They must be built before the calibration package.
 
 **When adding a new ROS2 `<depend>` in any `package.xml`**: also add the

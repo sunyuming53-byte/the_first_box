@@ -114,7 +114,7 @@ CheckOptions:
   - key: misc-throw-by-value-catch-by-reference.CheckThrowTemporaries
     value: '1'
 
-HeaderFilterRegex: 'src/(realman_arm|realman_vision|realman_calibration|omr_hardware)/.*\.(h|hpp|hxx)$'
+HeaderFilterRegex: 'src/(realman_arm|omr_vision|realman_calibration|omr_hardware)/.*\.(h|hpp|hxx)$'
 
 # C++23 target — clang-tidy-14 supports up to -std=c++20
 # clang-tidy-19 (LLVM toolchain) adds c++23/c++2c support

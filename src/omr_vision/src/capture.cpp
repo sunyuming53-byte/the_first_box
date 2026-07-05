@@ -1,4 +1,4 @@
-#include "realman_vision/capture.hpp"
+#include "omr_vision/capture.hpp"
 
 #include <chrono>
 #include <fstream>
@@ -11,7 +11,7 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 
-namespace rm::vision {
+namespace omr_vision {
 
 // ──────────────────────────────────────────────────────────────
 // helpers
@@ -118,4 +118,4 @@ void FrameCapture::save_with_pose(const camera::CameraFrame& frame, int index,
     file << ss.str();
 }
 
-}  // namespace rm::vision
+}  // namespace omr_vision

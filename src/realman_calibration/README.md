@@ -2,7 +2,7 @@
 
 Hand-eye calibration pipeline for RealMan robot arms.
 
-**Dependencies:** `realman_vision`, `realman_driver`, OpenCV, librealsense2
+**Dependencies:** `omr_vision`, `realman_driver`, OpenCV, librealsense2
 
 ## What it does
 

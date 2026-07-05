@@ -29,7 +29,7 @@ colcon build
 
 # 3. Launch the ros2_control pipeline
 source install/setup.bash
-ros2 launch realman_bringup bringup.launch.py arm_ip:=192.168.1.18
+ros2 launch omr_bringup bringup.launch.py arm_ip:=192.168.1.18
 
 # Arm examples removed; use ros2_control pipeline instead
 ```
@@ -39,8 +39,8 @@ ros2 launch realman_bringup bringup.launch.py arm_ip:=192.168.1.18
 ```
 realman/                              # ROS2 workspace root
 ├── src/
-│   ├── realman_vision/               # ament_cmake — RealSense D435 capture (no ROS deps)
-│   │   ├── include/realman_vision/
+│   ├── omr_vision/               # ament_cmake — RealSense D435 capture (no ROS deps)
+│   │   ├── include/omr_vision/
 │   │   │   ├── camera/               #   CameraStream, CameraConfig
 │   │   │   └── capture.hpp           #   Capture abstraction
 │   │   ├── src/
@@ -61,7 +61,7 @@ realman/                              # ROS2 workspace root
 │   │   ├── plugins.xml
 │   │   ├── CMakeLists.txt
 │   │   └── package.xml
-│   └── realman_bringup/              # ament_cmake — launch + config + URDF (no compiled code)
+│   └── omr_bringup/              # ament_cmake — launch + config + URDF (no compiled code)
 │       ├── launch/
 │       │   ├── bringup.launch.py      #   ros2_control pipeline (RSP + CM + JSB + JTC + camera + calib)
 │       │   └── calibration.launch.py
@@ -139,13 +139,13 @@ It can be used in any context — embedded in your own ROS2 node, linked into a
 
 ```bash
 # Start ros2_control pipeline (arm driver + controllers)
-ros2 launch realman_bringup bringup.launch.py arm_ip:=192.168.1.18
+ros2 launch omr_bringup bringup.launch.py arm_ip:=192.168.1.18
 
 # Start with camera + calibration
-ros2 launch realman_bringup bringup.launch.py
+ros2 launch omr_bringup bringup.launch.py
 
 # Arm-only (no camera or calibration)
-ros2 launch realman_bringup bringup.launch.py launch_camera:=false launch_calib:=false
+ros2 launch omr_bringup bringup.launch.py launch_camera:=false launch_calib:=false
 ```
 
 The bringup loads the RM65 URDF (kinematics + meshes), starts ros2_control_node with
@@ -172,11 +172,11 @@ colcon build --cmake-args -DREALMAN_SDK=/custom/path
 
 ```mermaid
 graph TD
-    vision["realman_vision<br/><i>ament_cmake</i>"]
+    vision["omr_vision<br/><i>ament_cmake</i>"]
     arm["realman_arm<br/><i>plain CMake (submodule of omr_hardware)</i>"]
     calib["realman_calibration<br/><i>ament_cmake</i>"]
     hw["omr_hardware<br/><i>ament_cmake</i>"]
-    bringup["realman_bringup<br/><i>launch only</i>"]
+    bringup["omr_bringup<br/><i>launch only</i>"]
 
     vision --> calib
     arm --> calib

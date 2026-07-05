@@ -1,4 +1,4 @@
-# realman_vision
+# omr_vision
 
 Intel RealSense camera capture and streaming for the RealMan pipeline.
 
@@ -13,7 +13,7 @@ Intel RealSense camera capture and streaming for the RealMan pipeline.
 ## Quick start
 
 ```cpp
-#include "realman_vision/capture.hpp"
+#include "omr_vision/capture.hpp"
 
 auto capture = rm_vision::Capture::create();
 auto frame = capture->grab();  // blocks until next frame

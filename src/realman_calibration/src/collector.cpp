@@ -3,8 +3,8 @@
 #include "realman/motion/types.hpp"
 #include "realman_calibration/collector.hpp"
 #include "realman_calibration/format_polyfill.hpp"
-#include "realman_vision/camera/stream.hpp"
-#include "realman_vision/capture.hpp"
+#include "omr_vision/camera/stream.hpp"
+#include "omr_vision/capture.hpp"
 
 #include <cmath>
 #include <cstdlib>
@@ -63,7 +63,7 @@ public:
     explicit Impl(const CalibDataConfig& cfg)
         : arm_cfg_{.ip = cfg.arm_ip, .tcp_port = 8080, .model = rm::ArmModel::RM_65},
           arm_{arm_cfg_}, cam_{cfg.camera},
-          capture_{rm::vision::CaptureConfig{.output_dir = cfg.output_dir,
+          capture_{omr_vision::CaptureConfig{.output_dir = cfg.output_dir,
                                              .total_images = cfg.total_images,
                                              .save_depth = false,
                                              .board_size = cfg.board_size}},
@@ -130,7 +130,7 @@ public:
                 // Auto-capture on detection
                 if (found) {
                     auto pose = arm_.toolPose();
-                    rm::vision::ArmPose arm_pose{.tx = pose.x,
+                    omr_vision::ArmPose arm_pose{.tx = pose.x,
                                                  .ty = pose.y,
                                                  .tz = pose.z,
                                                  .rx = pose.roll,
@@ -151,7 +151,7 @@ public:
                 // Visual feedback (if display available)
                 if (has_display) {
                     auto display =
-                        rm::vision::FrameCapture::draw_overlay(frame, corners, saved_count, total_);
+                        omr_vision::FrameCapture::draw_overlay(frame, corners, saved_count, total_);
                     auto pose = arm_.toolPose();
                     auto arm_text = std::format(
                         "Arm: x={:.3F} y={:.3F} z={:.3F} roll={:.1F} pitch={:.1F} yaw={:.1F}",
@@ -209,7 +209,7 @@ public:
                 if (has_display) {
                     // draw overlay
                     auto display =
-                        rm::vision::FrameCapture::draw_overlay(frame, corners, saved_count, total_);
+                        omr_vision::FrameCapture::draw_overlay(frame, corners, saved_count, total_);
 
                     // arm pose status text
                     auto pose = arm_.toolPose();
@@ -242,7 +242,7 @@ public:
                 // ── handle key input ──
                 if (key == 's' || key == 'S') {
                     auto pose = arm_.toolPose();
-                    rm::vision::ArmPose arm_pose{.tx = pose.x,
+                    omr_vision::ArmPose arm_pose{.tx = pose.x,
                                                  .ty = pose.y,
                                                  .tz = pose.z,
                                                  .rx = pose.roll,
@@ -295,8 +295,8 @@ public:
 private:
     rm::ArmConfig arm_cfg_;
     rm::Arm arm_;
-    rm::vision::camera::CameraStream cam_;
-    rm::vision::FrameCapture capture_;
+    omr_vision::camera::CameraStream cam_;
+    omr_vision::FrameCapture capture_;
     cv::Size board_size_;
     int total_;
     std::filesystem::path output_dir_;

@@ -9,7 +9,7 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/clang_tidy.cmake OPTIONAL)
 find_package(ament_cmake REQUIRED)
 find_package(OpenCV REQUIRED COMPONENTS core calib3d highgui imgproc imgcodecs objdetect aruco)
 find_package(realsense2 REQUIRED)
-find_package(realman_vision REQUIRED)
+find_package(omr_vision REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
@@ -42,7 +42,7 @@ find_library(_realman_arm_lib realman_arm
     NO_DEFAULT_PATH
 )
 target_link_libraries(realman_calibration PUBLIC
-    realman_vision::realman_vision
+    omr_vision::omr_vision
     ${omr_hardware_LIBRARIES}
     ${_realman_arm_lib}
     ${OpenCV_LIBS}

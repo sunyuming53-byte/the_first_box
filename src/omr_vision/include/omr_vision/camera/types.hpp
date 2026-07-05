@@ -6,7 +6,7 @@
 
 #include <opencv2/core/mat.hpp>
 
-namespace rm::vision::camera {
+namespace omr_vision::camera {
 
 struct CameraConfig {
     int width{1280};
@@ -37,4 +37,4 @@ struct CameraFrame {
     [[nodiscard]] auto point_3d(int u, int v) const -> std::array<double, 3>;
 };
 
-}  // namespace rm::vision::camera
+}  // namespace omr_vision::camera

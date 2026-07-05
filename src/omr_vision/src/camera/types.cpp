@@ -1,6 +1,6 @@
-#include "realman_vision/camera/types.hpp"
+#include "omr_vision/camera/types.hpp"
 
-namespace rm::vision::camera {
+namespace omr_vision::camera {
 
 auto CameraFrame::point_3d(int u, int v) const -> std::array<double, 3> {
     // depth is in mm (CV_16UC1), convert to meters
@@ -12,4 +12,4 @@ auto CameraFrame::point_3d(int u, int v) const -> std::array<double, 3> {
     return {x, y, z};
 }
 
-}  // namespace rm::vision::camera
+}  // namespace omr_vision::camera

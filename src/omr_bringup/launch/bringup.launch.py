@@ -27,7 +27,7 @@ def generate_launch_description():
             parameters=[{
                 'robot_description': Command([
                     PathJoinSubstitution([FindExecutable(name='xacro')]), ' ',
-                    PathJoinSubstitution([FindPackageShare('realman_bringup'), 'urdf', 'realman.urdf.xacro']), ' ',
+                    PathJoinSubstitution([FindPackageShare('omr_bringup'), 'urdf', 'realman.urdf.xacro']), ' ',
                     'arm_ip:=', LaunchConfiguration('arm_ip'),
                 ]),
             }],
@@ -41,13 +41,13 @@ def generate_launch_description():
             name='controller_manager',
             parameters=[
                 PathJoinSubstitution([
-                    FindPackageShare('realman_bringup'),
+                    FindPackageShare('omr_bringup'),
                     'config', 'realman_controllers.yaml',
                 ]),
                 {
                     'robot_description': Command([
                         PathJoinSubstitution([FindExecutable(name='xacro')]), ' ',
-                        PathJoinSubstitution([FindPackageShare('realman_bringup'), 'urdf', 'realman.urdf.xacro']), ' ',
+                        PathJoinSubstitution([FindPackageShare('omr_bringup'), 'urdf', 'realman.urdf.xacro']), ' ',
                         'arm_ip:=', LaunchConfiguration('arm_ip'),
                     ]),
                 },
