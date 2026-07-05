@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<robot name="RealManArm" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- User-facing parameters -->
+  <xacro:arg name="arm_ip"     default="192.168.1.18"/>
+  <xacro:arg name="tcp_port"   default="8080"/>
+  <xacro:arg name="link6_type" default="Link6"/>
+
+  <!-- Vendored upstream RM65 URDF (kinematics, inertias, meshes) -->
+  <xacro:include filename="rm_65.urdf.xacro"/>
+
+  <!-- ros2_control hardware interface wrapper -->
+  <xacro:include filename="realman.ros2_control.xacro"/>
+
+  <!-- Instantiate the ros2_control plugin -->
+  <xacro:realman_ros2_control
+    name="RealManArm"
+    arm_ip="$(arg arm_ip)"
+    tcp_port="$(arg tcp_port)"/>
+
+</robot>

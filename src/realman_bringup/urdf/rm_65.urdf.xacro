@@ -50,7 +50,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://rm_description/meshes/rm_65_arm/base_link.STL" />
+          filename="package://realman_bringup/urdf/meshes/rm_65_arm/base_link.STL" />
       </geometry>
       <material
         name="">
@@ -64,7 +64,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://rm_description/meshes/rm_65_arm/base_link.STL" />
+          filename="package://realman_bringup/urdf/meshes/rm_65_arm/base_link.STL" />
       </geometry>
     </collision>
   </link>
@@ -90,7 +90,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://rm_description/meshes/rm_65_arm/link1.STL" />
+          filename="package://realman_bringup/urdf/meshes/rm_65_arm/link1.STL" />
       </geometry>
       <material
         name="">
@@ -104,7 +104,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://rm_description/meshes/rm_65_arm/link1.STL" />
+          filename="package://realman_bringup/urdf/meshes/rm_65_arm/link1.STL" />
       </geometry>
     </collision>
   </link>
@@ -148,7 +148,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://rm_description/meshes/rm_65_arm/link2.STL" />
+          filename="package://realman_bringup/urdf/meshes/rm_65_arm/link2.STL" />
       </geometry>
       <material
         name="">
@@ -162,7 +162,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://rm_description/meshes/rm_65_arm/link2.STL" />
+          filename="package://realman_bringup/urdf/meshes/rm_65_arm/link2.STL" />
       </geometry>
     </collision>
   </link>
@@ -206,7 +206,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://rm_description/meshes/rm_65_arm/link3.STL" />
+          filename="package://realman_bringup/urdf/meshes/rm_65_arm/link3.STL" />
       </geometry>
       <material
         name="">
@@ -220,7 +220,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://rm_description/meshes/rm_65_arm/link3.STL" />
+          filename="package://realman_bringup/urdf/meshes/rm_65_arm/link3.STL" />
       </geometry>
     </collision>
   </link>
@@ -264,7 +264,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://rm_description/meshes/rm_65_arm/link4.STL" />
+          filename="package://realman_bringup/urdf/meshes/rm_65_arm/link4.STL" />
       </geometry>
       <material
         name="">
@@ -278,7 +278,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://rm_description/meshes/rm_65_arm/link4.STL" />
+          filename="package://realman_bringup/urdf/meshes/rm_65_arm/link4.STL" />
       </geometry>
     </collision>
   </link>
@@ -322,7 +322,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://rm_description/meshes/rm_65_arm/link5.STL" />
+          filename="package://realman_bringup/urdf/meshes/rm_65_arm/link5.STL" />
       </geometry>
       <material
         name="">
@@ -336,7 +336,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://rm_description/meshes/rm_65_arm/link5.STL" />
+          filename="package://realman_bringup/urdf/meshes/rm_65_arm/link5.STL" />
       </geometry>
     </collision>
   </link>
@@ -381,7 +381,7 @@
           rpy="0 0 0" />
         <geometry>
           <mesh
-            filename="package://rm_description/meshes/rm_65_arm/link6.STL" />
+            filename="package://realman_bringup/urdf/meshes/rm_65_arm/link6.STL" />
         </geometry>
         <material
           name="">
@@ -395,7 +395,7 @@
           rpy="0 0 0" />
         <geometry>
           <mesh
-            filename="package://rm_description/meshes/rm_65_arm/link6.STL" />
+            filename="package://realman_bringup/urdf/meshes/rm_65_arm/link6.STL" />
         </geometry>
       </collision>
     </link>
@@ -441,7 +441,7 @@
           rpy="0 0 0" />
         <geometry>
           <mesh
-            filename="package://rm_description/meshes/rm_65_arm/link6_6f.STL" />
+            filename="package://realman_bringup/urdf/meshes/rm_65_arm/link6_6f.STL" />
         </geometry>
         <material
           name="">
@@ -455,7 +455,7 @@
           rpy="0 0 0" />
         <geometry>
           <mesh
-            filename="package://rm_description/meshes/rm_65_arm/link6_6f.STL" />
+            filename="package://realman_bringup/urdf/meshes/rm_65_arm/link6_6f.STL" />
         </geometry>
       </collision>
     </link>
@@ -501,7 +501,7 @@
           rpy="0 0 0" />
         <geometry>
           <mesh
-            filename="package://rm_description/meshes/rm_65_arm/link6_6fb.STL" />
+            filename="package://realman_bringup/urdf/meshes/rm_65_arm/link6_6fb.STL" />
         </geometry>
         <material
           name="">
@@ -515,7 +515,7 @@
           rpy="0 0 0" />
         <geometry>
           <mesh
-            filename="package://rm_description/meshes/rm_65_arm/link6_6fb.STL" />
+            filename="package://realman_bringup/urdf/meshes/rm_65_arm/link6_6fb.STL" />
         </geometry>
       </collision>
     </link>
