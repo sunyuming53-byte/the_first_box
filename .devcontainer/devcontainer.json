@@ -4,6 +4,7 @@
 	"name": "RealMan ROS2 Humble",
 	"dockerComposeFile": "../docker-compose.yml",
 	"service": "develop",
+	"runServices": ["develop"],
 
 	// Mount workspace to /ws (matches Dockerfile WORKDIR)
 	"workspaceFolder": "/ws",
@@ -21,7 +22,11 @@
 				"ms-iot.vscode-ros",
 				"ms-python.python",
 				"xaver.clang-format",
-				"llvm-vs-code-extensions.vscode-clangd"
+				"llvm-vs-code-extensions.vscode-clangd",
+				"AMiner.codegeex",
+				"mhutchie.git-graph",
+				"James-Yu.latex-workshop",
+				"bierner.markdown-mermaid"
 			],
 			"settings": {
 				"dev.containers.logLevel": "trace",
