@@ -61,6 +61,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-humble-geometry-msgs \
     ros-humble-hardware-interface \
     ros-humble-pluginlib \
+    ros-humble-controller-manager \
+    ros-humble-joint-state-broadcaster \
+    ros-humble-joint-trajectory-controller \
+    ros-humble-robot-state-publisher \
+    ros-humble-xacro \
     ros-humble-sensor-msgs \
     ros-humble-std-msgs \
     ros-humble-visualization-msgs \
