@@ -21,7 +21,9 @@ find_package(trajectory_msgs REQUIRED)
 find_package(OpenCV REQUIRED)
 
 file(GLOB_RECURSE LIB_SOURCES src/*.cpp)
-list(REMOVE_ITEM LIB_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
+list(REMOVE_ITEM LIB_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/door_trajectory_node.cpp)
 
 add_library(${PROJECT_NAME} SHARED ${LIB_SOURCES})
 target_include_directories(${PROJECT_NAME} PUBLIC
@@ -55,6 +57,10 @@ install(DIRECTORY bt_xml/ DESTINATION share/${PROJECT_NAME}/bt_xml)
 add_executable(task_orchestrator src/main.cpp)
 target_link_libraries(task_orchestrator ${PROJECT_NAME})
 install(TARGETS task_orchestrator DESTINATION lib/${PROJECT_NAME})
+
+add_executable(door_trajectory_node src/door_trajectory_node.cpp)
+target_link_libraries(door_trajectory_node ${PROJECT_NAME})
+install(TARGETS door_trajectory_node DESTINATION lib/${PROJECT_NAME})
 
 ament_export_libraries(${PROJECT_NAME})
 ament_export_include_directories(include)
@@ -108,6 +114,9 @@ if(BUILD_TESTING)
     ament_add_gtest(orchestrator_integration_test test/test_main_ros.cpp test/orchestrator_integration_test.cpp)
     target_include_directories(orchestrator_integration_test PRIVATE test)
     target_link_libraries(orchestrator_integration_test ${PROJECT_NAME} ${OpenCV_LIBS} realsense2::realsense2)
+
+    ament_add_gtest(door_trajectory_node_test test/test_main_ros.cpp test/door_trajectory_node_test.cpp)
+    target_link_libraries(door_trajectory_node_test ${PROJECT_NAME} ${OpenCV_LIBS} realsense2::realsense2)
 endif()
 
 ament_package()
