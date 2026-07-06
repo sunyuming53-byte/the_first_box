@@ -1,6 +1,6 @@
-#include <omr_controller/state_machine/bt_factory.hpp>
+#include "omr_controller/state_machine/bt_factory.hpp"
 
-#include <omr_controller/types.hpp>
+#include "omr_controller/types.hpp"
 
 #include <behaviortree_cpp/bt_factory.h>
 

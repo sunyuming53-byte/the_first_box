@@ -1,6 +1,6 @@
 #pragma once
 
-#include <omr_controller/types.hpp>
+#include "omr_controller/types.hpp"
 #include <omr_vision/camera/stream.hpp>
 #include <omr_vision/camera/types.hpp>
 
