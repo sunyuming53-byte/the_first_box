@@ -18,6 +18,16 @@ def generate_launch_description():
                               description='IP address of the robot arm'),
         DeclareLaunchArgument('calibration_file', default_value='',
                               description='Path to hand-eye calibration transform file'),
+        DeclareLaunchArgument('launch_dais', default_value='true',
+                              description='Launch dais motor (ros2_control + state publisher)'),
+        DeclareLaunchArgument('serial_port', default_value='/dev/ttyRS485',
+                              description='Serial port for dais motor Modbus RTU'),
+        DeclareLaunchArgument('baud_rate', default_value='57600',
+                              description='Baud rate for dais motor Modbus RTU'),
+        DeclareLaunchArgument('slave_id', default_value='1',
+                              description='Modbus slave ID for dais motor'),
+        DeclareLaunchArgument('gear_ratio', default_value='1000',
+                              description='Gear ratio for dais motor'),
 
         # ── robot_description from xacro ─────────────────────────
         Node(
@@ -70,6 +80,65 @@ def generate_launch_description():
             executable='spawner',
             arguments=['joint_trajectory_controller', '--controller-manager', '/controller_manager'],
             condition=IfCondition(LaunchConfiguration('launch_arm')),
+        ),
+
+        # ── Dais robot_state_publisher ──────────────────────────
+        Node(
+            package='robot_state_publisher',
+            executable='robot_state_publisher',
+            name='dais_robot_state_publisher',
+            parameters=[{
+                'robot_description': Command([
+                    FindExecutable(name='xacro'), ' ',
+                    PathJoinSubstitution([FindPackageShare('omr_bringup'), 'urdf', 'dais.ros2_control.xacro']),
+                    ' serial_port:=', LaunchConfiguration('serial_port'),
+                    ' baud_rate:=', LaunchConfiguration('baud_rate'),
+                    ' slave_id:=', LaunchConfiguration('slave_id'),
+                    ' gear_ratio:=', LaunchConfiguration('gear_ratio'),
+                ]),
+            }],
+            condition=IfCondition(LaunchConfiguration('launch_dais')),
+        ),
+
+        # ── Dais controller manager (ros2_control) ─────────────
+        Node(
+            package='controller_manager',
+            executable='ros2_control_node',
+            name='dais_controller_manager',
+            parameters=[
+                PathJoinSubstitution([
+                    FindPackageShare('omr_bringup'),
+                    'config', 'dais_controllers.yaml',
+                ]),
+                {
+                    'robot_description': Command([
+                        FindExecutable(name='xacro'), ' ',
+                        PathJoinSubstitution([FindPackageShare('omr_bringup'), 'urdf', 'dais.ros2_control.xacro']),
+                        ' serial_port:=', LaunchConfiguration('serial_port'),
+                        ' baud_rate:=', LaunchConfiguration('baud_rate'),
+                        ' slave_id:=', LaunchConfiguration('slave_id'),
+                        ' gear_ratio:=', LaunchConfiguration('gear_ratio'),
+                    ]),
+                },
+            ],
+            condition=IfCondition(LaunchConfiguration('launch_dais')),
+            output='screen',
+        ),
+
+        # ── Dais joint_state_broadcaster spawner ───────────────
+        Node(
+            package='controller_manager',
+            executable='spawner',
+            arguments=['joint_state_broadcaster', '--controller-manager', '/dais_controller_manager'],
+            condition=IfCondition(LaunchConfiguration('launch_dais')),
+        ),
+
+        # ── Dais joint_trajectory_controller spawner ───────────
+        Node(
+            package='controller_manager',
+            executable='spawner',
+            arguments=['joint_trajectory_controller', '--controller-manager', '/dais_controller_manager'],
+            condition=IfCondition(LaunchConfiguration('launch_dais')),
         ),
 
         # ── RealSense camera ──────────────────────────────────────
