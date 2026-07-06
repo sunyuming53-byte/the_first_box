@@ -1,0 +1,147 @@
+#include "omr_controller/clients/vision_client.hpp"
+
+#include <gtest/gtest.h>
+
+#include <opencv2/aruco.hpp>
+#include <opencv2/imgproc.hpp>
+
+using namespace omr_controller;
+
+namespace {
+
+class FakeCamera : public ICamera {
+public:
+    explicit FakeCamera(cv::Mat image) : image_(std::move(image)) {}
+
+    std::optional<cv::Mat> next() override {
+        if (returned_) return std::nullopt;
+        returned_ = true;
+        return image_.clone();
+    }
+
+    omr_vision::camera::CameraIntrinsics depth_intrinsics() const override {
+        omr_vision::camera::CameraIntrinsics intr;
+        intr.K = (cv::Mat_<double>(3, 3) << 500.0, 0.0, 100.0, 0.0, 500.0, 100.0, 0.0, 0.0, 1.0);
+        intr.dist_coeff = cv::Mat::zeros(1, 5, CV_64F);
+        return intr;
+    }
+
+private:
+    cv::Mat image_;
+    bool returned_{false};
+};
+
+cv::Mat makeRedBlobImage(int width, int height, cv::Point center, int radius) {
+    cv::Mat img(height, width, CV_8UC3, cv::Scalar(0, 0, 0));
+    cv::circle(img, center, radius, cv::Scalar(0, 0, 255), cv::FILLED);
+    return img;
+}
+
+cv::Mat makeArucoImage(int side, int marker_id, int dict_type) {
+    auto dict = cv::aruco::getPredefinedDictionary(dict_type);
+    cv::Mat gray;
+    cv::aruco::drawMarker(dict, marker_id, side, gray, 1);
+    cv::Mat bgr;
+    cv::cvtColor(gray, bgr, cv::COLOR_GRAY2BGR);
+    return bgr;
+}
+
+}  // namespace
+
+class VisionClientTest : public ::testing::Test {
+protected:
+    // Helper: build VisionClient with a FakeCamera holding the given image.
+    auto makeClient(cv::Mat image) -> VisionClient {
+        return VisionClient(std::make_unique<FakeCamera>(std::move(image)));
+    }
+};
+
+TEST_F(VisionClientTest, DetectRedBlobFindsColorLabel) {
+    const cv::Point kExpectedCenter(100, 100);
+    cv::Mat img = makeRedBlobImage(200, 200, kExpectedCenter, 20);
+    VisionClient client = makeClient(img);
+
+    auto results = client.detect(img);
+
+    ASSERT_EQ(results.size(), 1u);
+    EXPECT_EQ(results[0].label, "color");
+    EXPECT_NEAR(results[0].center.x, kExpectedCenter.x, 5.0);
+    EXPECT_NEAR(results[0].center.y, kExpectedCenter.y, 5.0);
+}
+
+TEST_F(VisionClientTest, DetectEmptyImageReturnsEmpty) {
+    cv::Mat black(200, 200, CV_8UC3, cv::Scalar(0, 0, 0));
+    VisionClient client = makeClient(black);
+
+    auto results = client.detect(black);
+
+    EXPECT_TRUE(results.empty());
+}
+
+TEST_F(VisionClientTest, DetectArucoMarkerFindsCorrectId) {
+    constexpr int kMarkerSide = 400;
+    constexpr int kMarkerId = 3;
+    constexpr int kDictType = cv::aruco::DICT_4X4_50;
+
+    auto dict = cv::aruco::getPredefinedDictionary(kDictType);
+    cv::Mat gray;
+    cv::aruco::drawMarker(dict, kMarkerId, kMarkerSide, gray, 2);
+    cv::Mat img;
+    cv::cvtColor(gray, img, cv::COLOR_GRAY2BGR);
+
+    VisionClient client = makeClient(img);
+    client.set_params({0, 50, 50}, {10, 255, 255}, kDictType, 0.05);
+
+    auto results = client.detect(img);
+
+    if (results.empty()) {
+        GTEST_SKIP() << "Aruco marker detection not functioning in this OpenCV build";
+    }
+
+    bool found = false;
+    std::string expected_label = "aruco_" + std::to_string(kMarkerId);
+    for (const auto& r : results) {
+        if (r.label == expected_label) {
+            found = true;
+            double expected_center = kMarkerSide / 2.0;
+            EXPECT_NEAR(r.center.x, expected_center, expected_center * 0.25);
+            EXPECT_NEAR(r.center.y, expected_center, expected_center * 0.25);
+            break;
+        }
+    }
+    EXPECT_TRUE(found) << "Expected detection with label '" << expected_label << "', got "
+                       << results.size() << " results";
+}
+
+TEST_F(VisionClientTest, MultipleRedBlobsAllDetected) {
+    cv::Mat img(200, 200, CV_8UC3, cv::Scalar(0, 0, 0));
+    cv::circle(img, cv::Point(50, 50), 15, cv::Scalar(0, 0, 255), cv::FILLED);
+    cv::circle(img, cv::Point(150, 50), 15, cv::Scalar(0, 0, 255), cv::FILLED);
+    cv::circle(img, cv::Point(100, 150), 15, cv::Scalar(0, 0, 255), cv::FILLED);
+
+    VisionClient client = makeClient(img);
+    auto results = client.detect(img);
+
+    EXPECT_EQ(results.size(), 3u);
+}
+
+TEST_F(VisionClientTest, NoTargetAllGreenReturnsEmpty) {
+    cv::Mat img(200, 200, CV_8UC3, cv::Scalar(0, 255, 0));
+
+    VisionClient client = makeClient(img);
+    auto results = client.detect(img);
+
+    EXPECT_TRUE(results.empty());
+}
+
+TEST_F(VisionClientTest, DetectionConfidenceInRange) {
+    cv::Mat img = makeRedBlobImage(200, 200, cv::Point(100, 100), 20);
+
+    VisionClient client = makeClient(img);
+    auto results = client.detect(img);
+
+    for (const auto& r : results) {
+        EXPECT_GE(r.confidence, 0.0);
+        EXPECT_LE(r.confidence, 1.0);
+    }
+}

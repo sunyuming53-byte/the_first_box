@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:macro name="dais_ros2_control"
+               params="serial_port:=/dev/ttyRS485 baud_rate:=57600 slave_id:=1 gear_ratio:=1000">
+
+    <ros2_control name="DaisMotor" type="system">
+      <hardware>
+        <plugin>omr_hardware/DaisHardware</plugin>
+        <param name="serial_port">${serial_port}</param>
+        <param name="baud_rate">${baud_rate}</param>
+        <param name="slave_id">${slave_id}</param>
+        <param name="gear_ratio">${gear_ratio}</param>
+      </hardware>
+
+      <joint name="joint_dais">
+        <command_interface name="velocity"/>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+      </joint>
+
+    </ros2_control>
+  </xacro:macro>
+
+</robot>

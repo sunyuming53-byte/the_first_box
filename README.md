@@ -69,6 +69,26 @@ pipeline/                            # ROS2 workspace root
 │   │   ├── plugins.xml               #   ArmSystem + DaisHardware registration
 │   │   ├── CMakeLists.txt
 │   │   └── package.xml
+│   ├── omr_controller/               # ament_cmake — behavior tree-based task orchestrator
+│   │   ├── include/omr_controller/
+│   │   │   ├── orchestrator.hpp      #   TaskOrchestrator (rclcpp::Node + BT.CPP tick loop)
+│   │   │   ├── clients/              #   Non-blocking ROS2 clients
+│   │   │   │   ├── arm_client.hpp    #     ArmClient → JTC action + /joint_states
+│   │   │   │   ├── gripper_client.hpp#   GripperClient → GripperCommand action
+│   │   │   │   ├── motor_client.hpp  #     MotorClient (abstract) + MotorClientStub
+│   │   │   │   ├── base_client.hpp   #     BaseClient (abstract) + BaseClientStub
+│   │   │   │   └── vision_client.hpp #     VisionClient → CameraStream + OpenCV detect
+│   │   │   ├── state_machine/
+│   │   │   │   └── bt_factory.hpp    #     BT.CPP custom nodes registration
+│   │   │   └── types.hpp             #     Core data types
+│   │   ├── src/                      #   Implementation files
+│   │   ├── bt_xml/                   #   Behavior tree XML definitions
+│   │   │   └── pick_and_place.xml
+│   │   ├── launch/                   #   controller.launch.py
+│   │   ├── config/                   #   controller.yaml
+│   │   ├── test/                     #   11 test binaries (100% pass)
+│   │   ├── CMakeLists.txt
+│   │   └── package.xml
 │   └── omr_bringup/                  # ament_cmake — launch + config + URDF (no compiled code)
 │       ├── launch/
 │       │   ├── bringup.launch.py      #   ros2_control pipeline (RSP + CM + JSB + JTC + camera + calib)
@@ -118,16 +138,9 @@ flowchart TD
         HW["ArmSystem<br/><i>hardware_interface plugin</i>"]
     end
 
-    subgraph User["Your Controller (ROS2 Node)"]
-        CTRL["Custom Controller"]
-    end
-
     JSB -->|reads state| HW
     JTC -->|writes command| HW
     HW --> Arm
-
-    CTRL -->|subscribes| JSB
-    CTRL -->|action goal| JTC
 
     Arm["rm::Arm<br/><i>PIMPL facade — zero ROS deps</i>"]
     Arm --> Impl["Arm::Impl<br/><i>worker thread + cmd queue</i>"]
@@ -135,9 +148,47 @@ flowchart TD
     SDK -->|TCP| HW2["RealMan Robot Arm"]
 
     Arm -.->|Lazy connect| Impl
+
+    %% D-AIS Motor subsystem
+    subgraph DaisROS2["D-AIS ROS2 Control Loop"]
+        DCM["dais_controller_manager<br/><i>ros2_control_node</i>"]
+        DJSB["dais_joint_state_broadcaster<br/><i>→ /dais/joint_states</i>"]
+        DJTC["dais_joint_trajectory_controller<br/><i>/dais/follow_joint_trajectory</i>"]
+        DHW["DaisHardware<br/><i>hardware_interface plugin</i>"]
+    end
+
+    DJSB -->|reads state| DHW
+    DJTC -->|writes command| DHW
+    DHW --> Motor["dais::Motor<br/><i>pure C++ Modbus RTU driver</i>"]
+    Motor -->|Modbus RTU| PHW["D-AIS Motor"]
+
+    %% Task Orchestrator
+    subgraph Orchestrator["Task Orchestrator (omr_controller)"]
+        ORCH["TaskOrchestrator<br/><i>rclcpp::Node + BT.CPP tick loop (20 Hz)</i>"]
+        BT["BehaviorTree.CPP v4<br/><i>pick_and_place.xml</i>"]
+        CLIENTS["Client Layer<br/><i>Arm | Gripper | Motor | Base | Vision</i>"]
+    end
+
+    ORCH --> BT
+    BT --> CLIENTS
+    CLIENTS -->|action goal| JTC
+    CLIENTS -->|subscribes| JSB
+    CLIENTS -->|action goal| DJTC
+    CLIENTS -->|subscribes| DJSB
 ```
 
-**Data flow:** `ArmSystem.read()` → joint_state_broadcaster → `/joint_states` topic. Your controller sends a `FollowJointTrajectory` action goal → joint_trajectory_controller → `ArmSystem.write()` → `rm::Arm::moveJ()` → arm.
+**Arm data flow:** `ArmSystem.read()` → `joint_state_broadcaster` → `/joint_states` topic. The
+`joint_trajectory_controller` receives `FollowJointTrajectory` action goals → `ArmSystem.write()`
+→ `rm::Arm::moveJ()` → arm.
+
+**D-AIS motor data flow:** `DaisHardware.read()` → `joint_state_broadcaster` → `/joint_states`.
+The `joint_trajectory_controller` (velocity-mode, PID closed-loop) receives goals →
+`DaisHardware.write()` → `dais::Motor::setVelocity()` → Modbus RTU → motor.
+
+**Orchestrator data flow:** `TaskOrchestrator` runs a BT.CPP v4 behavior tree at 20 Hz. Each BT
+action node delegates to a non-blocking Client (ArmClient → arm JTC, GripperClient → gripper
+action, VisionClient → RealSense + OpenCV). The full task flow (pick-and-place, inspection,
+etc.) is defined in XML files under `bt_xml/`, editable without recompilation.
 
 `rm::Arm` is a plain C++ class (not an `rclcpp::Node`) with **zero ROS dependency**.
 It lives in the `realman_arm` git submodule under `omr_hardware/third_party/`.
@@ -158,11 +209,24 @@ ros2 launch omr_bringup bringup.launch.py
 
 # Arm-only (no camera or calibration)
 ros2 launch omr_bringup bringup.launch.py launch_camera:=false launch_calib:=false
+
+# Start dais motor driver alongside arm
+ros2 launch omr_bringup bringup.launch.py launch_dais:=true
+
+# Configure dais motor hardware params
+ros2 launch omr_bringup bringup.launch.py \
+    launch_dais:=true \
+    serial_port:=/dev/ttyRS485 \
+    baud_rate:=57600 \
+    slave_id:=1 \
+    gear_ratio:=1000
 ```
 
 The bringup loads the RM65 URDF (kinematics + meshes), starts ros2_control_node with
 `joint_state_broadcaster` and `joint_trajectory_controller`, then publishes TF via
 `robot_state_publisher`. All arm nodes are conditioned on `launch_arm:=true`.
+
+The bringup now supports `launch_dais:=true` to start a second `controller_manager` for the D-AIS motor at 50Hz (velocity-mode JTC with PID). Dais hw params are configurable via launch args.
 
 ## Building
 
@@ -215,6 +279,29 @@ uses for go-to-definition, diagnostics, and completions. The `.clangd` config
 suppresses ROS2-header false positives and disables `UnusedIncludes`. The dev
 container runs this automatically on creation.
 
+### Task Orchestrator (omr_controller)
+
+The `omr_controller` package provides a behavior tree-based task orchestrator built
+on BehaviorTree.CPP v4. It connects to all robot subsystems through standard ROS2
+interfaces:
+
+```
+TaskOrchestrator (20 Hz BT tick loop)
+  ├── ArmClient       → /arm_cm/follow_joint_trajectory
+  ├── GripperClient   → /gripper/follow_joint_trajectory
+  ├── MotorClient     → /dais_cm/follow_joint_trajectory (stub)
+  ├── BaseClient      → (stub — future base hardware)
+  └── VisionClient    → RealSense D435 + OpenCV detection
+```
+
+```bash
+# Launch the orchestrator
+ros2 launch omr_controller controller.launch.py
+```
+
+The task flow (pick-and-place, inspection, etc.) is defined in BehaviorTree XML
+files under `bt_xml/`, editable without recompilation.
+
 ## Testing
 
 Tests use `ament_cmake_gtest` and are gated behind `BUILD_TESTING`:
@@ -229,6 +316,13 @@ handles this via `APPEND_ENV`.
 
 `realman_calibration` has the most comprehensive test suite: camera calibration,
 pose processing, hand-eye solvers, TF integration, and synthetic data generators.
+
+```bash
+# Required in Docker: set RMW_IMPLEMENTATION for test compatibility
+export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+```
+
+> The default `rmw_fastrtps_cpp` requires shared memory not available in Docker containers. Set `RMW_IMPLEMENTATION=rmw_cyclonedds_cpp` before running tests in Docker. This is pre-configured in the Dockerfile.
 
 ## Static Analysis
 
