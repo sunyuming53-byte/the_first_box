@@ -10,8 +10,10 @@ find_package(ament_cmake REQUIRED)
 find_package(ament_index_cpp REQUIRED)
 find_package(behaviortree_cpp REQUIRED)
 find_package(control_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
 find_package(omr_vision REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclcpp_action REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(trajectory_msgs REQUIRED)
@@ -27,8 +29,10 @@ ament_target_dependencies(${PROJECT_NAME} PUBLIC
     ament_index_cpp
     behaviortree_cpp
     control_msgs
+    geometry_msgs
     omr_vision
     rclcpp
+    rclcpp_action
     sensor_msgs
     std_msgs
     trajectory_msgs
@@ -52,6 +56,18 @@ if(BUILD_TESTING)
     find_package(OpenCV REQUIRED)
     ament_add_gtest(types_test test/test_main.cpp test/types_test.cpp)
     target_link_libraries(types_test ${PROJECT_NAME} ${OpenCV_LIBS})
+
+    ament_add_gtest(gripper_client_test test/test_main.cpp test/gripper_client_test.cpp)
+    target_link_libraries(gripper_client_test ${PROJECT_NAME} ${OpenCV_LIBS})
+
+    ament_add_gtest(motor_client_test test/test_main.cpp test/motor_client_test.cpp)
+    target_link_libraries(motor_client_test ${PROJECT_NAME} ${OpenCV_LIBS})
+
+    ament_add_gtest(base_client_test test/test_main.cpp test/base_client_test.cpp)
+    target_link_libraries(base_client_test ${PROJECT_NAME} ${OpenCV_LIBS})
+
+    ament_add_gtest(arm_client_test test/test_main.cpp test/arm_client_test.cpp)
+    target_link_libraries(arm_client_test ${PROJECT_NAME})
 endif()
 
 ament_package()
