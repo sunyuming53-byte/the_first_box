@@ -39,6 +39,7 @@ ENV HTTP_PROXY=${HTTP_PROXY} \
     https_proxy=${HTTPS_PROXY}
 
 ENV DEBIAN_FRONTEND=noninteractive
+ENV RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 
 # Use Aliyun mirror for faster apt downloads
 RUN sed -i 's@archive.ubuntu.com@mirrors.aliyun.com@g' /etc/apt/sources.list && \
