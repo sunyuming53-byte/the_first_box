@@ -18,9 +18,6 @@ using namespace omr_controller;
 // ---------------------------------------------------------------------------
 class IntegrationTest : public ::testing::Test {
 protected:
-    static void SetUpTestSuite() { rclcpp::init(0, nullptr); }
-    static void TearDownTestSuite() { rclcpp::shutdown(); }
-
     void SetUp() override {
         node_ = std::make_shared<rclcpp::Node>("integration_test");
     }
