@@ -153,6 +153,9 @@ if(BUILD_TESTING)
     ament_add_gtest(trajectory_sequence_test test/test_main_ros.cpp test/trajectory_sequence_test.cpp)
     target_link_libraries(trajectory_sequence_test ${PROJECT_NAME} ${OpenCV_LIBS} realsense2::realsense2)
 
+    ament_add_gtest(door_trajectory_edge_test test/test_main_ros.cpp test/door_trajectory_edge_test.cpp)
+    target_link_libraries(door_trajectory_edge_test ${PROJECT_NAME} ${OpenCV_LIBS} realsense2::realsense2)
+
     ament_add_gtest(door_collision_test test/test_main_ros.cpp test/door_collision_test.cpp)
     target_link_libraries(door_collision_test ${PROJECT_NAME} ${OpenCV_LIBS} realsense2::realsense2)
 
