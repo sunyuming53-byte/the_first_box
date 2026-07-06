@@ -59,7 +59,7 @@ protected:
 };
 
 TEST_F(VisionClientTest, DetectRedBlobFindsColorLabel) {
-    constexpr cv::Point kExpectedCenter(100, 100);
+    const cv::Point kExpectedCenter(100, 100);
     cv::Mat img = makeRedBlobImage(200, 200, kExpectedCenter, 20);
     VisionClient client = makeClient(img);
 
