@@ -80,13 +80,26 @@ pipeline/                            # ROS2 workspace root
 │   │   │   │   └── vision_client.hpp #     VisionClient → CameraStream + OpenCV detect
 │   │   │   ├── state_machine/
 │   │   │   │   └── bt_factory.hpp    #     BT.CPP custom nodes registration
+│   │   │   ├── door_math.hpp          #     Door trajectory math model C(θ,φ) + R_T(θ,φ)
+│   │   │   ├── door_trajectory_node.hpp  #  DoorTrajectoryNode — MoveIt2-based motion planner
+│   │   │   ├── geometry_utils.hpp     #     homogeneous_to_pose() conversion utility
 │   │   │   └── types.hpp             #     Core data types
 │   │   ├── src/                      #   Implementation files
+│   │   │   ├── orchestrator.cpp
+│   │   │   ├── door_trajectory_node.cpp  #  Entry point for standalone trajectory node
+│   │   │   ├── door_trajectory_motion.cpp # MoveGroupInterface + collision objects + state machine
+│   │   │   └── clients/
 │   │   ├── bt_xml/                   #   Behavior tree XML definitions
 │   │   │   └── pick_and_place.xml
 │   │   ├── launch/                   #   controller.launch.py
 │   │   ├── config/                   #   controller.yaml
 │   │   ├── test/                     #   11 test binaries (100% pass)
+│   │   ├── CMakeLists.txt
+│   │   └── package.xml
+│   ├── rm65_moveit_config/           # ament_cmake — MoveIt2 config for RM65 (no compiled code)
+│   │   ├── config/                    #   SRDF, kinematics (KDL), OMPL, controller config
+│   │   ├── launch/                    #   move_group.launch.py + door_trajectory.launch.py
+│   │   ├── urdf/                      #   RM65 URDF with geometric collision primitives
 │   │   ├── CMakeLists.txt
 │   │   └── package.xml
 │   └── omr_bringup/                  # ament_cmake — launch + config + URDF (no compiled code)
@@ -228,6 +241,47 @@ The bringup loads the RM65 URDF (kinematics + meshes), starts ros2_control_node 
 
 The bringup now supports `launch_dais:=true` to start a second `controller_manager` for the D-AIS motor at 50Hz (velocity-mode JTC with PID). Dais hw params are configurable via launch args.
 
+### Door Trajectory (MoveIt2 collision-aware motion)
+
+The `omr_controller` package includes a standalone `DoorTrajectoryNode` that drives the arm
+through a collision-aware trajectory using MoveIt2. Designed for tasks like door opening where
+the arm must avoid colliding with a rotating planar surface.
+
+**Architecture:**
+```
+Math model C(θ,φ) + R_T(θ,φ) → world-to-target poses
+  → T_armBase_doorHinge transform (user-calibrated)
+  → move_group->setPoseTarget() → plan (OMPL, collision-aware)
+  → execute via /arm_cm/follow_joint_trajectory
+  → joint-state polling for completion (open-loop JTC workaround)
+```
+
+**Features:**
+- Collision-aware planning around a dynamic door panel (thin box) and static door frame (cylinder)
+- Parameterized trajectory: `(θ, φ)` schedule with configurable step size and max angle
+- Approach motion: plans a collision-free path from a safe home pose to the first trajectory waypoint
+- Open-loop JTC workaround: polls `/joint_states` for completion before advancing to next waypoint
+- 69 unit tests covering math model verification, mock planning, real FCL collision detection, and edge cases
+
+```bash
+# Launch the door trajectory orchestrator (requires arm already running)
+ros2 launch omr_bringup bringup.launch.py launch_door_trajectory:=true
+
+# Standalone move_group (without trajectory node)
+ros2 launch rm65_moveit_config move_group.launch.py use_rviz:=false
+```
+
+**Configuration** (`src/omr_bringup/config/door_trajectory_params.yaml`):
+| Parameter | Default | Description |
+|---|---|---|
+| `r`, `L`, `h` | 2.0, 1.5, 0.0 | Model geometry (m) |
+| `T_armBase_doorHinge` | zeros | Arm base → hinge transform [tx,ty,tz,rx,ry,rz] |
+| `theta_step_deg` / `theta_max_deg` | 5.0 / 90.0 | Door opening schedule |
+| `phi_values_deg` | [0,15,...,90] | Segment rotation waypoints |
+| `home_joints` | zeros | Safe approach starting pose (must be calibrated) |
+| `door_panel_size` | [2.0, 0.05, 0.8] | Door collision box dimensions (m) |
+| `door_frame_radius` | 0.05 | Door frame cylinder radius (m) |
+
 ## Building
 
 The SDK is discovered at `/opt/realman-sdk` (or `$REALMAN_SDK`) via
@@ -261,6 +315,7 @@ graph TD
     hw --> calib
     hw --> bringup
     calib --> bringup
+    bringup --> moveit["rm65_moveit_config<br/><i>ament_cmake (config only)</i>"]
 ```
 
 `colcon build` resolves this automatically, but it matters when building packages individually or adding cross-package dependencies.
