@@ -157,9 +157,6 @@ if(BUILD_TESTING)
     ament_add_gtest(collision_avoidance_test test/test_main_ros.cpp test/collision_avoidance_test.cpp)
     target_include_directories(collision_avoidance_test PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
     target_link_libraries(collision_avoidance_test ${PROJECT_NAME} ${OpenCV_LIBS})
-    # Pre-existing: FCL requires MoveIt2 + URDF loading environment not fully
-    # reproducible in CI — skip to avoid blocking the CI pipeline.
-    set_tests_properties(collision_avoidance_test PROPERTIES DISABLED TRUE)
 endif()
 
 ament_package()
