@@ -184,7 +184,18 @@ flowchart TD
     CLIENTS -->|subscribes| DJSB
 ```
 
-**Data flow:** `ArmSystem.read()` → joint_state_broadcaster → `/joint_states` topic. Your controller sends a `FollowJointTrajectory` action goal → joint_trajectory_controller → `ArmSystem.write()` → `rm::Arm::moveJ()` → arm.
+**Arm data flow:** `ArmSystem.read()` → `joint_state_broadcaster` → `/joint_states` topic. The
+`joint_trajectory_controller` receives `FollowJointTrajectory` action goals → `ArmSystem.write()`
+→ `rm::Arm::moveJ()` → arm.
+
+**D-AIS motor data flow:** `DaisHardware.read()` → `joint_state_broadcaster` → `/joint_states`.
+The `joint_trajectory_controller` (velocity-mode, PID closed-loop) receives goals →
+`DaisHardware.write()` → `dais::Motor::setVelocity()` → Modbus RTU → motor.
+
+**Orchestrator data flow:** `TaskOrchestrator` runs a BT.CPP v4 behavior tree at 20 Hz. Each BT
+action node delegates to a non-blocking Client (ArmClient → arm JTC, GripperClient → gripper
+action, VisionClient → RealSense + OpenCV). The full task flow (pick-and-place, inspection,
+etc.) is defined in XML files under `bt_xml/`, editable without recompilation.
 
 `rm::Arm` is a plain C++ class (not an `rclcpp::Node`) with **zero ROS dependency**.
 It lives in the `realman_arm` git submodule under `omr_hardware/third_party/`.
