@@ -8,6 +8,7 @@
 #include <thread>
 #include <vector>
 
+#include "omr_controller/state_machine/door_trajectory_action.hpp"
 #include "omr_controller/types.hpp"
 
 namespace {
@@ -144,19 +145,24 @@ BT::NodeStatus WaitAction::tick() {
 // ============================================================================
 
 BT::Tree build_tree(const std::string& xml_text, ArmClient& arm, GripperClient& gripper,
-                    VisionClient& vision) {
+                    VisionClient& vision,
+                    rclcpp::Node::SharedPtr ros_node) {
     BT::BehaviorTreeFactory factory;
 
     factory.registerNodeType<MoveArmAction>("MoveArmAction");
     factory.registerNodeType<GripperAction>("GripperAction");
     factory.registerNodeType<DetectObjectAction>("DetectObjectAction");
     factory.registerNodeType<WaitAction>("WaitAction");
+    factory.registerNodeType<DoorTrajectoryAction>("DoorTrajectoryAction");
 
     auto tree = factory.createTreeFromText(xml_text);
 
     tree.rootBlackboard()->set("arm_client", &arm);
     tree.rootBlackboard()->set("gripper_client", &gripper);
     tree.rootBlackboard()->set("vision_client", &vision);
+    if (ros_node) {
+        tree.rootBlackboard()->set("ros_node", ros_node);
+    }
 
     return tree;
 }

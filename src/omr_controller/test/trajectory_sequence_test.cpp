@@ -4,22 +4,31 @@
 #include <memory>
 #include <thread>
 
-#include "omr_controller/door_trajectory_node.hpp"
+#include "omr_controller/state_machine/door_trajectory_action.hpp"
 #include <rclcpp/rclcpp.hpp>
 
 namespace {
 
-class TrajectorySequenceTestNode : public omr_controller::DoorTrajectoryNode {
-public:
-    explicit TrajectorySequenceTestNode(const rclcpp::NodeOptions& options = rclcpp::NodeOptions())
-        : DoorTrajectoryNode(options) {}
+// Helper: create a minimal BT::NodeConfig with ros_node on blackboard.
+BT::NodeConfig make_config(rclcpp::Node::SharedPtr ros_node) {
+    BT::NodeConfig cfg;
+    cfg.blackboard = BT::Blackboard::create();
+    cfg.blackboard->set("ros_node", ros_node);
+    return cfg;
+}
 
-    using DoorTrajectoryNode::door_objects_added_;
-    using DoorTrajectoryNode::getCurrentState;
-    using DoorTrajectoryNode::getCurrentWaypointIndex;
-    using DoorTrajectoryNode::getWaypoints;
-    using DoorTrajectoryNode::setIdleStartTimeForTesting;
-    using DoorTrajectoryNode::setJointPositionsForTesting;
+// Test adapter with mocked MoveIt2 methods.
+class TrajectorySequenceTestNode : public omr_controller::DoorTrajectoryAction {
+public:
+    TrajectorySequenceTestNode(const std::string& name, const BT::NodeConfig& config)
+        : DoorTrajectoryAction(name, config) {}
+
+    using DoorTrajectoryAction::door_objects_added_;
+    using DoorTrajectoryAction::getCurrentState;
+    using DoorTrajectoryAction::getCurrentWaypointIndex;
+    using DoorTrajectoryAction::getWaypoints;
+    using DoorTrajectoryAction::setIdleStartTimeForTesting;
+    using DoorTrajectoryAction::setJointPositionsForTesting;
 
     void setPlanResult(bool result) { plan_result_ = result; }
     bool planWasCalled() const { return plan_called_; }
@@ -56,13 +65,16 @@ private:
     bool setup_door_collision_called_ = false;
 };
 
-void spinUntilState(rclcpp::Node* node, omr_controller::TrajectoryState target,
-                    std::chrono::milliseconds timeout = std::chrono::seconds(2)) {
-    auto deadline = std::chrono::steady_clock::now() + timeout;
-    auto* test_node = dynamic_cast<TrajectorySequenceTestNode*>(node);
-    while (std::chrono::steady_clock::now() < deadline) {
-        rclcpp::spin_some(node->get_node_base_interface());
-        if (test_node && test_node->getCurrentState() == target) return;
+// Tick the BT node until it reaches the target state or timeout.
+void tickUntilState(TrajectorySequenceTestNode* node,
+                    omr_controller::TrajectoryState target,
+                    rclcpp::Node* ros_node,
+                    int max_ticks = 500) {
+    for (int i = 0; i < max_ticks; ++i) {
+        rclcpp::spin_some(ros_node->get_node_base_interface());
+        auto status = node->executeTick();
+        if (node->getCurrentState() == target) return;
+        if (status == BT::NodeStatus::SUCCESS || status == BT::NodeStatus::FAILURE) return;
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
 }
@@ -72,18 +84,20 @@ void spinUntilState(rclcpp::Node* node, omr_controller::TrajectoryState target,
 class TrajectorySequenceTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        rclcpp::NodeOptions opts;
-        opts.append_parameter_override("idle_delay_sec", 0.1);
-        opts.append_parameter_override("tick_rate", 100.0);
-        node_ = std::make_shared<TrajectorySequenceTestNode>(opts);
+        ros_node_ = std::make_shared<rclcpp::Node>("trajectory_test");
+        auto cfg = make_config(ros_node_);
+        cfg.input_ports["idle_delay_sec"] = "0.1";
+        node_ = std::make_shared<TrajectorySequenceTestNode>("door_traj", cfg);
+        node_->executeTick();  // onStart() initialises
     }
 
     void TearDown() override { node_.reset(); }
 
+    rclcpp::Node::SharedPtr ros_node_;
     std::shared_ptr<TrajectorySequenceTestNode> node_;
 };
 
-// ── Test 1: IDLE → APPROACH_HOME → PLAN_APPROACH ───────────────────────────
+// ── Test 1: IDLE → APPROACH_HOME → PLAN_APPROACH ──────────────────────────
 
 TEST_F(TrajectorySequenceTest, IdleToApproachHomeToPlanApproach) {
     node_->setJointPositionsForTesting(node_->home_joints());
@@ -91,34 +105,34 @@ TEST_F(TrajectorySequenceTest, IdleToApproachHomeToPlanApproach) {
 
     EXPECT_EQ(node_->getCurrentState(), omr_controller::TrajectoryState::IDLE);
 
-    node_->setIdleStartTimeForTesting(node_->get_clock()->now() -
-                                      rclcpp::Duration::from_seconds(1.0));
+    node_->setIdleStartTimeForTesting(
+        node_->rosClock()->now() - rclcpp::Duration::from_seconds(1.0));
 
-    spinUntilState(node_.get(), omr_controller::TrajectoryState::PLAN_APPROACH);
+    tickUntilState(node_.get(), omr_controller::TrajectoryState::PLAN_APPROACH, ros_node_.get());
     EXPECT_EQ(node_->getCurrentState(), omr_controller::TrajectoryState::PLAN_APPROACH);
 
-    spinUntilState(node_.get(), omr_controller::TrajectoryState::EXECUTE_APPROACH);
+    tickUntilState(node_.get(), omr_controller::TrajectoryState::EXECUTE_APPROACH, ros_node_.get());
     EXPECT_TRUE(node_->planWasCalled());
     EXPECT_EQ(node_->getCurrentState(), omr_controller::TrajectoryState::EXECUTE_APPROACH);
 }
 
-// ── Test 2: PREPARE_WAYPOINTS computes correct count ────────────────────────
+// ── Test 2: PREPARE_WAYPOINTS computes correct count ───────────────────────
 
 TEST_F(TrajectorySequenceTest, PrepareWaypointsCount) {
-    rclcpp::NodeOptions opts;
-    opts.append_parameter_override("idle_delay_sec", 0.0);
-    opts.append_parameter_override("tick_rate", 100.0);
-    opts.append_parameter_override("theta_step_deg", 10.0);
-    opts.append_parameter_override("theta_max_deg", 30.0);
-    opts.append_parameter_override("phi_values_deg", std::vector<double>({0.0, 45.0, 90.0}));
-    auto node = std::make_shared<TrajectorySequenceTestNode>(opts);
+    auto cfg2 = make_config(ros_node_);
+    cfg2.input_ports["idle_delay_sec"] = "0.0";
+    cfg2.input_ports["theta_step_deg"] = "10.0";
+    cfg2.input_ports["theta_max_deg"] = "30.0";
+    cfg2.input_ports["phi_values"] = "0,45,90";
+    auto node = std::make_shared<TrajectorySequenceTestNode>("door_traj", cfg2);
+    node->executeTick();
 
     node->setJointPositionsForTesting(node->home_joints());
     node->setPlanResult(true);
-    node->setIdleStartTimeForTesting(node->get_clock()->now() -
-                                     rclcpp::Duration::from_seconds(1.0));
+    node->setIdleStartTimeForTesting(
+        node->rosClock()->now() - rclcpp::Duration::from_seconds(1.0));
 
-    spinUntilState(node.get(), omr_controller::TrajectoryState::PLANNING_WAYPOINT);
+    tickUntilState(node.get(), omr_controller::TrajectoryState::PLANNING_WAYPOINT, ros_node_.get());
     EXPECT_EQ(node->getCurrentState(), omr_controller::TrajectoryState::PLANNING_WAYPOINT);
 
     const auto& waypoints = node->getWaypoints();
@@ -136,65 +150,65 @@ TEST_F(TrajectorySequenceTest, PrepareWaypointsCount) {
 // ── Test 3: Single waypoint full cycle ─────────────────────────────────────
 
 TEST_F(TrajectorySequenceTest, SingleWaypointFullCycle) {
-    rclcpp::NodeOptions opts;
-    opts.append_parameter_override("idle_delay_sec", 0.0);
-    opts.append_parameter_override("tick_rate", 100.0);
-    opts.append_parameter_override("theta_max_deg", 0.0);
-    opts.append_parameter_override("phi_values_deg", std::vector<double>({0.0}));
-    auto node = std::make_shared<TrajectorySequenceTestNode>(opts);
+    auto cfg2 = make_config(ros_node_);
+    cfg2.input_ports["idle_delay_sec"] = "0.0";
+    cfg2.input_ports["theta_max_deg"] = "0.0";
+    cfg2.input_ports["phi_values"] = "0";
+    auto node = std::make_shared<TrajectorySequenceTestNode>("door_traj", cfg2);
+    node->executeTick();
 
     node->setJointPositionsForTesting(node->home_joints());
     node->setPlanResult(true);
-    node->setIdleStartTimeForTesting(node->get_clock()->now() -
-                                     rclcpp::Duration::from_seconds(1.0));
+    node->setIdleStartTimeForTesting(
+        node->rosClock()->now() - rclcpp::Duration::from_seconds(1.0));
 
-    spinUntilState(node.get(), omr_controller::TrajectoryState::PLANNING_WAYPOINT);
+    tickUntilState(node.get(), omr_controller::TrajectoryState::PLANNING_WAYPOINT, ros_node_.get());
     EXPECT_EQ(node->getCurrentState(), omr_controller::TrajectoryState::PLANNING_WAYPOINT);
     EXPECT_EQ(node->getWaypoints().size(), 1u);
 
-    spinUntilState(node.get(), omr_controller::TrajectoryState::DONE);
+    tickUntilState(node.get(), omr_controller::TrajectoryState::DONE, ros_node_.get());
     EXPECT_EQ(node->getCurrentState(), omr_controller::TrajectoryState::DONE);
 }
 
 // ── Test 4: Approach plan failure → ERROR ─────────────────────────────────
 
 TEST_F(TrajectorySequenceTest, PlanFailureTransitionsToError) {
-    rclcpp::NodeOptions opts;
-    opts.append_parameter_override("idle_delay_sec", 0.0);
-    opts.append_parameter_override("tick_rate", 100.0);
-    opts.append_parameter_override("theta_max_deg", 10.0);
-    auto node = std::make_shared<TrajectorySequenceTestNode>(opts);
+    auto cfg2 = make_config(ros_node_);
+    cfg2.input_ports["idle_delay_sec"] = "0.0";
+    cfg2.input_ports["theta_max_deg"] = "10.0";
+    auto node = std::make_shared<TrajectorySequenceTestNode>("door_traj", cfg2);
+    node->executeTick();
 
     node->setJointPositionsForTesting(node->home_joints());
     node->setPlanResult(false);
-    node->setIdleStartTimeForTesting(node->get_clock()->now() -
-                                     rclcpp::Duration::from_seconds(1.0));
+    node->setIdleStartTimeForTesting(
+        node->rosClock()->now() - rclcpp::Duration::from_seconds(1.0));
 
-    spinUntilState(node.get(), omr_controller::TrajectoryState::ERROR);
+    tickUntilState(node.get(), omr_controller::TrajectoryState::ERROR, ros_node_.get());
     EXPECT_EQ(node->getCurrentState(), omr_controller::TrajectoryState::ERROR);
 }
 
 // ── Test 5: Waypoint plan failure mid-sequence → ERROR ─────────────────────
 
 TEST_F(TrajectorySequenceTest, WaypointFailureTransitionsToError) {
-    rclcpp::NodeOptions opts;
-    opts.append_parameter_override("idle_delay_sec", 0.0);
-    opts.append_parameter_override("tick_rate", 100.0);
-    opts.append_parameter_override("theta_max_deg", 10.0);
-    opts.append_parameter_override("phi_values_deg", std::vector<double>({0.0}));
-    auto node = std::make_shared<TrajectorySequenceTestNode>(opts);
+    auto cfg2 = make_config(ros_node_);
+    cfg2.input_ports["idle_delay_sec"] = "0.0";
+    cfg2.input_ports["theta_max_deg"] = "10.0";
+    cfg2.input_ports["phi_values"] = "0";
+    auto node = std::make_shared<TrajectorySequenceTestNode>("door_traj", cfg2);
+    node->executeTick();
 
     node->setJointPositionsForTesting(node->home_joints());
     node->setPlanResult(true);
-    node->setIdleStartTimeForTesting(node->get_clock()->now() -
-                                     rclcpp::Duration::from_seconds(1.0));
+    node->setIdleStartTimeForTesting(
+        node->rosClock()->now() - rclcpp::Duration::from_seconds(1.0));
 
-    spinUntilState(node.get(), omr_controller::TrajectoryState::PLANNING_WAYPOINT);
+    tickUntilState(node.get(), omr_controller::TrajectoryState::PLANNING_WAYPOINT, ros_node_.get());
     EXPECT_EQ(node->getCurrentState(), omr_controller::TrajectoryState::PLANNING_WAYPOINT);
 
     node->setPlanResult(false);
 
-    spinUntilState(node.get(), omr_controller::TrajectoryState::ERROR);
+    tickUntilState(node.get(), omr_controller::TrajectoryState::ERROR, ros_node_.get());
     EXPECT_EQ(node->getCurrentState(), omr_controller::TrajectoryState::ERROR);
     EXPECT_EQ(node->getCurrentWaypointIndex(), 0u);
 }
@@ -202,25 +216,25 @@ TEST_F(TrajectorySequenceTest, WaypointFailureTransitionsToError) {
 // ── Test 6: Multiple waypoints advance index correctly ─────────────────────
 
 TEST_F(TrajectorySequenceTest, MultipleWaypointsAdvanceIndex) {
-    rclcpp::NodeOptions opts;
-    opts.append_parameter_override("idle_delay_sec", 0.0);
-    opts.append_parameter_override("tick_rate", 100.0);
-    opts.append_parameter_override("theta_max_deg", 5.0);
-    opts.append_parameter_override("theta_step_deg", 5.0);
-    opts.append_parameter_override("phi_values_deg", std::vector<double>({0.0, 90.0}));
-    auto node = std::make_shared<TrajectorySequenceTestNode>(opts);
+    auto cfg2 = make_config(ros_node_);
+    cfg2.input_ports["idle_delay_sec"] = "0.0";
+    cfg2.input_ports["theta_max_deg"] = "5.0";
+    cfg2.input_ports["theta_step_deg"] = "5.0";
+    cfg2.input_ports["phi_values"] = "0,90";
+    auto node = std::make_shared<TrajectorySequenceTestNode>("door_traj", cfg2);
+    node->executeTick();
 
     node->setJointPositionsForTesting(node->home_joints());
     node->setPlanResult(true);
-    node->setIdleStartTimeForTesting(node->get_clock()->now() -
-                                     rclcpp::Duration::from_seconds(1.0));
+    node->setIdleStartTimeForTesting(
+        node->rosClock()->now() - rclcpp::Duration::from_seconds(1.0));
 
-    spinUntilState(node.get(), omr_controller::TrajectoryState::PLANNING_WAYPOINT);
+    tickUntilState(node.get(), omr_controller::TrajectoryState::PLANNING_WAYPOINT, ros_node_.get());
     EXPECT_EQ(node->getCurrentState(), omr_controller::TrajectoryState::PLANNING_WAYPOINT);
     EXPECT_EQ(node->getWaypoints().size(), 4u);
     EXPECT_EQ(node->getCurrentWaypointIndex(), 0u);
 
-    spinUntilState(node.get(), omr_controller::TrajectoryState::DONE);
+    tickUntilState(node.get(), omr_controller::TrajectoryState::DONE, ros_node_.get());
     EXPECT_EQ(node->getCurrentState(), omr_controller::TrajectoryState::DONE);
     EXPECT_GE(node->planCallCount(), 4);
 }
@@ -228,19 +242,19 @@ TEST_F(TrajectorySequenceTest, MultipleWaypointsAdvanceIndex) {
 // ── Test 7: Approach from non-home triggers joint-space home move ──────────
 
 TEST_F(TrajectorySequenceTest, ApproachFromNonHomeTriggersJointHome) {
-    rclcpp::NodeOptions opts;
-    opts.append_parameter_override("idle_delay_sec", 0.0);
-    opts.append_parameter_override("tick_rate", 100.0);
-    auto node = std::make_shared<TrajectorySequenceTestNode>(opts);
+    auto cfg2 = make_config(ros_node_);
+    cfg2.input_ports["idle_delay_sec"] = "0.0";
+    auto node = std::make_shared<TrajectorySequenceTestNode>("door_traj", cfg2);
+    node->executeTick();
 
     std::vector<double> non_home = {0.5, 0.3, -0.2, 0.1, 0.4, -0.3};
     node->setJointPositionsForTesting(non_home);
     node->setJointHomeResult(true);
     node->setPlanResult(true);
-    node->setIdleStartTimeForTesting(node->get_clock()->now() -
-                                     rclcpp::Duration::from_seconds(1.0));
+    node->setIdleStartTimeForTesting(
+        node->rosClock()->now() - rclcpp::Duration::from_seconds(1.0));
 
-    spinUntilState(node.get(), omr_controller::TrajectoryState::PLAN_APPROACH);
+    tickUntilState(node.get(), omr_controller::TrajectoryState::PLAN_APPROACH, ros_node_.get());
     EXPECT_TRUE(node->jointHomeCalled());
     EXPECT_EQ(node->getCurrentState(), omr_controller::TrajectoryState::PLAN_APPROACH);
 }
@@ -248,17 +262,17 @@ TEST_F(TrajectorySequenceTest, ApproachFromNonHomeTriggersJointHome) {
 // ── Test 8: Approach from home skips joint home command ────────────────────
 
 TEST_F(TrajectorySequenceTest, ApproachFromHomeSkipsJointHome) {
-    rclcpp::NodeOptions opts;
-    opts.append_parameter_override("idle_delay_sec", 0.0);
-    opts.append_parameter_override("tick_rate", 100.0);
-    auto node = std::make_shared<TrajectorySequenceTestNode>(opts);
+    auto cfg2 = make_config(ros_node_);
+    cfg2.input_ports["idle_delay_sec"] = "0.0";
+    auto node = std::make_shared<TrajectorySequenceTestNode>("door_traj", cfg2);
+    node->executeTick();
 
     node->setJointPositionsForTesting(node->home_joints());
     node->setPlanResult(true);
-    node->setIdleStartTimeForTesting(node->get_clock()->now() -
-                                     rclcpp::Duration::from_seconds(1.0));
+    node->setIdleStartTimeForTesting(
+        node->rosClock()->now() - rclcpp::Duration::from_seconds(1.0));
 
-    spinUntilState(node.get(), omr_controller::TrajectoryState::PLAN_APPROACH);
+    tickUntilState(node.get(), omr_controller::TrajectoryState::PLAN_APPROACH, ros_node_.get());
     EXPECT_FALSE(node->jointHomeCalled())
         << "joint home move must NOT be called when arm is already at home";
     EXPECT_EQ(node->getCurrentState(), omr_controller::TrajectoryState::PLAN_APPROACH);
@@ -267,17 +281,17 @@ TEST_F(TrajectorySequenceTest, ApproachFromHomeSkipsJointHome) {
 // ── Test 9: PLAN_APPROACH sets up door collision objects ───────────────────
 
 TEST_F(TrajectorySequenceTest, PlanApproachSetsUpCollisionObjects) {
-    rclcpp::NodeOptions opts;
-    opts.append_parameter_override("idle_delay_sec", 0.0);
-    opts.append_parameter_override("tick_rate", 100.0);
-    auto node = std::make_shared<TrajectorySequenceTestNode>(opts);
+    auto cfg2 = make_config(ros_node_);
+    cfg2.input_ports["idle_delay_sec"] = "0.0";
+    auto node = std::make_shared<TrajectorySequenceTestNode>("door_traj", cfg2);
+    node->executeTick();
 
     node->setJointPositionsForTesting(node->home_joints());
     node->setPlanResult(true);
-    node->setIdleStartTimeForTesting(node->get_clock()->now() -
-                                     rclcpp::Duration::from_seconds(1.0));
+    node->setIdleStartTimeForTesting(
+        node->rosClock()->now() - rclcpp::Duration::from_seconds(1.0));
 
-    spinUntilState(node.get(), omr_controller::TrajectoryState::EXECUTE_APPROACH);
+    tickUntilState(node.get(), omr_controller::TrajectoryState::EXECUTE_APPROACH, ros_node_.get());
     EXPECT_TRUE(node->setupDoorCollisionCalled());
     EXPECT_TRUE(node->door_objects_added_);
     EXPECT_EQ(node->getCurrentState(), omr_controller::TrajectoryState::EXECUTE_APPROACH);
@@ -286,18 +300,18 @@ TEST_F(TrajectorySequenceTest, PlanApproachSetsUpCollisionObjects) {
 // ── Test 10: Non-home approach failure → ERROR ────────────────────────────
 
 TEST_F(TrajectorySequenceTest, NonHomeApproachFailureTransitionsToError) {
-    rclcpp::NodeOptions opts;
-    opts.append_parameter_override("idle_delay_sec", 0.0);
-    opts.append_parameter_override("tick_rate", 100.0);
-    auto node = std::make_shared<TrajectorySequenceTestNode>(opts);
+    auto cfg2 = make_config(ros_node_);
+    cfg2.input_ports["idle_delay_sec"] = "0.0";
+    auto node = std::make_shared<TrajectorySequenceTestNode>("door_traj", cfg2);
+    node->executeTick();
 
     std::vector<double> non_home = {0.5, 0.3, -0.2, 0.1, 0.4, -0.3};
     node->setJointPositionsForTesting(non_home);
     node->setJointHomeResult(false);  // home approach fails
-    node->setIdleStartTimeForTesting(node->get_clock()->now() -
-                                     rclcpp::Duration::from_seconds(1.0));
+    node->setIdleStartTimeForTesting(
+        node->rosClock()->now() - rclcpp::Duration::from_seconds(1.0));
 
-    spinUntilState(node.get(), omr_controller::TrajectoryState::ERROR);
+    tickUntilState(node.get(), omr_controller::TrajectoryState::ERROR, ros_node_.get());
     EXPECT_TRUE(node->jointHomeCalled());
     EXPECT_EQ(node->getCurrentState(), omr_controller::TrajectoryState::ERROR);
 }

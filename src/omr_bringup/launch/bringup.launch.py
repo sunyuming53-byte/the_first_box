@@ -29,7 +29,9 @@ def generate_launch_description():
         DeclareLaunchArgument('gear_ratio', default_value='1000',
                               description='Gear ratio for dais motor'),
         DeclareLaunchArgument('launch_door_trajectory', default_value='false',
-                              description='Launch MoveIt2 door trajectory orchestrator'),
+                              description='Launch MoveIt2 door trajectory orchestrator (deprecated, use BT XML)'),
+        DeclareLaunchArgument('launch_moveit', default_value='false',
+                              description='Launch MoveIt2 move_group as a persistent planning service'),
 
         # ── robot_description from xacro ─────────────────────────
         Node(
@@ -162,18 +164,34 @@ def generate_launch_description():
             condition=IfCondition(LaunchConfiguration('launch_calib')),
         ),
 
-        # ── MoveIt2 door trajectory orchestrator ─────────────────
+        # ── MoveIt2 move_group (persistent planning service) ─────────────
         Node(
-            package='omr_controller',
-            executable='door_trajectory_node',
-            name='door_trajectory_node',
+            package='moveit_ros_move_group',
+            executable='move_group',
+            name='move_group',
             parameters=[
-                PathJoinSubstitution([
-                    FindPackageShare('omr_bringup'),
-                    'config', 'door_trajectory_params.yaml',
-                ]),
+                {
+                    'robot_description': Command([
+                        PathJoinSubstitution([FindExecutable(name='xacro')]), ' ',
+                        PathJoinSubstitution([FindPackageShare('rm65_moveit_config'),
+                                              'urdf', 'rm65_moveit.urdf.xacro']),
+                    ]),
+                    'robot_description_semantic': Command([
+                        PathJoinSubstitution([FindExecutable(name='xacro')]), ' ',
+                        PathJoinSubstitution([FindPackageShare('rm65_moveit_config'),
+                                              'config', 'rm65.srdf']),
+                    ]),
+                    'use_sim_time': False,
+                    'publish_robot_description_semantic': True,
+                },
+                PathJoinSubstitution([FindPackageShare('rm65_moveit_config'),
+                                      'config', 'kinematics.yaml']),
+                PathJoinSubstitution([FindPackageShare('rm65_moveit_config'),
+                                      'config', 'ompl_planning.yaml']),
+                PathJoinSubstitution([FindPackageShare('rm65_moveit_config'),
+                                      'config', 'controllers.yaml']),
             ],
-            condition=IfCondition(LaunchConfiguration('launch_door_trajectory')),
+            condition=IfCondition(LaunchConfiguration('launch_moveit')),
             output='screen',
         ),
     ])

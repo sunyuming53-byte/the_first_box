@@ -24,4 +24,16 @@
       </Fallback>
     </Sequence>
   </BehaviorTree>
+
+  <!-- Door trajectory BT example (add to sequence above to use):
+  <BehaviorTree ID="DoorTrajectory">
+    <DoorTrajectoryAction
+      r="2.0" L="1.5" h="0.0"
+      hinge_transform="0,0,0,0,0,0"
+      theta_max_deg="90" theta_step_deg="5"
+      phi_values="0,15,30,45,60,75,90"
+      home_joints="0,0,0,0,0,0"
+      idle_delay_sec="0.0"/>
+  </BehaviorTree>
+  -->
 </root>

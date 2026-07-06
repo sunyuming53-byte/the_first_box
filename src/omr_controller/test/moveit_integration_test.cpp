@@ -4,26 +4,41 @@
 #include <memory>
 #include <thread>
 
-#include "omr_controller/door_trajectory_node.hpp"
+#include "omr_controller/state_machine/door_trajectory_action.hpp"
 #include <rclcpp/rclcpp.hpp>
 
-class DoorTrajectoryNodeMoveitTest : public omr_controller::DoorTrajectoryNode {
-public:
-    explicit DoorTrajectoryNodeMoveitTest(
-        const rclcpp::NodeOptions& options = rclcpp::NodeOptions())
-        : DoorTrajectoryNode(options) {}
+namespace {
 
-    using DoorTrajectoryNode::ensureMoveGroup;
-    using DoorTrajectoryNode::getJointPositionsForTesting;
-    using DoorTrajectoryNode::jointStateCallback;
-    using DoorTrajectoryNode::setJointPositionsForTesting;
-    using DoorTrajectoryNode::waitForCompletion;
+BT::NodeConfig make_config(rclcpp::Node::SharedPtr ros_node) {
+    BT::NodeConfig cfg;
+    cfg.blackboard = BT::Blackboard::create();
+    cfg.blackboard->set("ros_node", ros_node);
+    return cfg;
+}
+
+class DoorTrajectoryNodeMoveitTest : public omr_controller::DoorTrajectoryAction {
+public:
+    DoorTrajectoryNodeMoveitTest(const std::string& name, const BT::NodeConfig& config)
+        : DoorTrajectoryAction(name, config) {}
+
+    using DoorTrajectoryAction::ensureMoveGroup;
+    using DoorTrajectoryAction::getJointPositionsForTesting;
+    using DoorTrajectoryAction::jointStateCallback;
+    using DoorTrajectoryAction::planAndExecuteToPose;
+    using DoorTrajectoryAction::setJointPositionsForTesting;
+    using DoorTrajectoryAction::waitForCompletion;
 };
 
 class MoveitIntegrationTest : public ::testing::Test {
 protected:
-    void SetUp() override { node_ = std::make_shared<DoorTrajectoryNodeMoveitTest>(); }
+    void SetUp() override {
+        ros_node_ = std::make_shared<rclcpp::Node>("moveit_test");
+        auto cfg = make_config(ros_node_);
+        node_ = std::make_shared<DoorTrajectoryNodeMoveitTest>("door_traj", cfg);
+        node_->executeTick();  // onStart() initialises
+    }
 
+    rclcpp::Node::SharedPtr ros_node_;
     std::shared_ptr<DoorTrajectoryNodeMoveitTest> node_;
 };
 
@@ -69,3 +84,5 @@ TEST_F(MoveitIntegrationTest, WaitForCompletionReturnsFalseOnTimeout) {
     bool result = node_->waitForCompletion(target, 0.1);
     EXPECT_FALSE(result) << "waitForCompletion should return false on timeout";
 }
+
+}  // namespace

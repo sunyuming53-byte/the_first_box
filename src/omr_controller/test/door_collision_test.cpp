@@ -3,21 +3,39 @@
 
 #include <memory>
 
-#include "omr_controller/door_trajectory_node.hpp"
+#include "omr_controller/state_machine/door_trajectory_action.hpp"
+#include <rclcpp/rclcpp.hpp>
 
-class DoorCollisionTest : public omr_controller::DoorTrajectoryNode {
+namespace {
+
+// Helper: create a minimal BT::NodeConfig with ros_node on blackboard.
+BT::NodeConfig make_config(rclcpp::Node::SharedPtr ros_node) {
+    BT::NodeConfig cfg;
+    cfg.blackboard = BT::Blackboard::create();
+    cfg.blackboard->set("ros_node", ros_node);
+    return cfg;
+}
+
+// Test adapter exposing collision object builders.
+class DoorCollisionTest : public omr_controller::DoorTrajectoryAction {
 public:
-    explicit DoorCollisionTest(const rclcpp::NodeOptions& options = rclcpp::NodeOptions())
-        : DoorTrajectoryNode(options) {}
+    DoorCollisionTest(const std::string& name, const BT::NodeConfig& config)
+        : DoorTrajectoryAction(name, config) {}
 
-    using DoorTrajectoryNode::buildDoorFrameMsg;
-    using DoorTrajectoryNode::buildDoorPanelMsg;
+    using DoorTrajectoryAction::buildDoorFrameMsg;
+    using DoorTrajectoryAction::buildDoorPanelMsg;
 };
 
 class DoorCollisionObjectTest : public ::testing::Test {
 protected:
-    void SetUp() override { node_ = std::make_shared<DoorCollisionTest>(); }
+    void SetUp() override {
+        ros_node_ = std::make_shared<rclcpp::Node>("collision_test");
+        auto cfg = make_config(ros_node_);
+        node_ = std::make_shared<DoorCollisionTest>("door_traj", cfg);
+        node_->executeTick();  // onStart() initialises ports
+    }
 
+    rclcpp::Node::SharedPtr ros_node_;
     std::shared_ptr<DoorCollisionTest> node_;
 };
 
@@ -27,7 +45,7 @@ TEST_F(DoorCollisionObjectTest, BuildDoorFrameMsgHasCorrectStructure) {
     auto msg = node_->buildDoorFrameMsg();
 
     EXPECT_EQ(msg.id, "door_frame");
-    EXPECT_EQ(msg.header.frame_id, node_->get_parameter("planning_frame").get_value<std::string>());
+    EXPECT_EQ(msg.header.frame_id, "base_link");
     EXPECT_EQ(msg.operation, moveit_msgs::msg::CollisionObject::ADD);
 
     ASSERT_EQ(msg.primitives.size(), 1u);
@@ -106,7 +124,6 @@ TEST_F(DoorCollisionObjectTest, QuaternionForTheta360Deg) {
     auto msg = node_->buildDoorPanelMsg(theta);
 
     const auto& q = msg.primitive_poses[0].orientation;
-    // Full rotation — identity up to quaternion double-cover sign
     EXPECT_NEAR(std::abs(q.w), 1.0, 1e-9);
     EXPECT_NEAR(q.x, 0.0, 1e-9);
     EXPECT_NEAR(q.y, 0.0, 1e-9);
@@ -144,12 +161,14 @@ TEST_F(DoorCollisionObjectTest, PanelPositionUnchangedWithTheta) {
 // ──── Custom dimensions are respected ──────────────────────────────────────
 
 TEST(DoorCollisionCustomParamTest, CustomPanelSizeAffectsMsg) {
-    rclcpp::NodeOptions opts;
-    opts.append_parameter_override("door_panel_size", std::vector<double>({1.0, 0.02, 0.5}));
+    auto ros_node = std::make_shared<rclcpp::Node>("custom_collision_test");
+    auto cfg = make_config(ros_node);
+    cfg.input_ports["door_panel_size"] = "1.0,0.02,0.5";
 
-    auto node = std::make_shared<DoorCollisionTest>(opts);
+    auto node = std::make_shared<DoorCollisionTest>("door_traj", cfg);
+    node->executeTick();
+
     auto msg = node->buildDoorPanelMsg(0.0);
-
     ASSERT_EQ(msg.primitives[0].dimensions.size(), 3u);
     EXPECT_DOUBLE_EQ(msg.primitives[0].dimensions[shape_msgs::msg::SolidPrimitive::BOX_X], 1.0);
     EXPECT_DOUBLE_EQ(msg.primitives[0].dimensions[shape_msgs::msg::SolidPrimitive::BOX_Y], 0.02);
@@ -157,12 +176,16 @@ TEST(DoorCollisionCustomParamTest, CustomPanelSizeAffectsMsg) {
 }
 
 TEST(DoorCollisionCustomParamTest, CustomFrameRadiusAffectsMsg) {
-    rclcpp::NodeOptions opts;
-    opts.append_parameter_override("door_frame_radius", 0.1);
+    auto ros_node = std::make_shared<rclcpp::Node>("custom_collision_test");
+    auto cfg = make_config(ros_node);
+    cfg.input_ports["door_frame_radius"] = "0.1";
 
-    auto node = std::make_shared<DoorCollisionTest>(opts);
+    auto node = std::make_shared<DoorCollisionTest>("door_traj", cfg);
+    node->executeTick();
+
     auto msg = node->buildDoorFrameMsg();
-
     EXPECT_DOUBLE_EQ(msg.primitives[0].dimensions[shape_msgs::msg::SolidPrimitive::CYLINDER_RADIUS],
                      0.1);
 }
+
+}  // namespace
