@@ -79,7 +79,7 @@ if(BUILD_TESTING)
     target_include_directories(vision_client_test PRIVATE test)
     target_link_libraries(vision_client_test ${PROJECT_NAME} ${OpenCV_LIBS} realsense2::realsense2)
 
-    ament_add_gtest(bt_factory_test test/test_main.cpp test/bt_factory_test.cpp)
+    ament_add_gtest(bt_factory_test test/test_main_ros.cpp test/bt_factory_test.cpp)
     target_include_directories(bt_factory_test PRIVATE test)
     target_link_libraries(bt_factory_test ${PROJECT_NAME} ${OpenCV_LIBS} realsense2::realsense2)
 

@@ -12,8 +12,8 @@ namespace omr_controller {
 
 TaskOrchestrator::TaskOrchestrator(const rclcpp::NodeOptions& options)
     : Node("task_orchestrator", options) {
-    // Create all 5 clients
-    auto self = shared_from_this();
+    auto self = std::shared_ptr<rclcpp::Node>(
+        static_cast<rclcpp::Node*>(this), [](rclcpp::Node*) {});
     arm_ = std::make_unique<ArmClient>(self);
     gripper_ = std::make_unique<GripperClient>(self);
     vision_ = std::make_unique<VisionClient>(

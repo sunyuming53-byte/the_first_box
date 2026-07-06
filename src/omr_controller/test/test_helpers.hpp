@@ -3,6 +3,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp_action/rclcpp_action.hpp>
 #include <control_msgs/action/follow_joint_trajectory.hpp>
+#include <control_msgs/action/gripper_command.hpp>
 #include <sensor_msgs/msg/joint_state.hpp>
 
 #include <chrono>
@@ -43,6 +44,41 @@ inline auto create_mock_jtc_server(
              goal_handle) {
         auto result = std::make_shared<Action::Result>();
         result->error_code = Action::Result::SUCCESSFUL;
+        goal_handle->succeed(result);
+      };
+
+  return rclcpp_action::create_server<Action>(
+      node, name, handle_goal, handle_cancel, handle_accepted);
+}
+
+// ---------------------------------------------------------------------------
+// create_mock_gripper_server
+// ---------------------------------------------------------------------------
+/// Create a mock GripperCommand action server that auto-accepts and
+/// immediately succeeds every goal.
+inline auto create_mock_gripper_server(
+    rclcpp::Node* node,
+    const std::string& name)
+    -> std::shared_ptr<rclcpp_action::Server<
+        control_msgs::action::GripperCommand>>
+{
+  using Action = control_msgs::action::GripperCommand;
+
+  auto handle_goal =
+      [](const rclcpp_action::GoalUUID&,
+         std::shared_ptr<const Action::Goal>) {
+        return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
+      };
+
+  auto handle_cancel =
+      [](const std::shared_ptr<rclcpp_action::ServerGoalHandle<Action>>&) {
+        return rclcpp_action::CancelResponse::ACCEPT;
+      };
+
+  auto handle_accepted =
+      [](const std::shared_ptr<rclcpp_action::ServerGoalHandle<Action>>&
+             goal_handle) {
+        auto result = std::make_shared<Action::Result>();
         goal_handle->succeed(result);
       };
 

@@ -106,7 +106,9 @@ DetectObjectAction::DetectObjectAction(const std::string& name,
                                        const BT::NodeConfig& config)
     : BT::SyncActionNode(name, config) {}
 
-BT::PortsList DetectObjectAction::providedPorts() { return {}; }
+BT::PortsList DetectObjectAction::providedPorts() {
+    return {BT::OutputPort<int>("detection_count")};
+}
 
 BT::NodeStatus DetectObjectAction::tick() {
     auto* vision = config().blackboard->get<VisionClient*>("vision_client");

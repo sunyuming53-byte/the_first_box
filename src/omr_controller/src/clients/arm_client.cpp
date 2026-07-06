@@ -17,7 +17,7 @@ ArmClient::ArmClient(rclcpp::Node::SharedPtr node) : node_(std::move(node)) {
             : "/joint_states";
 
     actionClient_ =
-        rclcpp_action::create_client<control_msgs::action::FollowJointTrajectory>(node, actionName);
+        rclcpp_action::create_client<control_msgs::action::FollowJointTrajectory>(node_, actionName);
 
     jointStateSub_ = node_->create_subscription<sensor_msgs::msg::JointState>(
         topicName, rclcpp::SensorDataQoS(),
