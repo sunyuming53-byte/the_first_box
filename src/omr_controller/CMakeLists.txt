@@ -68,6 +68,10 @@ if(BUILD_TESTING)
 
     ament_add_gtest(arm_client_test test/test_main.cpp test/arm_client_test.cpp)
     target_link_libraries(arm_client_test ${PROJECT_NAME})
+
+    ament_add_gtest(vision_client_test test/test_main.cpp test/vision_client_test.cpp)
+    target_include_directories(vision_client_test PRIVATE test)
+    target_link_libraries(vision_client_test ${PROJECT_NAME} ${OpenCV_LIBS})
 endif()
 
 ament_package()
