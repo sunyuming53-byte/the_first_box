@@ -39,6 +39,7 @@ jobs:
       - name: Build and test
         run: |
           docker run --rm \
+            --user root \
             -v ${{ github.workspace }}:/ws \
             realman:develop \
             bash -c "
