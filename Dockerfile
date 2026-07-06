@@ -70,6 +70,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-humble-sensor-msgs \
     ros-humble-std-msgs \
     ros-humble-visualization-msgs \
+    ros-humble-ament-index-cpp \
+    ros-humble-behaviortree-cpp \
+    ros-humble-control-msgs \
     && rm -rf /var/lib/apt/lists/*
 
 # RealMan SDK — copy from submodule to /opt/realman-sdk
@@ -119,6 +122,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libmodbus-dev \
     zsh curl git \
     ros-humble-rmw-cyclonedds-cpp \
+    ros-humble-ament-index-cpp \
+    ros-humble-behaviortree-cpp \
+    ros-humble-control-msgs \
     && rm -rf /var/lib/apt/lists/*
 
 # SDK runtime — libapi_c.so for arm control at runtime

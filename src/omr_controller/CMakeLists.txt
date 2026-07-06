@@ -18,9 +18,10 @@ find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(trajectory_msgs REQUIRED)
 
-file(GLOB_RECURSE SOURCES src/*.cpp)
+file(GLOB_RECURSE LIB_SOURCES src/*.cpp)
+list(REMOVE_ITEM LIB_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
 
-add_library(${PROJECT_NAME} SHARED ${SOURCES})
+add_library(${PROJECT_NAME} SHARED ${LIB_SOURCES})
 target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
@@ -47,6 +48,10 @@ install(DIRECTORY include/ DESTINATION include)
 install(DIRECTORY launch/ DESTINATION share/${PROJECT_NAME}/launch)
 install(DIRECTORY config/ DESTINATION share/${PROJECT_NAME}/config)
 install(DIRECTORY bt_xml/ DESTINATION share/${PROJECT_NAME}/bt_xml)
+
+add_executable(task_orchestrator src/main.cpp)
+target_link_libraries(task_orchestrator ${PROJECT_NAME})
+install(TARGETS task_orchestrator DESTINATION lib/${PROJECT_NAME})
 
 ament_export_libraries(${PROJECT_NAME})
 ament_export_include_directories(include)
@@ -88,6 +93,10 @@ if(BUILD_TESTING)
     ament_add_gtest(orchestrator_test test/test_main.cpp test/orchestrator_test.cpp)
     target_include_directories(orchestrator_test PRIVATE test)
     target_link_libraries(orchestrator_test ${PROJECT_NAME})
+
+    ament_add_gtest(orchestrator_integration_test test/test_main.cpp test/orchestrator_integration_test.cpp)
+    target_include_directories(orchestrator_integration_test PRIVATE test)
+    target_link_libraries(orchestrator_integration_test ${PROJECT_NAME})
 endif()
 
 ament_package()

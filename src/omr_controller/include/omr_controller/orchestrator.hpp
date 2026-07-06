@@ -24,6 +24,8 @@ private:
     void tick();
     void load_bt_xml();
 
+    friend class ::OrchestratorIntegrationTest;
+
     std::unique_ptr<ArmClient> arm_;
     std::unique_ptr<GripperClient> gripper_;
     std::unique_ptr<VisionClient> vision_;

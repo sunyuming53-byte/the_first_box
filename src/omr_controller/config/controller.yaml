@@ -1,0 +1,9 @@
+task_orchestrator:
+  ros__parameters:
+    bt_xml_path: "pick_and_place.xml"
+    bt_tick_rate: 20.0
+    arm_jtc_action: "/arm_cm/follow_joint_trajectory"
+    dais_jtc_action: "/dais_cm/follow_joint_trajectory"
+    joint_state_topic: "/joint_states"
+    color_lower_hsv: [0, 50, 50]
+    color_upper_hsv: [10, 255, 255]
