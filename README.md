@@ -79,15 +79,15 @@ pipeline/                            # ROS2 workspace root
 │   │   │   │   ├── base_client.hpp   #     BaseClient (abstract) + BaseClientStub
 │   │   │   │   └── vision_client.hpp #     VisionClient → CameraStream + OpenCV detect
 │   │   │   ├── state_machine/
-│   │   │   │   └── bt_factory.hpp    #     BT.CPP custom nodes registration
+│   │   │   │   ├── bt_factory.hpp                #  BT.CPP custom nodes registration
+│   │   │   │   └── door_trajectory_action.hpp    #  DoorTrajectoryAction (BT::StatefulActionNode)
 │   │   │   ├── door_math.hpp          #     Door trajectory math model C(θ,φ) + R_T(θ,φ)
-│   │   │   ├── door_trajectory_node.hpp  #  DoorTrajectoryNode — MoveIt2-based motion planner
 │   │   │   ├── geometry_utils.hpp     #     homogeneous_to_pose() conversion utility
 │   │   │   └── types.hpp             #     Core data types
 │   │   ├── src/                      #   Implementation files
 │   │   │   ├── orchestrator.cpp
-│   │   │   ├── door_trajectory_node.cpp  #  Entry point for standalone trajectory node
-│   │   │   ├── door_trajectory_motion.cpp # MoveGroupInterface + collision objects + state machine
+│   │   │   ├── state_machine/
+│   │   │   │   └── door_trajectory_action.cpp # DoorTrajectoryAction: MoveIt2 + state machine + collision
 │   │   │   └── clients/
 │   │   ├── bt_xml/                   #   Behavior tree XML definitions
 │   │   │   └── pick_and_place.xml
@@ -98,7 +98,7 @@ pipeline/                            # ROS2 workspace root
 │   │   └── package.xml
 │   ├── rm65_moveit_config/           # ament_cmake — MoveIt2 config for RM65 (no compiled code)
 │   │   ├── config/                    #   SRDF, kinematics (KDL), OMPL, controller config
-│   │   ├── launch/                    #   move_group.launch.py + door_trajectory.launch.py
+│   │   ├── launch/                    #   move_group.launch.py
 │   │   ├── urdf/                      #   RM65 URDF with geometric collision primitives
 │   │   ├── CMakeLists.txt
 │   │   └── package.xml
@@ -180,28 +180,31 @@ flowchart TD
         ORCH["TaskOrchestrator<br/><i>rclcpp::Node + BT.CPP tick loop (20 Hz)</i>"]
         BT["BehaviorTree.CPP v4<br/><i>pick_and_place.xml</i>"]
         CLIENTS["Client Layer<br/><i>Arm | Gripper | Motor | Base | Vision</i>"]
+        DTA["DoorTrajectoryAction<br/><i>BT::StatefulActionNode</i>"]
     end
 
     ORCH --> BT
     BT --> CLIENTS
+    BT --> DTA
     CLIENTS -->|action goal| JTC
     CLIENTS -->|subscribes| JSB
     CLIENTS -->|action goal| DJTC
     CLIENTS -->|subscribes| DJSB
+    DTA -->|setPoseTarget / plan / execute| MG
+    DTA -->|add / update| DOOR
+    DTA -->|subscribes| JSB
 
-    %% Door Trajectory (MoveIt2)
-    subgraph DoorTraj["Door Trajectory (MoveIt2)"]
-        DT["DoorTrajectoryNode<br/><i>rclcpp::Node + state machine (10 Hz)</i>"]
-        MG["move_group<br/><i>MoveIt2 planning pipeline</i>"]
-        DOOR["Planning Scene<br/><i>door panel + frame collision objects</i>"]
+    %% MoveIt2 Planning
+    subgraph MoveIt["MoveIt2 Planning"]
+        MG["move_group<br/><i>collision-aware planning (OMPL)</i>"]
+        SCENE["Planning Scene<br/><i>application-managed collision objects</i>"]
     end
 
-    DT -->|setPoseTarget / plan / execute| MG
-    DT -->|add / update| DOOR
     MG -->|action goal| JTC
     MG -->|subscribes| JSB
-    DT -->|subscribes| JSB
     MG -->|robot_description| RSP
+    DT -->|setPoseTarget / plan / execute| MG
+    DT -->|add / update| SCENE
 ```
 
 **Arm data flow:** `ArmSystem.read()` → `joint_state_broadcaster` → `/joint_states` topic. The
@@ -217,11 +220,11 @@ action node delegates to a non-blocking Client (ArmClient → arm JTC, GripperCl
 action, VisionClient → RealSense + OpenCV). The full task flow (pick-and-place, inspection,
 etc.) is defined in XML files under `bt_xml/`, editable without recompilation.
 
-**Door trajectory data flow:** `DoorTrajectoryNode` computes target poses from a parametric
-`(θ, φ)` math model, feeds them to MoveIt2's `move_group` for collision-aware planning (OMPL
-with door collision objects in the planning scene), and executes via the existing `/arm_cm/follow_joint_trajectory` action. Joint-state polling tracks completion since the JTC runs
-open-loop. The `rm65_moveit_config` package provides URDF (convex collision primitives),
-SRDF, kinematics (KDL), and OMPL configuration.
+**MoveIt2 data flow:** \`move_group\` provides collision-aware planning via OMPL, sending
+trajectories to the existing `/arm_cm/follow_joint_trajectory` action. The planning scene
+and collision objects are managed by application-level BT nodes — \`move_group\` itself
+is task-agnostic. Configuration lives in \`rm65_moveit_config\` (URDF with convex
+collision primitives, SRDF, KDL kinematics, OMPL config).
 
 `rm::Arm` is a plain C++ class (not an `rclcpp::Node`) with **zero ROS dependency**.
 It lives in the `realman_arm` git submodule under `omr_hardware/third_party/`.
@@ -261,46 +264,39 @@ The bringup loads the RM65 URDF (kinematics + meshes), starts ros2_control_node 
 
 The bringup now supports `launch_dais:=true` to start a second `controller_manager` for the D-AIS motor at 50Hz (velocity-mode JTC with PID). Dais hw params are configurable via launch args.
 
-### Door Trajectory (MoveIt2 collision-aware motion)
+### MoveIt2 collision-aware planning
 
-The `omr_controller` package includes a standalone `DoorTrajectoryNode` that drives the arm
-through a collision-aware trajectory using MoveIt2. Designed for tasks like door opening where
-the arm must avoid colliding with a rotating planar surface.
+The workspace includes a `rm65_moveit_config` package with MoveIt2 configuration
+(SRDF, KDL kinematics, OMPL planners) for the RM65 arm. The URDF uses geometric
+collision primitives (cylinders + boxes) instead of STL meshes for FCL compatibility.
 
-**Architecture:**
-```
-Math model C(θ,φ) + R_T(θ,φ) → world-to-target poses
-  → T_armBase_doorHinge transform (user-calibrated)
-  → move_group->setPoseTarget() → plan (OMPL, collision-aware)
-  → execute via /arm_cm/follow_joint_trajectory
-  → joint-state polling for completion (open-loop JTC workaround)
-```
-
-**Features:**
-- Collision-aware planning around a dynamic door panel (thin box) and static door frame (cylinder)
-- Parameterized trajectory: `(θ, φ)` schedule with configurable step size and max angle
-- Approach motion: plans a collision-free path from a safe home pose to the first trajectory waypoint
-- Open-loop JTC workaround: polls `/joint_states` for completion before advancing to next waypoint
-- 69 unit tests covering math model verification, mock planning, real FCL collision detection, and edge cases
+`move_group` launches as a persistent planning service alongside the ros2_control
+pipeline. Application-level BT nodes manage the planning scene and collision objects
+— `move_group` itself is task-agnostic.
 
 ```bash
-# Launch the door trajectory orchestrator (requires arm already running)
-ros2 launch omr_bringup bringup.launch.py launch_door_trajectory:=true
-
-# Standalone move_group (without trajectory node)
-ros2 launch rm65_moveit_config move_group.launch.py use_rviz:=false
+# Launch arm + MoveIt2
+ros2 launch omr_bringup bringup.launch.py launch_moveit:=true
 ```
 
-**Configuration** (`src/omr_bringup/config/door_trajectory_params.yaml`):
-| Parameter | Default | Description |
-|---|---|---|
-| `r`, `L`, `h` | 2.0, 1.5, 0.0 | Model geometry (m) |
-| `T_armBase_doorHinge` | zeros | Arm base → hinge transform [tx,ty,tz,rx,ry,rz] |
-| `theta_step_deg` / `theta_max_deg` | 5.0 / 90.0 | Door opening schedule |
-| `phi_values_deg` | [0,15,...,90] | Segment rotation waypoints |
-| `home_joints` | zeros | Safe approach starting pose (must be calibrated) |
-| `door_panel_size` | [2.0, 0.05, 0.8] | Door collision box dimensions (m) |
-| `door_frame_radius` | 0.05 | Door frame cylinder radius (m) |
+**Example: door trajectory**
+
+`DoorTrajectoryAction` (`BT::StatefulActionNode`) demonstrates MoveIt2 usage for a
+specific task. It computes target poses from a parametric `(θ, φ)` math model,
+registers task-specific collision objects (door panel + frame) in the planning scene,
+and delegates planning and execution to `move_group`. All business logic — the math
+model, collision object geometry, trajectory schedule — lives in the controller package,
+not in MoveIt2 config.
+
+```xml
+<!-- Example BT XML usage -->
+<DoorTrajectoryAction
+  r="2.0" L="1.5" h="0.0"
+  hinge_transform="0,0,0,0,0,0"
+  theta_max_deg="90" theta_step_deg="5"
+  phi_values="0,15,30,45,60,75,90"
+  home_joints="0,0,0,0,0,0"/>
+```
 
 ## Building
 
