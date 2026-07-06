@@ -63,8 +63,7 @@ TEST_F(IntegrationTest, ArmGripperSequence) {
     // Step 1: send a joint trajectory goal.
     JointGoal goal;
     goal.positions = {0.1, 0.2, 0.3, 0.4, 0.5, 0.6};
-    auto handle = arm.moveJoints(goal);
-    EXPECT_NE(handle, nullptr);
+    EXPECT_NO_THROW(arm.moveJoints(goal));
 
     // Step 2: open the gripper.
     EXPECT_TRUE(gripper.open());

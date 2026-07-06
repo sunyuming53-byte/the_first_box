@@ -3,8 +3,7 @@
 #include <control_msgs/action/gripper_command.hpp>
 
 #include <rclcpp/node.hpp>
-#include <rclcpp_action/client.hpp>
-#include <rclcpp_action/client_goal_handle.hpp>
+#include <rclcpp_action/rclcpp_action.hpp>
 
 #include <memory>
 #include <string>
