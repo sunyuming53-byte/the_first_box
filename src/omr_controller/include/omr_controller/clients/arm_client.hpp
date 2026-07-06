@@ -20,10 +20,8 @@ class ArmClient {
 public:
     explicit ArmClient(rclcpp::Node* node);
 
-    /// Send a joint goal via FollowJointTrajectory action.
-    /// Returns the goal handle (null if server unavailable).
-    rclcpp_action::ClientGoalHandle<control_msgs::action::FollowJointTrajectory>::SharedPtr
-    moveJoints(const JointGoal& goal);
+    /// Send a joint goal via FollowJointTrajectory action (fire-and-forget).
+    void moveJoints(const JointGoal& goal);
 
     /// Return the most recently cached joint positions.
     std::vector<double> currentJoints() const;

@@ -1,6 +1,7 @@
 #include "omr_controller/clients/gripper_client.hpp"
 
 #include <rclcpp/logging.hpp>
+#include <rclcpp_action/client.hpp>
 
 namespace omr_controller {
 

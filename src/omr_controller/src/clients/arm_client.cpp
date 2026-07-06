@@ -24,10 +24,9 @@ ArmClient::ArmClient(rclcpp::Node* node) : node_(node) {
         [this](const sensor_msgs::msg::JointState::SharedPtr msg) { jointStateCallback(msg); });
 }
 
-rclcpp_action::ClientGoalHandle<control_msgs::action::FollowJointTrajectory>::SharedPtr
-ArmClient::moveJoints(const JointGoal& goal) {
+void ArmClient::moveJoints(const JointGoal& goal) {
     if (!actionClient_->wait_for_action_server(std::chrono::seconds(1))) {
-        return nullptr;
+        return;
     }
 
     auto actionGoal = control_msgs::action::FollowJointTrajectory::Goal();
@@ -39,23 +38,23 @@ ArmClient::moveJoints(const JointGoal& goal) {
     point.positions = goal.positions;
     point.time_from_start =
         rclcpp::Duration::from_seconds(goal.time_from_start_sec > 0.0 ? goal.time_from_start_sec
-                                                                       : 1.0);
+                                                                        : 1.0);
 
     actionGoal.trajectory.points.push_back(point);
 
     auto sendGoalOptions = rclcpp_action::Client<control_msgs::action::FollowJointTrajectory>::SendGoalOptions();
+    sendGoalOptions.goal_response_callback =
+        [this](rclcpp_action::ClientGoalHandle<control_msgs::action::FollowJointTrajectory>::SharedPtr goalHandle) {
+            std::lock_guard<std::mutex> lock(mutex_);
+            activeGoal_ = goalHandle;
+        };
     sendGoalOptions.result_callback =
         [this](const rclcpp_action::ClientGoalHandle<control_msgs::action::FollowJointTrajectory>::WrappedResult&) {
             std::lock_guard<std::mutex> lock(mutex_);
             activeGoal_.reset();
         };
 
-    auto goalHandle = actionClient_->async_send_goal(actionGoal, sendGoalOptions);
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        activeGoal_ = goalHandle;
-    }
-    return goalHandle;
+    actionClient_->async_send_goal(actionGoal, sendGoalOptions);
 }
 
 std::vector<double> ArmClient::currentJoints() const {

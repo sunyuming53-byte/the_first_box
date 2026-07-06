@@ -20,17 +20,15 @@ class TaskOrchestrator : public rclcpp::Node {
 public:
     explicit TaskOrchestrator(const rclcpp::NodeOptions& options = rclcpp::NodeOptions());
 
-private:
-    void tick();
-    void load_bt_xml();
-
-    friend class ::OrchestratorIntegrationTest;
-
     std::unique_ptr<ArmClient> arm_;
     std::unique_ptr<GripperClient> gripper_;
     std::unique_ptr<VisionClient> vision_;
     std::unique_ptr<MotorClientStub> motor_;
     std::unique_ptr<BaseClientStub> base_;
+
+private:
+    void tick();
+    void load_bt_xml();
 
     rclcpp::TimerBase::SharedPtr tick_timer_;
     BT::Tree bt_tree_;

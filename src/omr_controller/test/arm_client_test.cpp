@@ -41,9 +41,8 @@ TEST_F(ArmClientTest, MovePoseThrowsLogicError) {
     EXPECT_THROW(client_->movePose(pose), std::logic_error);
 }
 
-TEST_F(ArmClientTest, MoveJointsNoServerReturnsNull) {
+TEST_F(ArmClientTest, MoveJointsNoServerDoesNotThrow) {
     JointGoal goal;
     goal.positions = {0.1, 0.2, 0.3, 0.4, 0.5, 0.6};
-    auto handle = client_->moveJoints(goal);
-    EXPECT_EQ(handle, nullptr);
+    EXPECT_NO_THROW(client_->moveJoints(goal));
 }
