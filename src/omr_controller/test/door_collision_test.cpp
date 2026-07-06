@@ -1,25 +1,22 @@
-#include "omr_controller/door_trajectory_node.hpp"
-
+#include <cmath>
 #include <gtest/gtest.h>
 
-#include <cmath>
 #include <memory>
+
+#include "omr_controller/door_trajectory_node.hpp"
 
 class DoorCollisionTest : public omr_controller::DoorTrajectoryNode {
 public:
-    explicit DoorCollisionTest(
-        const rclcpp::NodeOptions& options = rclcpp::NodeOptions())
+    explicit DoorCollisionTest(const rclcpp::NodeOptions& options = rclcpp::NodeOptions())
         : DoorTrajectoryNode(options) {}
 
-    using DoorTrajectoryNode::buildDoorPanelMsg;
     using DoorTrajectoryNode::buildDoorFrameMsg;
+    using DoorTrajectoryNode::buildDoorPanelMsg;
 };
 
 class DoorCollisionObjectTest : public ::testing::Test {
 protected:
-    void SetUp() override {
-        node_ = std::make_shared<DoorCollisionTest>();
-    }
+    void SetUp() override { node_ = std::make_shared<DoorCollisionTest>(); }
 
     std::shared_ptr<DoorCollisionTest> node_;
 };
@@ -30,23 +27,17 @@ TEST_F(DoorCollisionObjectTest, BuildDoorFrameMsgHasCorrectStructure) {
     auto msg = node_->buildDoorFrameMsg();
 
     EXPECT_EQ(msg.id, "door_frame");
-    EXPECT_EQ(msg.header.frame_id, node_->get_parameter("planning_frame")
-                                       .get_value<std::string>());
+    EXPECT_EQ(msg.header.frame_id, node_->get_parameter("planning_frame").get_value<std::string>());
     EXPECT_EQ(msg.operation, moveit_msgs::msg::CollisionObject::ADD);
 
     ASSERT_EQ(msg.primitives.size(), 1u);
-    EXPECT_EQ(msg.primitives[0].type,
-              shape_msgs::msg::SolidPrimitive::CYLINDER);
+    EXPECT_EQ(msg.primitives[0].type, shape_msgs::msg::SolidPrimitive::CYLINDER);
 
     ASSERT_EQ(msg.primitives[0].dimensions.size(), 2u);
-    EXPECT_DOUBLE_EQ(
-        msg.primitives[0]
-            .dimensions[shape_msgs::msg::SolidPrimitive::CYLINDER_HEIGHT],
-        0.8);
-    EXPECT_DOUBLE_EQ(
-        msg.primitives[0]
-            .dimensions[shape_msgs::msg::SolidPrimitive::CYLINDER_RADIUS],
-        0.05);
+    EXPECT_DOUBLE_EQ(msg.primitives[0].dimensions[shape_msgs::msg::SolidPrimitive::CYLINDER_HEIGHT],
+                     0.8);
+    EXPECT_DOUBLE_EQ(msg.primitives[0].dimensions[shape_msgs::msg::SolidPrimitive::CYLINDER_RADIUS],
+                     0.05);
 
     ASSERT_EQ(msg.primitive_poses.size(), 1u);
     EXPECT_DOUBLE_EQ(msg.primitive_poses[0].position.x, 0.0);
@@ -67,19 +58,12 @@ TEST_F(DoorCollisionObjectTest, BuildDoorPanelMsgAtThetaZero) {
     EXPECT_EQ(msg.operation, moveit_msgs::msg::CollisionObject::ADD);
 
     ASSERT_EQ(msg.primitives.size(), 1u);
-    EXPECT_EQ(msg.primitives[0].type,
-              shape_msgs::msg::SolidPrimitive::BOX);
+    EXPECT_EQ(msg.primitives[0].type, shape_msgs::msg::SolidPrimitive::BOX);
 
     ASSERT_EQ(msg.primitives[0].dimensions.size(), 3u);
-    EXPECT_DOUBLE_EQ(
-        msg.primitives[0].dimensions[shape_msgs::msg::SolidPrimitive::BOX_X],
-        2.0);
-    EXPECT_DOUBLE_EQ(
-        msg.primitives[0].dimensions[shape_msgs::msg::SolidPrimitive::BOX_Y],
-        0.05);
-    EXPECT_DOUBLE_EQ(
-        msg.primitives[0].dimensions[shape_msgs::msg::SolidPrimitive::BOX_Z],
-        0.8);
+    EXPECT_DOUBLE_EQ(msg.primitives[0].dimensions[shape_msgs::msg::SolidPrimitive::BOX_X], 2.0);
+    EXPECT_DOUBLE_EQ(msg.primitives[0].dimensions[shape_msgs::msg::SolidPrimitive::BOX_Y], 0.05);
+    EXPECT_DOUBLE_EQ(msg.primitives[0].dimensions[shape_msgs::msg::SolidPrimitive::BOX_Z], 0.8);
 
     ASSERT_EQ(msg.primitive_poses.size(), 1u);
     EXPECT_DOUBLE_EQ(msg.primitive_poses[0].position.x, 0.0);
@@ -138,10 +122,8 @@ TEST_F(DoorCollisionObjectTest, ThetaZeroVsTheta90ProducesDifferentOrientation) 
     const auto& q0 = msg0.primitive_poses[0].orientation;
     const auto& q90 = msg90.primitive_poses[0].orientation;
 
-    bool differs = (std::abs(q0.x - q90.x) > 1e-9) ||
-                   (std::abs(q0.y - q90.y) > 1e-9) ||
-                   (std::abs(q0.z - q90.z) > 1e-9) ||
-                   (std::abs(q0.w - q90.w) > 1e-9);
+    bool differs = (std::abs(q0.x - q90.x) > 1e-9) || (std::abs(q0.y - q90.y) > 1e-9) ||
+                   (std::abs(q0.z - q90.z) > 1e-9) || (std::abs(q0.w - q90.w) > 1e-9);
     EXPECT_TRUE(differs);
 }
 
@@ -163,22 +145,15 @@ TEST_F(DoorCollisionObjectTest, PanelPositionUnchangedWithTheta) {
 
 TEST(DoorCollisionCustomParamTest, CustomPanelSizeAffectsMsg) {
     rclcpp::NodeOptions opts;
-    opts.append_parameter_override("door_panel_size",
-                                   std::vector<double>({1.0, 0.02, 0.5}));
+    opts.append_parameter_override("door_panel_size", std::vector<double>({1.0, 0.02, 0.5}));
 
     auto node = std::make_shared<DoorCollisionTest>(opts);
     auto msg = node->buildDoorPanelMsg(0.0);
 
     ASSERT_EQ(msg.primitives[0].dimensions.size(), 3u);
-    EXPECT_DOUBLE_EQ(
-        msg.primitives[0].dimensions[shape_msgs::msg::SolidPrimitive::BOX_X],
-        1.0);
-    EXPECT_DOUBLE_EQ(
-        msg.primitives[0].dimensions[shape_msgs::msg::SolidPrimitive::BOX_Y],
-        0.02);
-    EXPECT_DOUBLE_EQ(
-        msg.primitives[0].dimensions[shape_msgs::msg::SolidPrimitive::BOX_Z],
-        0.5);
+    EXPECT_DOUBLE_EQ(msg.primitives[0].dimensions[shape_msgs::msg::SolidPrimitive::BOX_X], 1.0);
+    EXPECT_DOUBLE_EQ(msg.primitives[0].dimensions[shape_msgs::msg::SolidPrimitive::BOX_Y], 0.02);
+    EXPECT_DOUBLE_EQ(msg.primitives[0].dimensions[shape_msgs::msg::SolidPrimitive::BOX_Z], 0.5);
 }
 
 TEST(DoorCollisionCustomParamTest, CustomFrameRadiusAffectsMsg) {
@@ -188,8 +163,6 @@ TEST(DoorCollisionCustomParamTest, CustomFrameRadiusAffectsMsg) {
     auto node = std::make_shared<DoorCollisionTest>(opts);
     auto msg = node->buildDoorFrameMsg();
 
-    EXPECT_DOUBLE_EQ(
-        msg.primitives[0]
-            .dimensions[shape_msgs::msg::SolidPrimitive::CYLINDER_RADIUS],
-        0.1);
+    EXPECT_DOUBLE_EQ(msg.primitives[0].dimensions[shape_msgs::msg::SolidPrimitive::CYLINDER_RADIUS],
+                     0.1);
 }

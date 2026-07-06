@@ -11,9 +11,7 @@
 
 class DoorTrajectoryNodeTest : public ::testing::Test {
 protected:
-    void SetUp() override {
-        node_ = std::make_shared<omr_controller::DoorTrajectoryNode>();
-    }
+    void SetUp() override { node_ = std::make_shared<omr_controller::DoorTrajectoryNode>(); }
 
     std::shared_ptr<omr_controller::DoorTrajectoryNode> node_;
 };
@@ -85,8 +83,7 @@ TEST(DoorTrajectoryNodeCustomParamTest, CustomRValueIsUsed) {
 
 TEST(DoorTrajectoryNodeCustomParamTest, CustomVectorParamIsUsed) {
     rclcpp::NodeOptions opts;
-    opts.append_parameter_override("phi_values_deg",
-                                   std::vector<double>({10.0, 20.0, 30.0}));
+    opts.append_parameter_override("phi_values_deg", std::vector<double>({10.0, 20.0, 30.0}));
 
     auto node = std::make_shared<omr_controller::DoorTrajectoryNode>(opts);
     const auto& v = node->phi_values_deg();
@@ -116,8 +113,7 @@ TEST_F(DoorTrajectoryNodeTest, StatePublisherPublishes) {
     std::atomic<bool> received{false};
 
     auto sub = helper->create_subscription<std_msgs::msg::String>(
-        "/door_trajectory_node/state", 10,
-        [&received](const std_msgs::msg::String& msg) {
+        "/door_trajectory_node/state", 10, [&received](const std_msgs::msg::String& msg) {
             EXPECT_EQ(msg.data, "IDLE");
             received = true;
         });

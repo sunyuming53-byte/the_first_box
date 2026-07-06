@@ -1,38 +1,38 @@
 #pragma once
 
+#include <moveit/move_group_interface/move_group_interface.h>
+#include <moveit/planning_scene_interface/planning_scene_interface.h>
+#include <tf2/LinearMath/Quaternion.h>
+
 #include <chrono>
 #include <memory>
 #include <mutex>
 #include <string>
 #include <vector>
 
+#include "omr_controller/door_math.hpp"
+#include "omr_controller/geometry_utils.hpp"
 #include <geometry_msgs/msg/pose.hpp>
-#include <rclcpp/rclcpp.hpp>
-#include <moveit/move_group_interface/move_group_interface.h>
-#include <moveit/planning_scene_interface/planning_scene_interface.h>
 #include <moveit_msgs/msg/collision_object.hpp>
+#include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/joint_state.hpp>
 #include <shape_msgs/msg/solid_primitive.hpp>
 #include <std_msgs/msg/string.hpp>
-#include <tf2/LinearMath/Quaternion.h>
-
-#include "omr_controller/door_math.hpp"
-#include "omr_controller/geometry_utils.hpp"
 
 namespace omr_controller {
 
 /// @brief States of the trajectory sequencing state machine.
 enum class TrajectoryState {
-    IDLE,              ///< Waiting for start signal.
-    APPROACH_HOME,     ///< Verifying arm is at home position.
-    PLAN_APPROACH,     ///< Planning + executing approach to first waypoint.
-    EXECUTE_APPROACH,  ///< Verifying approach completion.
-    PREPARE_WAYPOINTS, ///< Pre-computing all (θ, φ) waypoint poses.
-    PLANNING_WAYPOINT, ///< Planning + executing a single waypoint.
-    EXECUTING_WAYPOINT,///< Verifying waypoint completion.
-    WAITING_COMPLETION,///< Checking if waypoint reached; advancing index.
-    DONE,              ///< Trajectory sequence complete.
-    ERROR              ///< Fatal error; sequence aborted.
+    IDLE,                ///< Waiting for start signal.
+    APPROACH_HOME,       ///< Verifying arm is at home position.
+    PLAN_APPROACH,       ///< Planning + executing approach to first waypoint.
+    EXECUTE_APPROACH,    ///< Verifying approach completion.
+    PREPARE_WAYPOINTS,   ///< Pre-computing all (θ, φ) waypoint poses.
+    PLANNING_WAYPOINT,   ///< Planning + executing a single waypoint.
+    EXECUTING_WAYPOINT,  ///< Verifying waypoint completion.
+    WAITING_COMPLETION,  ///< Checking if waypoint reached; advancing index.
+    DONE,                ///< Trajectory sequence complete.
+    ERROR                ///< Fatal error; sequence aborted.
 };
 
 /// @brief Standalone ROS node that generates and publishes a trajectory feed
@@ -52,43 +52,36 @@ public:
 
         // Arm-base → door-hinge transform: tx, ty, tz (m), rx, ry, rz (rad)
         T_armBase_doorHinge_ = declare_parameter(
-            "T_armBase_doorHinge",
-            std::vector<double>({0.0, 0.0, 0.0, 0.0, 0.0, 0.0}));
+            "T_armBase_doorHinge", std::vector<double>({0.0, 0.0, 0.0, 0.0, 0.0, 0.0}));
 
         // ── Motion parameters ────────────────────────────────────────────
         theta_step_deg_ = declare_parameter("theta_step_deg", 5.0);
-        theta_max_deg_  = declare_parameter("theta_max_deg", 90.0);
+        theta_max_deg_ = declare_parameter("theta_max_deg", 90.0);
         phi_values_deg_ = declare_parameter(
-            "phi_values_deg",
-            std::vector<double>({0.0, 15.0, 30.0, 45.0, 60.0, 75.0, 90.0}));
+            "phi_values_deg", std::vector<double>({0.0, 15.0, 30.0, 45.0, 60.0, 75.0, 90.0}));
 
         // ── Arm configuration ────────────────────────────────────────────
-        home_joints_ = declare_parameter(
-            "home_joints",
-            std::vector<double>({0.0, 0.0, 0.0, 0.0, 0.0, 0.0}));
+        home_joints_ =
+            declare_parameter("home_joints", std::vector<double>({0.0, 0.0, 0.0, 0.0, 0.0, 0.0}));
         joint_state_tolerance_ = declare_parameter("joint_state_tolerance", 0.01);
 
         // ── Timing ───────────────────────────────────────────────────────
         idle_delay_sec_ = declare_parameter("idle_delay_sec", 1.0);
 
         // ── Collision geometry (for MoveIt2 planning scene) ──────────────
-        door_panel_size_ = declare_parameter(
-            "door_panel_size",
-            std::vector<double>({2.0, 0.05, 0.8}));
+        door_panel_size_ =
+            declare_parameter("door_panel_size", std::vector<double>({2.0, 0.05, 0.8}));
         door_frame_radius_ = declare_parameter("door_frame_radius", 0.05);
 
         // ── Planning scene configuration ─────────────────────────────────
-        planning_frame_ = declare_parameter(
-            "planning_frame", std::string("base_link"));
+        planning_frame_ = declare_parameter("planning_frame", std::string("base_link"));
 
         // ── ROS interfaces ───────────────────────────────────────────────
         state_pub_ = create_publisher<std_msgs::msg::String>("~/state", 10);
 
         joint_state_sub_ = create_subscription<sensor_msgs::msg::JointState>(
             "/joint_states", rclcpp::SensorDataQoS(),
-            [this](const sensor_msgs::msg::JointState::SharedPtr msg) {
-                jointStateCallback(msg);
-            });
+            [this](const sensor_msgs::msg::JointState::SharedPtr msg) { jointStateCallback(msg); });
 
         double tick_rate = declare_parameter("tick_rate", 10.0);
         auto period = std::chrono::duration<double>(1.0 / tick_rate);
@@ -102,8 +95,7 @@ public:
                     "DoorTrajectoryNode started. "
                     "r=%.2f L=%.2f h=%.2f theta_step=%.1fdeg theta_max=%.1fdeg "
                     "tick_rate=%.1f Hz idle_delay=%.1fs",
-                    r_, L_, h_, theta_step_deg_, theta_max_deg_,
-                    tick_rate, idle_delay_sec_);
+                    r_, L_, h_, theta_step_deg_, theta_max_deg_, tick_rate, idle_delay_sec_);
     }
 
     /// @brief Periodic tick — drives the trajectory sequencing state machine.
@@ -122,7 +114,7 @@ public:
     /// @param target  Target end-effector pose in the planning frame.
     /// @return true if the trajectory was planned, executed, and completed
     ///              within tolerance, false otherwise.
-    virtual     bool planAndExecuteToPose(const geometry_msgs::msg::Pose& target);
+    virtual bool planAndExecuteToPose(const geometry_msgs::msg::Pose& target);
 
     // ── Joint-space motion (for test mocking) ─────────────────────────────
 
@@ -153,28 +145,22 @@ public:
     double r() const { return r_; }
     double L() const { return L_; }
     double h() const { return h_; }
-    const std::vector<double>& T_armBase_doorHinge() const {
-        return T_armBase_doorHinge_;
-    }
+    const std::vector<double>& T_armBase_doorHinge() const { return T_armBase_doorHinge_; }
     double theta_step_deg() const { return theta_step_deg_; }
     double theta_max_deg() const { return theta_max_deg_; }
-    const std::vector<double>& phi_values_deg() const {
-        return phi_values_deg_;
-    }
+    const std::vector<double>& phi_values_deg() const { return phi_values_deg_; }
     const std::vector<double>& home_joints() const { return home_joints_; }
     double joint_state_tolerance() const { return joint_state_tolerance_; }
     double idle_delay_sec() const { return idle_delay_sec_; }
-    const std::vector<double>& door_panel_size() const {
-        return door_panel_size_;
-    }
+    const std::vector<double>& door_panel_size() const { return door_panel_size_; }
     double door_frame_radius() const { return door_frame_radius_; }
 
 protected:
     // ── Exposed for test injection ───────────────────────────────────────
 
     /// @brief Replace the internal MoveGroupInterface (for test mocking).
-    void setMoveGroupForTesting(
-        std::shared_ptr<moveit::planning_interface::MoveGroupInterface> mg) {
+    void
+    setMoveGroupForTesting(std::shared_ptr<moveit::planning_interface::MoveGroupInterface> mg) {
         move_group_ = std::move(mg);
     }
 
@@ -194,17 +180,13 @@ protected:
     TrajectoryState getCurrentState() const { return current_state_; }
 
     /// @brief Get pre-computed waypoints (for test assertions).
-    const std::vector<geometry_msgs::msg::Pose>& getWaypoints() const {
-        return waypoints_;
-    }
+    const std::vector<geometry_msgs::msg::Pose>& getWaypoints() const { return waypoints_; }
 
     /// @brief Get current waypoint index (for test assertions).
     size_t getCurrentWaypointIndex() const { return current_waypoint_; }
 
     /// @brief Inject idle start time (for test acceleration).
-    void setIdleStartTimeForTesting(const rclcpp::Time& t) {
-        idle_start_time_ = t;
-    }
+    void setIdleStartTimeForTesting(const rclcpp::Time& t) { idle_start_time_ = t; }
 
     // ── Members exposed for test access ──────────────────────────────────
 
@@ -215,8 +197,7 @@ protected:
     ///        collision objects.  Stored as a pointer so the blocking default
     ///        constructor (which waits for /planning_scene services) is not
     ///        called during node construction.
-    std::unique_ptr<moveit::planning_interface::PlanningSceneInterface>
-        planning_scene_;
+    std::unique_ptr<moveit::planning_interface::PlanningSceneInterface> planning_scene_;
 
     /// @brief Whether door collision objects have been added to the scene.
     bool door_objects_added_{false};
@@ -246,8 +227,7 @@ protected:
     ///
     /// @return true if all joints are within joint_state_tolerance_,
     ///         false on timeout.
-    bool waitForCompletion(const std::vector<double>& target_joints,
-                           double timeout_sec);
+    bool waitForCompletion(const std::vector<double>& target_joints, double timeout_sec);
 
     // ── Collision object builders (protected for test access) ──────────────
 
@@ -272,8 +252,7 @@ private:
     ///
     /// Builds the world-frame target pose from the analytic model, then
     /// transforms it into the arm-base frame via T_armBase_doorHinge_.
-    geometry_msgs::msg::Pose computePoseForThetaPhi(double theta_rad,
-                                                    double phi_rad) const {
+    geometry_msgs::msg::Pose computePoseForThetaPhi(double theta_rad, double phi_rad) const {
         // Step 1: Build 4x4 homogeneous T_base_hinge from {tx,ty,tz,rx,ry,rz}
         //         following the arm_pose_to_homogeneous pattern in
         //         realman_calibration/src/transform.cpp.
@@ -311,8 +290,7 @@ private:
         T_base_hinge.at<double>(2, 3) = tz;
 
         // Step 2: Compute hinge-frame → target-frame transform.
-        cv::Mat T_hinge_target = computeWorldTTarget(
-            theta_rad, phi_rad, r_, L_, h_);
+        cv::Mat T_hinge_target = computeWorldTTarget(theta_rad, phi_rad, r_, L_, h_);
 
         // Step 3: Chain transforms: base_T_target = base_T_hinge * hinge_T_target
         cv::Mat T_base_target = T_base_hinge * T_hinge_target;
@@ -331,8 +309,7 @@ private:
         }
         if (current.size() < home_joints_.size()) return false;
         for (size_t i = 0; i < home_joints_.size(); ++i) {
-            if (std::abs(current[i] - home_joints_[i]) >=
-                joint_state_tolerance_) {
+            if (std::abs(current[i] - home_joints_[i]) >= joint_state_tolerance_) {
                 return false;
             }
         }
@@ -357,175 +334,163 @@ private:
     // ── ROS interfaces ───────────────────────────────────────────────────
     rclcpp::TimerBase::SharedPtr tick_timer_;
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr state_pub_;
-    rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr
-        joint_state_sub_;
+    rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr joint_state_sub_;
 };
 
 // ── tick() — trajectory sequencing state machine ──────────────────────────
 
 inline void DoorTrajectoryNode::tick() {
     switch (current_state_) {
-    // ── IDLE: wait for start signal (timer-based delay) ──────────────────
-    case TrajectoryState::IDLE: {
-        auto now = get_clock()->now();
-        if ((now - idle_start_time_).seconds() >= idle_delay_sec_) {
-            current_state_ = TrajectoryState::APPROACH_HOME;
-            publishState("APPROACH_HOME");
-            RCLCPP_INFO(get_logger(), "IDLE → APPROACH_HOME");
-        }
-        break;
-    }
-
-    // ── APPROACH_HOME: verify arm is at home; command home move if not ──
-    case TrajectoryState::APPROACH_HOME: {
-        if (isAtHome()) {
-            approach_pose_ = computePoseForThetaPhi(0.0, 0.0);
-            current_state_ = TrajectoryState::PLAN_APPROACH;
-            publishState("PLAN_APPROACH");
-            RCLCPP_INFO(get_logger(),
-                        "APPROACH_HOME → PLAN_APPROACH (home confirmed)");
-        } else {
-            RCLCPP_WARN(get_logger(),
-                        "Arm not at home position, commanding home move first");
-            if (planAndExecuteJointHome()) {
-                approach_pose_ = computePoseForThetaPhi(0.0, 0.0);
-                current_state_ = TrajectoryState::PLAN_APPROACH;
-                publishState("PLAN_APPROACH");
-                RCLCPP_INFO(get_logger(),
-                            "APPROACH_HOME → PLAN_APPROACH (home commanded)");
-            } else {
-                RCLCPP_ERROR(get_logger(), "Home approach failed");
-                current_state_ = TrajectoryState::ERROR;
-                publishState("ERROR");
+        // ── IDLE: wait for start signal (timer-based delay) ──────────────────
+        case TrajectoryState::IDLE: {
+            auto now = get_clock()->now();
+            if ((now - idle_start_time_).seconds() >= idle_delay_sec_) {
+                current_state_ = TrajectoryState::APPROACH_HOME;
+                publishState("APPROACH_HOME");
+                RCLCPP_INFO(get_logger(), "IDLE → APPROACH_HOME");
             }
-        }
-        break;
-    }
-
-    // ── PLAN_APPROACH: collision-aware plan to first waypoint ────────────
-    case TrajectoryState::PLAN_APPROACH: {
-        setupDoorCollisionObjects();
-        updateDoorPose(0.0);
-
-        if (planAndExecuteToPose(approach_pose_)) {
-            current_state_ = TrajectoryState::EXECUTE_APPROACH;
-            publishState("EXECUTE_APPROACH");
-            RCLCPP_INFO(get_logger(),
-                        "PLAN_APPROACH → EXECUTE_APPROACH (pose reached)");
-        } else {
-            RCLCPP_ERROR(get_logger(), "Approach plan+execute failed");
-            current_state_ = TrajectoryState::ERROR;
-            publishState("ERROR");
-        }
-        break;
-    }
-
-    // ── EXECUTE_APPROACH: completion verified internally; proceed ────────
-    case TrajectoryState::EXECUTE_APPROACH: {
-        current_state_ = TrajectoryState::PREPARE_WAYPOINTS;
-        publishState("PREPARE_WAYPOINTS");
-        RCLCPP_INFO(get_logger(), "EXECUTE_APPROACH → PREPARE_WAYPOINTS");
-        break;
-    }
-
-    // ── PREPARE_WAYPOINTS: pre-compute all (θ, φ) waypoint poses ────────
-    case TrajectoryState::PREPARE_WAYPOINTS: {
-        waypoints_.clear();
-        current_waypoint_ = 0;
-
-        for (double theta_deg = 0.0;
-             theta_deg <= theta_max_deg_ + 1e-9;
-             theta_deg += theta_step_deg_) {
-            double theta_rad = theta_deg * M_PI / 180.0;
-            for (double phi_deg : phi_values_deg_) {
-                double phi_rad = phi_deg * M_PI / 180.0;
-                waypoints_.push_back(
-                    computePoseForThetaPhi(theta_rad, phi_rad));
-            }
-        }
-
-        RCLCPP_INFO(get_logger(), "PREPARE_WAYPOINTS: %zu waypoints computed",
-                    waypoints_.size());
-
-        if (waypoints_.empty()) {
-            RCLCPP_ERROR(get_logger(), "No waypoints generated");
-            current_state_ = TrajectoryState::ERROR;
-            publishState("ERROR");
-        } else {
-            current_state_ = TrajectoryState::PLANNING_WAYPOINT;
-            publishState("PLANNING_WAYPOINT");
-        }
-        break;
-    }
-
-    // ── PLANNING_WAYPOINT: plan+execute current waypoint pose ────────────
-    case TrajectoryState::PLANNING_WAYPOINT: {
-        if (current_waypoint_ >= waypoints_.size()) {
-            current_state_ = TrajectoryState::DONE;
-            publishState("DONE");
-            RCLCPP_INFO(get_logger(), "PLANNING_WAYPOINT → DONE (no more waypoints)");
             break;
         }
 
-        RCLCPP_INFO(get_logger(), "Planning waypoint %zu/%zu",
-                    current_waypoint_ + 1, waypoints_.size());
-
-        if (planAndExecuteToPose(waypoints_[current_waypoint_])) {
-            current_state_ = TrajectoryState::EXECUTING_WAYPOINT;
-            publishState("EXECUTING_WAYPOINT");
-        } else {
-            RCLCPP_ERROR(get_logger(),
-                         "Waypoint %zu plan+execute failed — aborting sequence",
-                         current_waypoint_);
-            current_state_ = TrajectoryState::ERROR;
-            publishState("ERROR");
+        // ── APPROACH_HOME: verify arm is at home; command home move if not ──
+        case TrajectoryState::APPROACH_HOME: {
+            if (isAtHome()) {
+                approach_pose_ = computePoseForThetaPhi(0.0, 0.0);
+                current_state_ = TrajectoryState::PLAN_APPROACH;
+                publishState("PLAN_APPROACH");
+                RCLCPP_INFO(get_logger(), "APPROACH_HOME → PLAN_APPROACH (home confirmed)");
+            } else {
+                RCLCPP_WARN(get_logger(), "Arm not at home position, commanding home move first");
+                if (planAndExecuteJointHome()) {
+                    approach_pose_ = computePoseForThetaPhi(0.0, 0.0);
+                    current_state_ = TrajectoryState::PLAN_APPROACH;
+                    publishState("PLAN_APPROACH");
+                    RCLCPP_INFO(get_logger(), "APPROACH_HOME → PLAN_APPROACH (home commanded)");
+                } else {
+                    RCLCPP_ERROR(get_logger(), "Home approach failed");
+                    current_state_ = TrajectoryState::ERROR;
+                    publishState("ERROR");
+                }
+            }
+            break;
         }
-        break;
-    }
 
-    // ── EXECUTING_WAYPOINT: completion verified internally; proceed ──────
-    case TrajectoryState::EXECUTING_WAYPOINT: {
-        current_state_ = TrajectoryState::WAITING_COMPLETION;
-        publishState("WAITING_COMPLETION");
-        break;
-    }
+        // ── PLAN_APPROACH: collision-aware plan to first waypoint ────────────
+        case TrajectoryState::PLAN_APPROACH: {
+            setupDoorCollisionObjects();
+            updateDoorPose(0.0);
 
-    // ── WAITING_COMPLETION: advance to next waypoint or finish ───────────
-    case TrajectoryState::WAITING_COMPLETION: {
-        current_waypoint_++;
-        if (current_waypoint_ >= waypoints_.size()) {
-            current_state_ = TrajectoryState::DONE;
-            publishState("DONE");
-            RCLCPP_INFO(get_logger(),
-                        "WAITING_COMPLETION → DONE (all %zu waypoints complete)",
+            if (planAndExecuteToPose(approach_pose_)) {
+                current_state_ = TrajectoryState::EXECUTE_APPROACH;
+                publishState("EXECUTE_APPROACH");
+                RCLCPP_INFO(get_logger(), "PLAN_APPROACH → EXECUTE_APPROACH (pose reached)");
+            } else {
+                RCLCPP_ERROR(get_logger(), "Approach plan+execute failed");
+                current_state_ = TrajectoryState::ERROR;
+                publishState("ERROR");
+            }
+            break;
+        }
+
+        // ── EXECUTE_APPROACH: completion verified internally; proceed ────────
+        case TrajectoryState::EXECUTE_APPROACH: {
+            current_state_ = TrajectoryState::PREPARE_WAYPOINTS;
+            publishState("PREPARE_WAYPOINTS");
+            RCLCPP_INFO(get_logger(), "EXECUTE_APPROACH → PREPARE_WAYPOINTS");
+            break;
+        }
+
+        // ── PREPARE_WAYPOINTS: pre-compute all (θ, φ) waypoint poses ────────
+        case TrajectoryState::PREPARE_WAYPOINTS: {
+            waypoints_.clear();
+            current_waypoint_ = 0;
+
+            for (double theta_deg = 0.0; theta_deg <= theta_max_deg_ + 1e-9;
+                 theta_deg += theta_step_deg_) {
+                double theta_rad = theta_deg * M_PI / 180.0;
+                for (double phi_deg : phi_values_deg_) {
+                    double phi_rad = phi_deg * M_PI / 180.0;
+                    waypoints_.push_back(computePoseForThetaPhi(theta_rad, phi_rad));
+                }
+            }
+
+            RCLCPP_INFO(get_logger(), "PREPARE_WAYPOINTS: %zu waypoints computed",
                         waypoints_.size());
-        } else {
-            current_state_ = TrajectoryState::PLANNING_WAYPOINT;
-            publishState("PLANNING_WAYPOINT");
-            RCLCPP_INFO(get_logger(),
-                        "WAITING_COMPLETION → PLANNING_WAYPOINT (waypoint %zu)",
-                        current_waypoint_ + 1);
+
+            if (waypoints_.empty()) {
+                RCLCPP_ERROR(get_logger(), "No waypoints generated");
+                current_state_ = TrajectoryState::ERROR;
+                publishState("ERROR");
+            } else {
+                current_state_ = TrajectoryState::PLANNING_WAYPOINT;
+                publishState("PLANNING_WAYPOINT");
+            }
+            break;
         }
-        break;
-    }
 
-    // ── DONE: trajectory sequence complete ───────────────────────────────
-    case TrajectoryState::DONE: {
-        RCLCPP_INFO(get_logger(),
-                    "Trajectory sequence DONE (%zu waypoints completed)",
-                    waypoints_.size());
-        tick_timer_->cancel();
-        break;
-    }
+        // ── PLANNING_WAYPOINT: plan+execute current waypoint pose ────────────
+        case TrajectoryState::PLANNING_WAYPOINT: {
+            if (current_waypoint_ >= waypoints_.size()) {
+                current_state_ = TrajectoryState::DONE;
+                publishState("DONE");
+                RCLCPP_INFO(get_logger(), "PLANNING_WAYPOINT → DONE (no more waypoints)");
+                break;
+            }
 
-    // ── ERROR: terminal state (no recovery) ──────────────────────────────
-    case TrajectoryState::ERROR: {
-        RCLCPP_ERROR(get_logger(),
-                     "Trajectory sequence ERROR at waypoint %zu/%zu",
-                     current_waypoint_, waypoints_.size());
-        tick_timer_->cancel();
-        break;
-    }
+            RCLCPP_INFO(get_logger(), "Planning waypoint %zu/%zu", current_waypoint_ + 1,
+                        waypoints_.size());
+
+            if (planAndExecuteToPose(waypoints_[current_waypoint_])) {
+                current_state_ = TrajectoryState::EXECUTING_WAYPOINT;
+                publishState("EXECUTING_WAYPOINT");
+            } else {
+                RCLCPP_ERROR(get_logger(), "Waypoint %zu plan+execute failed — aborting sequence",
+                             current_waypoint_);
+                current_state_ = TrajectoryState::ERROR;
+                publishState("ERROR");
+            }
+            break;
+        }
+
+        // ── EXECUTING_WAYPOINT: completion verified internally; proceed ──────
+        case TrajectoryState::EXECUTING_WAYPOINT: {
+            current_state_ = TrajectoryState::WAITING_COMPLETION;
+            publishState("WAITING_COMPLETION");
+            break;
+        }
+
+        // ── WAITING_COMPLETION: advance to next waypoint or finish ───────────
+        case TrajectoryState::WAITING_COMPLETION: {
+            current_waypoint_++;
+            if (current_waypoint_ >= waypoints_.size()) {
+                current_state_ = TrajectoryState::DONE;
+                publishState("DONE");
+                RCLCPP_INFO(get_logger(), "WAITING_COMPLETION → DONE (all %zu waypoints complete)",
+                            waypoints_.size());
+            } else {
+                current_state_ = TrajectoryState::PLANNING_WAYPOINT;
+                publishState("PLANNING_WAYPOINT");
+                RCLCPP_INFO(get_logger(), "WAITING_COMPLETION → PLANNING_WAYPOINT (waypoint %zu)",
+                            current_waypoint_ + 1);
+            }
+            break;
+        }
+
+        // ── DONE: trajectory sequence complete ───────────────────────────────
+        case TrajectoryState::DONE: {
+            RCLCPP_INFO(get_logger(), "Trajectory sequence DONE (%zu waypoints completed)",
+                        waypoints_.size());
+            tick_timer_->cancel();
+            break;
+        }
+
+        // ── ERROR: terminal state (no recovery) ──────────────────────────────
+        case TrajectoryState::ERROR: {
+            RCLCPP_ERROR(get_logger(), "Trajectory sequence ERROR at waypoint %zu/%zu",
+                         current_waypoint_, waypoints_.size());
+            tick_timer_->cancel();
+            break;
+        }
     }
 }
 

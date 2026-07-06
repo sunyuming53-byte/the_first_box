@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cmath>
+
 #include <opencv2/core.hpp>
 
 namespace omr_controller {

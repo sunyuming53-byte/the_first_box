@@ -1,9 +1,9 @@
-#include <gtest/gtest.h>
+#include "omr_controller/door_math.hpp"
 
 #include <cmath>
-#include <opencv2/core.hpp>
+#include <gtest/gtest.h>
 
-#include "omr_controller/door_math.hpp"
+#include <opencv2/core.hpp>
 
 namespace omr_controller {
 namespace {
@@ -21,22 +21,14 @@ struct Table1Case {
 
 // Using exact values from the paper (±0.001 tolerance)
 constexpr Table1Case kTable1[] = {
-    {0.0, 0.0, 2.0000, 0.0000, 0.0000},
-    {0.0, 45.0, 2.0000, 1.0607, 0.4393},
-    {0.0, 90.0, 2.0000, 1.5000, 1.5000},
-    {0.0, 180.0, 2.0000, 0.0000, 3.0000},
-    {30.0, 0.0, 1.7321, 1.0000, 0.0000},
-    {30.0, 45.0, 1.2017, 1.9186, 0.4393},
-    {30.0, 90.0, 0.9821, 2.2990, 1.5000},
-    {30.0, 180.0, 1.7321, 1.0000, 3.0000},
-    {60.0, 0.0, 1.0000, 1.7321, 0.0000},
-    {60.0, 45.0, 0.0814, 2.2624, 0.4393},
-    {60.0, 90.0, -0.2990, 2.4821, 1.5000},
-    {60.0, 180.0, 1.0000, 1.7321, 3.0000},
-    {90.0, 0.0, 0.0000, 2.0000, 0.0000},
-    {90.0, 45.0, -1.0607, 2.0000, 0.4393},
-    {90.0, 90.0, -1.5000, 2.0000, 1.5000},
-    {90.0, 180.0, -0.0000, 2.0000, 3.0000},
+    {0.0, 0.0, 2.0000, 0.0000, 0.0000},    {0.0, 45.0, 2.0000, 1.0607, 0.4393},
+    {0.0, 90.0, 2.0000, 1.5000, 1.5000},   {0.0, 180.0, 2.0000, 0.0000, 3.0000},
+    {30.0, 0.0, 1.7321, 1.0000, 0.0000},   {30.0, 45.0, 1.2017, 1.9186, 0.4393},
+    {30.0, 90.0, 0.9821, 2.2990, 1.5000},  {30.0, 180.0, 1.7321, 1.0000, 3.0000},
+    {60.0, 0.0, 1.0000, 1.7321, 0.0000},   {60.0, 45.0, 0.0814, 2.2624, 0.4393},
+    {60.0, 90.0, -0.2990, 2.4821, 1.5000}, {60.0, 180.0, 1.0000, 1.7321, 3.0000},
+    {90.0, 0.0, 0.0000, 2.0000, 0.0000},   {90.0, 45.0, -1.0607, 2.0000, 0.4393},
+    {90.0, 90.0, -1.5000, 2.0000, 1.5000}, {90.0, 180.0, -0.0000, 2.0000, 3.0000},
 };
 
 constexpr double kR = 2.0;
@@ -67,8 +59,7 @@ INSTANTIATE_TEST_SUITE_P(All16Cases, Table1Test, ::testing::ValuesIn(kTable1));
 
 TEST(RTTest, ColumnsAreOrthonormal) {
     // Test at a few nontrivial angles
-    const double angles[][2] = {
-        {0.3, 0.5}, {0.7, 1.2}, {1.0, 2.0}, {2.0, 1.5}, {0.1, 3.0}};
+    const double angles[][2] = {{0.3, 0.5}, {0.7, 1.2}, {1.0, 2.0}, {2.0, 1.5}, {0.1, 3.0}};
 
     for (const auto& [theta, phi] : angles) {
         cv::Mat R = computeRT(theta, phi);
@@ -91,8 +82,7 @@ TEST(RTTest, ColumnsAreOrthonormal) {
 
 TEST(RTTest, DeterminantIsOne) {
     // Test at a few nontrivial angles
-    const double angles[][2] = {
-        {0.3, 0.5}, {0.7, 1.2}, {1.0, 2.0}, {2.0, 1.5}, {0.1, 3.0}};
+    const double angles[][2] = {{0.3, 0.5}, {0.7, 1.2}, {1.0, 2.0}, {2.0, 1.5}, {0.1, 3.0}};
 
     for (const auto& [theta, phi] : angles) {
         cv::Mat R = computeRT(theta, phi);
@@ -160,8 +150,7 @@ TEST(CTest, ThetaZero_Cx_is_r) {
 
 TEST(WorldTTargetTest, OriginMapsToOrigin) {
     // world_T_target · (C, 1)^T = (0, 0, 0, 1)^T
-    const double cases[][2] = {
-        {0.0, 0.0}, {0.5, 0.3}, {1.0, 1.5}, {2.0, 3.0}, {0.0, kPi}};
+    const double cases[][2] = {{0.0, 0.0}, {0.5, 0.3}, {1.0, 1.5}, {2.0, 3.0}, {0.0, kPi}};
 
     for (const auto& [theta, phi] : cases) {
         cv::Mat C = computeC(theta, phi, kR, kL, kH);

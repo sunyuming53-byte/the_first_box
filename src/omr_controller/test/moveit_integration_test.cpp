@@ -1,11 +1,10 @@
-#include "omr_controller/door_trajectory_node.hpp"
-
 #include <gtest/gtest.h>
 
 #include <chrono>
 #include <memory>
 #include <thread>
 
+#include "omr_controller/door_trajectory_node.hpp"
 #include <rclcpp/rclcpp.hpp>
 
 class DoorTrajectoryNodeMoveitTest : public omr_controller::DoorTrajectoryNode {
@@ -15,17 +14,15 @@ public:
         : DoorTrajectoryNode(options) {}
 
     using DoorTrajectoryNode::ensureMoveGroup;
-    using DoorTrajectoryNode::jointStateCallback;
-    using DoorTrajectoryNode::waitForCompletion;
     using DoorTrajectoryNode::getJointPositionsForTesting;
+    using DoorTrajectoryNode::jointStateCallback;
     using DoorTrajectoryNode::setJointPositionsForTesting;
+    using DoorTrajectoryNode::waitForCompletion;
 };
 
 class MoveitIntegrationTest : public ::testing::Test {
 protected:
-    void SetUp() override {
-        node_ = std::make_shared<DoorTrajectoryNodeMoveitTest>();
-    }
+    void SetUp() override { node_ = std::make_shared<DoorTrajectoryNodeMoveitTest>(); }
 
     std::shared_ptr<DoorTrajectoryNodeMoveitTest> node_;
 };

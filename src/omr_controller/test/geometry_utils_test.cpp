@@ -1,9 +1,9 @@
-#include <gtest/gtest.h>
+#include "omr_controller/geometry_utils.hpp"
 
 #include <cmath>
-#include <opencv2/core.hpp>
+#include <gtest/gtest.h>
 
-#include "omr_controller/geometry_utils.hpp"
+#include <opencv2/core.hpp>
 
 namespace omr_controller {
 namespace {
