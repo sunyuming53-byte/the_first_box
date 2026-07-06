@@ -11,6 +11,8 @@ find_package(ament_index_cpp REQUIRED)
 find_package(behaviortree_cpp REQUIRED)
 find_package(control_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(moveit_msgs REQUIRED)
+find_package(moveit_ros_planning_interface REQUIRED)
 find_package(omr_vision REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_action REQUIRED)
@@ -35,6 +37,8 @@ ament_target_dependencies(${PROJECT_NAME} PUBLIC
     behaviortree_cpp
     control_msgs
     geometry_msgs
+    moveit_msgs
+    moveit_ros_planning_interface
     omr_vision
     rclcpp
     rclcpp_action
@@ -117,6 +121,9 @@ if(BUILD_TESTING)
 
     ament_add_gtest(door_trajectory_node_test test/test_main_ros.cpp test/door_trajectory_node_test.cpp)
     target_link_libraries(door_trajectory_node_test ${PROJECT_NAME} ${OpenCV_LIBS} realsense2::realsense2)
+
+    ament_add_gtest(moveit_integration_test test/test_main_ros.cpp test/moveit_integration_test.cpp)
+    target_link_libraries(moveit_integration_test ${PROJECT_NAME} ${OpenCV_LIBS} realsense2::realsense2)
 endif()
 
 ament_package()

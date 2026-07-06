@@ -1,10 +1,15 @@
 #pragma once
 
 #include <chrono>
+#include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
+#include <geometry_msgs/msg/pose.hpp>
 #include <rclcpp/rclcpp.hpp>
+#include <moveit/move_group_interface/move_group_interface.h>
+#include <sensor_msgs/msg/joint_state.hpp>
 #include <std_msgs/msg/string.hpp>
 
 namespace omr_controller {
@@ -52,13 +57,19 @@ public:
         // ── ROS interfaces ───────────────────────────────────────────────
         state_pub_ = create_publisher<std_msgs::msg::String>("~/state", 10);
 
+        joint_state_sub_ = create_subscription<sensor_msgs::msg::JointState>(
+            "/joint_states", rclcpp::SensorDataQoS(),
+            [this](const sensor_msgs::msg::JointState::SharedPtr msg) {
+                jointStateCallback(msg);
+            });
+
         double tick_rate = declare_parameter("tick_rate", 20.0);
         auto period = std::chrono::duration<double>(1.0 / tick_rate);
         tick_timer_ = create_wall_timer(period, [this]() { tick(); });
 
         RCLCPP_INFO(get_logger(),
                     "DoorTrajectoryNode started (skeleton). "
-                    "r=%.2f L=%.2f h=%.2f θ_step=%.1f° tick_rate=%.1f Hz",
+                    "r=%.2f L=%.2f h=%.2f theta_step=%.1fdeg tick_rate=%.1f Hz",
                     r_, L_, h_, theta_step_deg_, tick_rate);
     }
 
@@ -69,6 +80,21 @@ public:
         msg.data = "IDLE";
         state_pub_->publish(msg);
     }
+
+    // ── MoveIt2 interface ────────────────────────────────────────────────
+
+    /// @brief Plan and execute a Cartesian pose target using MoveGroupInterface.
+    ///
+    /// Calls setPoseTarget() → plan() → execute() on the underlying
+    /// MoveGroupInterface, then polls /joint_states until the arm reaches the
+    /// final trajectory point or a timeout expires.  This polling is required
+    /// because the JTC is configured for open-loop control (execute() returns
+    /// immediately).
+    ///
+    /// @param target  Target end-effector pose in the planning frame.
+    /// @return true if the trajectory was planned, executed, and completed
+    ///              within tolerance, false otherwise.
+    bool planAndExecuteToPose(const geometry_msgs::msg::Pose& target);
 
     // ── Public accessors (for testing) ───────────────────────────────────
 
@@ -89,6 +115,51 @@ public:
     }
     double door_frame_radius() const { return door_frame_radius_; }
 
+protected:
+    // ── Exposed for test injection ───────────────────────────────────────
+
+    /// @brief Replace the internal MoveGroupInterface (for test mocking).
+    void setMoveGroupForTesting(
+        std::shared_ptr<moveit::planning_interface::MoveGroupInterface> mg) {
+        move_group_ = std::move(mg);
+    }
+
+    /// @brief Directly set cached joint positions (for test injection).
+    void setJointPositionsForTesting(const std::vector<double>& positions) {
+        std::lock_guard<std::mutex> lock(joints_mutex_);
+        current_joints_ = positions;
+    }
+
+    /// @brief Read cached joint positions (for test assertions).
+    std::vector<double> getJointPositionsForTesting() const {
+        std::lock_guard<std::mutex> lock(joints_mutex_);
+        return current_joints_;
+    }
+
+    // ── Members exposed for test access ──────────────────────────────────
+
+    /// @brief MoveGroupInterface — lazy-initialised on first planAndExecuteToPose().
+    std::shared_ptr<moveit::planning_interface::MoveGroupInterface> move_group_;
+
+    std::vector<double> current_joints_;
+    mutable std::mutex joints_mutex_;
+
+    // ── MoveIt2 helpers (protected for test access) ──────────────────────
+
+    /// @brief Ensure move_group_ is initialised (called on first use).
+    void ensureMoveGroup();
+
+    /// @brief Handler for /joint_states subscription.
+    void jointStateCallback(const sensor_msgs::msg::JointState::SharedPtr msg);
+
+    /// @brief Poll current_joints_ until all 6 joints are within tolerance of
+    ///        the target or timeout_sec elapses.
+    ///
+    /// @return true if all joints are within joint_state_tolerance_,
+    ///         false on timeout.
+    bool waitForCompletion(const std::vector<double>& target_joints,
+                           double timeout_sec);
+
 private:
     // ── Parameters ───────────────────────────────────────────────────────
     double r_;
@@ -105,6 +176,8 @@ private:
     // ── ROS interfaces ───────────────────────────────────────────────────
     rclcpp::TimerBase::SharedPtr tick_timer_;
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr state_pub_;
+    rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr
+        joint_state_sub_;
 };
 
 }  // namespace omr_controller
