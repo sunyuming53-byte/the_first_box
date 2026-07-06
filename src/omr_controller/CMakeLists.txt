@@ -16,6 +16,7 @@ find_package(rclcpp REQUIRED)
 find_package(rclcpp_action REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(tf2 REQUIRED)
 find_package(trajectory_msgs REQUIRED)
 find_package(OpenCV REQUIRED)
 
@@ -37,6 +38,7 @@ ament_target_dependencies(${PROJECT_NAME} PUBLIC
     rclcpp_action
     sensor_msgs
     std_msgs
+    tf2
     trajectory_msgs
 )
 target_link_libraries(${PROJECT_NAME} PUBLIC ${OpenCV_LIBS})
@@ -66,6 +68,10 @@ if(BUILD_TESTING)
     ament_add_gtest(door_math_test test/test_main.cpp test/door_math_test.cpp)
     target_include_directories(door_math_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
     target_link_libraries(door_math_test ${OpenCV_LIBS})
+
+    ament_add_gtest(geometry_utils_test test/test_main.cpp test/geometry_utils_test.cpp)
+    target_include_directories(geometry_utils_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    target_link_libraries(geometry_utils_test ${PROJECT_NAME} ${OpenCV_LIBS})
 
     ament_add_gtest(gripper_client_test test/test_main_ros.cpp test/gripper_client_test.cpp)
     target_link_libraries(gripper_client_test ${PROJECT_NAME} ${OpenCV_LIBS} realsense2::realsense2)
