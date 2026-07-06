@@ -22,7 +22,7 @@ public:
 
     /// Send a joint goal via FollowJointTrajectory action.
     /// Returns the goal handle (null if server unavailable).
-    rclcpp_action::GoalHandle<control_msgs::action::FollowJointTrajectory>::SharedPtr
+    rclcpp_action::ClientGoalHandle<control_msgs::action::FollowJointTrajectory>::SharedPtr
     moveJoints(const JointGoal& goal);
 
     /// Return the most recently cached joint positions.
@@ -43,7 +43,7 @@ private:
     rclcpp::Node* node_;
     rclcpp_action::Client<control_msgs::action::FollowJointTrajectory>::SharedPtr actionClient_;
     rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr jointStateSub_;
-    rclcpp_action::GoalHandle<control_msgs::action::FollowJointTrajectory>::SharedPtr activeGoal_;
+    rclcpp_action::ClientGoalHandle<control_msgs::action::FollowJointTrajectory>::SharedPtr activeGoal_;
     std::vector<double> jointPositions_;
     mutable std::mutex mutex_;
 };
