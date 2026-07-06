@@ -54,8 +54,8 @@ TEST_F(IntegrationTest, ArmGripperSequence) {
     // Let the action servers register in the ROS graph.
     rclcpp::spin_some(node_);
 
-    ArmClient arm(node_.get());
-    GripperClient gripper(node_.get());
+    ArmClient arm(node_);
+    GripperClient gripper(node_);
 
     // Step 1: send a joint trajectory goal.
     JointGoal goal;
@@ -94,8 +94,8 @@ TEST_F(IntegrationTest, AllFiveClientsConstructWithoutConflict) {
 
     // ArmClient and GripperClient need a dedicated node.
     auto other_node = std::make_shared<rclcpp::Node>("client_node");
-    ArmClient arm(other_node.get());
-    GripperClient gripper(other_node.get());
+    ArmClient arm(other_node);
+    GripperClient gripper(other_node);
 
     // All five are alive; call a method on each to verify.
     EXPECT_NO_THROW({

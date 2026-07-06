@@ -6,7 +6,7 @@
 
 namespace omr_controller {
 
-ArmClient::ArmClient(rclcpp::Node* node) : node_(node) {
+ArmClient::ArmClient(rclcpp::Node::SharedPtr node) : node_(std::move(node)) {
     const std::string actionName =
         node_->has_parameter("arm_jtc_action")
             ? node_->get_parameter("arm_jtc_action").as_string()

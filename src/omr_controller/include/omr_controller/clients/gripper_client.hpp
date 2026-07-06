@@ -12,7 +12,7 @@ namespace omr_controller {
 
 class GripperClient {
  public:
-  explicit GripperClient(rclcpp::Node* node,
+  explicit GripperClient(rclcpp::Node::SharedPtr node,
                          const std::string& action_name = "/gripper/follow_joint_trajectory");
 
   GripperClient(const GripperClient&) = delete;
@@ -31,7 +31,7 @@ class GripperClient {
 
   bool sendGoal(double position, double force_pct);
 
-  rclcpp::Node* node_;
+  rclcpp::Node::SharedPtr node_;
   ActionClient::SharedPtr client_;
   GoalHandle::SharedPtr active_goal_;
 };

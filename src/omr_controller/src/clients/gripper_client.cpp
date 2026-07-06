@@ -4,8 +4,8 @@
 
 namespace omr_controller {
 
-GripperClient::GripperClient(rclcpp::Node* node, const std::string& action_name)
-    : node_(node) {
+GripperClient::GripperClient(rclcpp::Node::SharedPtr node, const std::string& action_name)
+    : node_(std::move(node)) {
   client_ = rclcpp_action::create_client<control_msgs::action::GripperCommand>(node_, action_name);
 }
 

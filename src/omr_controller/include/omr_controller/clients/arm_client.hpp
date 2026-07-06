@@ -18,7 +18,7 @@ namespace omr_controller {
 
 class ArmClient {
 public:
-    explicit ArmClient(rclcpp::Node* node);
+    explicit ArmClient(rclcpp::Node::SharedPtr node);
 
     /// Send a joint goal via FollowJointTrajectory action (fire-and-forget).
     void moveJoints(const JointGoal& goal);
@@ -38,7 +38,7 @@ public:
 private:
     void jointStateCallback(const sensor_msgs::msg::JointState::SharedPtr msg);
 
-    rclcpp::Node* node_;
+    rclcpp::Node::SharedPtr node_;
     rclcpp_action::Client<control_msgs::action::FollowJointTrajectory>::SharedPtr actionClient_;
     rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr jointStateSub_;
     rclcpp_action::ClientGoalHandle<control_msgs::action::FollowJointTrajectory>::SharedPtr activeGoal_;

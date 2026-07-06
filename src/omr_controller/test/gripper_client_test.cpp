@@ -59,12 +59,12 @@ class GripperClientTest : public ::testing::Test {
 };
 
 TEST_F(GripperClientTest, ConstructDefaultActionName) {
-  GripperClient client(node_.get());
+  GripperClient client(node_);
   (void)client;
 }
 
 TEST_F(GripperClientTest, ConstructCustomActionName) {
-  GripperClient client(node_.get(), "/custom/gripper");
+  GripperClient client(node_, "/custom/gripper");
   (void)client;
 }
 
@@ -73,7 +73,7 @@ TEST_F(GripperClientTest, OpenOnMockServerReturnsTrue) {
       node_.get(), "/gripper/follow_joint_trajectory");
   rclcpp::spin_some(node_);
 
-  GripperClient client(node_.get());
+  GripperClient client(node_);
   EXPECT_TRUE(client.open());
 }
 
@@ -82,16 +82,16 @@ TEST_F(GripperClientTest, CloseOnMockServerReturnsTrue) {
       node_.get(), "/gripper/follow_joint_trajectory");
   rclcpp::spin_some(node_);
 
-  GripperClient client(node_.get());
+  GripperClient client(node_);
   EXPECT_TRUE(client.close());
 }
 
 TEST_F(GripperClientTest, NoActionServerOpenReturnsFalse) {
-  GripperClient client(node_.get());
+  GripperClient client(node_);
   EXPECT_FALSE(client.open());
 }
 
 TEST_F(GripperClientTest, NoActionServerCloseReturnsFalse) {
-  GripperClient client(node_.get());
+  GripperClient client(node_);
   EXPECT_FALSE(client.close());
 }

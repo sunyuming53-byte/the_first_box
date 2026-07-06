@@ -9,7 +9,7 @@ class ArmClientTest : public ::testing::Test {
 protected:
     void SetUp() override {
         node_ = std::make_shared<rclcpp::Node>("test_arm_client");
-        client_ = std::make_unique<omr_controller::ArmClient>(node_.get());
+        client_ = std::make_unique<omr_controller::ArmClient>(node_);
     }
 
     void TearDown() override {
