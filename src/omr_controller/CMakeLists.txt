@@ -63,6 +63,10 @@ if(BUILD_TESTING)
     ament_add_gtest(types_test test/test_main.cpp test/types_test.cpp)
     target_link_libraries(types_test ${PROJECT_NAME} ${OpenCV_LIBS} realsense2::realsense2)
 
+    ament_add_gtest(door_math_test test/test_main.cpp test/door_math_test.cpp)
+    target_include_directories(door_math_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    target_link_libraries(door_math_test ${OpenCV_LIBS})
+
     ament_add_gtest(gripper_client_test test/test_main_ros.cpp test/gripper_client_test.cpp)
     target_link_libraries(gripper_client_test ${PROJECT_NAME} ${OpenCV_LIBS} realsense2::realsense2)
 
