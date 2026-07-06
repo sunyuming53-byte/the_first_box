@@ -138,16 +138,9 @@ flowchart TD
         HW["ArmSystem<br/><i>hardware_interface plugin</i>"]
     end
 
-    subgraph User["Your Controller (ROS2 Node)"]
-        CTRL["Custom Controller"]
-    end
-
     JSB -->|reads state| HW
     JTC -->|writes command| HW
     HW --> Arm
-
-    CTRL -->|subscribes| JSB
-    CTRL -->|action goal| JTC
 
     Arm["rm::Arm<br/><i>PIMPL facade — zero ROS deps</i>"]
     Arm --> Impl["Arm::Impl<br/><i>worker thread + cmd queue</i>"]
