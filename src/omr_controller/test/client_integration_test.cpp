@@ -1,15 +1,15 @@
-#include "omr_controller/clients/arm_client.hpp"
-#include "omr_controller/clients/gripper_client.hpp"
-#include "omr_controller/clients/vision_client.hpp"
-#include "omr_controller/clients/motor_client.hpp"
-#include "omr_controller/clients/base_client.hpp"
-#include "test_helpers.hpp"
-
 #include <gtest/gtest.h>
-#include <rclcpp/rclcpp.hpp>
-#include <rclcpp_action/rclcpp_action.hpp>
 
 #include <memory>
+
+#include "omr_controller/clients/arm_client.hpp"
+#include "omr_controller/clients/base_client.hpp"
+#include "omr_controller/clients/gripper_client.hpp"
+#include "omr_controller/clients/motor_client.hpp"
+#include "omr_controller/clients/vision_client.hpp"
+#include "test_helpers.hpp"
+#include <rclcpp/rclcpp.hpp>
+#include <rclcpp_action/rclcpp_action.hpp>
 
 using namespace omr_controller;
 
@@ -18,9 +18,7 @@ using namespace omr_controller;
 // ---------------------------------------------------------------------------
 class IntegrationTest : public ::testing::Test {
 protected:
-    void SetUp() override {
-        node_ = std::make_shared<rclcpp::Node>("integration_test");
-    }
+    void SetUp() override { node_ = std::make_shared<rclcpp::Node>("integration_test"); }
 
     rclcpp::Node::SharedPtr node_;
 };
@@ -37,16 +35,13 @@ TEST_F(IntegrationTest, ArmGripperSequence) {
     using GripperAction = control_msgs::action::GripperCommand;
     auto gripper_server = rclcpp_action::create_server<GripperAction>(
         node_.get(), "/gripper/follow_joint_trajectory",
-        [](const rclcpp_action::GoalUUID&,
-           std::shared_ptr<const GripperAction::Goal>) {
+        [](const rclcpp_action::GoalUUID&, std::shared_ptr<const GripperAction::Goal>) {
             return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
         },
-        [](const std::shared_ptr<
-            rclcpp_action::ServerGoalHandle<GripperAction>>&) {
+        [](const std::shared_ptr<rclcpp_action::ServerGoalHandle<GripperAction>>&) {
             return rclcpp_action::CancelResponse::ACCEPT;
         },
-        [](const std::shared_ptr<
-            rclcpp_action::ServerGoalHandle<GripperAction>>& gh) {
+        [](const std::shared_ptr<rclcpp_action::ServerGoalHandle<GripperAction>>& gh) {
             auto result = std::make_shared<GripperAction::Result>();
             gh->succeed(result);
         });
@@ -82,9 +77,7 @@ TEST_F(IntegrationTest, AllFiveClientsConstructWithoutConflict) {
             returned_ = true;
             return image_.clone();
         }
-        omr_vision::camera::CameraIntrinsics depth_intrinsics() const override {
-            return {};
-        }
+        omr_vision::camera::CameraIntrinsics depth_intrinsics() const override { return {}; }
         cv::Mat image_;
         bool returned_{false};
     };

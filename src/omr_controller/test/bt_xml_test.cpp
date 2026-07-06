@@ -1,12 +1,11 @@
-#include "omr_controller/state_machine/bt_factory.hpp"
-
-#include <gtest/gtest.h>
-
 #include <behaviortree_cpp/bt_factory.h>
+#include <gtest/gtest.h>
 
 #include <fstream>
 #include <sstream>
 #include <string>
+
+#include "omr_controller/state_machine/bt_factory.hpp"
 
 // ============================================================================
 // Helpers

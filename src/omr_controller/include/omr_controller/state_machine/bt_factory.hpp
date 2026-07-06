@@ -1,12 +1,12 @@
 #pragma once
 
-#include "omr_controller/clients/arm_client.hpp"
-#include "omr_controller/clients/gripper_client.hpp"
-#include "omr_controller/clients/vision_client.hpp"
-
 #include <behaviortree_cpp/bt_factory.h>
 
 #include <string>
+
+#include "omr_controller/clients/arm_client.hpp"
+#include "omr_controller/clients/gripper_client.hpp"
+#include "omr_controller/clients/vision_client.hpp"
 
 namespace omr_controller {
 
@@ -63,9 +63,7 @@ public:
 ///   "arm_client"     -> ArmClient*
 ///   "gripper_client" -> GripperClient*
 ///   "vision_client"  -> VisionClient*
-BT::Tree build_tree(const std::string& xml_text,
-                    ArmClient& arm,
-                    GripperClient& gripper,
+BT::Tree build_tree(const std::string& xml_text, ArmClient& arm, GripperClient& gripper,
                     VisionClient& vision);
 
 }  // namespace omr_controller

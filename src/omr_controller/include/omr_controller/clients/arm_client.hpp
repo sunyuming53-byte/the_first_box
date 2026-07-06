@@ -1,15 +1,13 @@
 #pragma once
 
-#include "omr_controller/types.hpp"
-
-#include <geometry_msgs/msg/pose.hpp>
-
 #include <memory>
 #include <mutex>
 #include <string>
 #include <vector>
 
+#include "omr_controller/types.hpp"
 #include <control_msgs/action/follow_joint_trajectory.hpp>
+#include <geometry_msgs/msg/pose.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp_action/rclcpp_action.hpp>
 #include <sensor_msgs/msg/joint_state.hpp>
@@ -41,7 +39,8 @@ private:
     rclcpp::Node::SharedPtr node_;
     rclcpp_action::Client<control_msgs::action::FollowJointTrajectory>::SharedPtr actionClient_;
     rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr jointStateSub_;
-    rclcpp_action::ClientGoalHandle<control_msgs::action::FollowJointTrajectory>::SharedPtr activeGoal_;
+    rclcpp_action::ClientGoalHandle<control_msgs::action::FollowJointTrajectory>::SharedPtr
+        activeGoal_;
     std::vector<double> jointPositions_;
     mutable std::mutex mutex_;
 };

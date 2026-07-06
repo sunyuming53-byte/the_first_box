@@ -1,8 +1,9 @@
 #include "omr_controller/clients/arm_client.hpp"
 
+#include <gtest/gtest.h>
+
 #include <stdexcept>
 
-#include <gtest/gtest.h>
 #include <rclcpp/rclcpp.hpp>
 
 class ArmClientTest : public ::testing::Test {
@@ -21,18 +22,14 @@ protected:
     std::unique_ptr<omr_controller::ArmClient> client_;
 };
 
-TEST_F(ArmClientTest, ConstructionSucceeds) {
-    EXPECT_EQ(client_->currentJoints().size(), 0u);
-}
+TEST_F(ArmClientTest, ConstructionSucceeds) { EXPECT_EQ(client_->currentJoints().size(), 0u); }
 
 TEST_F(ArmClientTest, CurrentJointsEmptyBeforeMessages) {
     auto joints = client_->currentJoints();
     EXPECT_TRUE(joints.empty());
 }
 
-TEST_F(ArmClientTest, IsMovingFalseInitially) {
-    EXPECT_FALSE(client_->isMoving());
-}
+TEST_F(ArmClientTest, IsMovingFalseInitially) { EXPECT_FALSE(client_->isMoving()); }
 
 TEST_F(ArmClientTest, MovePoseThrowsLogicError) {
     geometry_msgs::msg::Pose pose;

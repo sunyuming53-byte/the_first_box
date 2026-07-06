@@ -1,7 +1,5 @@
 #include "omr_controller/state_machine/bt_factory.hpp"
 
-#include "omr_controller/types.hpp"
-
 #include <behaviortree_cpp/bt_factory.h>
 
 #include <chrono>
@@ -9,6 +7,8 @@
 #include <string>
 #include <thread>
 #include <vector>
+
+#include "omr_controller/types.hpp"
 
 namespace {
 
@@ -36,8 +36,7 @@ MoveArmAction::MoveArmAction(const std::string& name, const BT::NodeConfig& conf
     : BT::SyncActionNode(name, config) {}
 
 BT::PortsList MoveArmAction::providedPorts() {
-    return {BT::InputPort<std::string>("joint_positions"),
-            BT::InputPort<double>("speed_ratio")};
+    return {BT::InputPort<std::string>("joint_positions"), BT::InputPort<double>("speed_ratio")};
 }
 
 BT::NodeStatus MoveArmAction::tick() {
@@ -70,8 +69,7 @@ GripperAction::GripperAction(const std::string& name, const BT::NodeConfig& conf
     : BT::SyncActionNode(name, config) {}
 
 BT::PortsList GripperAction::providedPorts() {
-    return {BT::InputPort<std::string>("action"),
-            BT::InputPort<double>("force")};
+    return {BT::InputPort<std::string>("action"), BT::InputPort<double>("force")};
 }
 
 BT::NodeStatus GripperAction::tick() {
@@ -102,8 +100,7 @@ BT::NodeStatus GripperAction::tick() {
 // DetectObjectAction
 // ============================================================================
 
-DetectObjectAction::DetectObjectAction(const std::string& name,
-                                       const BT::NodeConfig& config)
+DetectObjectAction::DetectObjectAction(const std::string& name, const BT::NodeConfig& config)
     : BT::SyncActionNode(name, config) {}
 
 BT::PortsList DetectObjectAction::providedPorts() {
@@ -118,8 +115,7 @@ BT::NodeStatus DetectObjectAction::tick() {
 
     auto results = vision->next_detection();
     if (results && !results->empty()) {
-        config().blackboard->set("detection_count",
-                                 static_cast<int>(results->size()));
+        config().blackboard->set("detection_count", static_cast<int>(results->size()));
         return BT::NodeStatus::SUCCESS;
     }
     return BT::NodeStatus::FAILURE;
@@ -132,9 +128,7 @@ BT::NodeStatus DetectObjectAction::tick() {
 WaitAction::WaitAction(const std::string& name, const BT::NodeConfig& config)
     : BT::SyncActionNode(name, config) {}
 
-BT::PortsList WaitAction::providedPorts() {
-    return {BT::InputPort<int>("duration_ms")};
-}
+BT::PortsList WaitAction::providedPorts() { return {BT::InputPort<int>("duration_ms")}; }
 
 BT::NodeStatus WaitAction::tick() {
     int duration_ms = 0;
@@ -149,9 +143,7 @@ BT::NodeStatus WaitAction::tick() {
 // build_tree
 // ============================================================================
 
-BT::Tree build_tree(const std::string& xml_text,
-                    ArmClient& arm,
-                    GripperClient& gripper,
+BT::Tree build_tree(const std::string& xml_text, ArmClient& arm, GripperClient& gripper,
                     VisionClient& vision) {
     BT::BehaviorTreeFactory factory;
 

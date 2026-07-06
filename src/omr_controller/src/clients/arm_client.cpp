@@ -7,17 +7,15 @@
 namespace omr_controller {
 
 ArmClient::ArmClient(rclcpp::Node::SharedPtr node) : node_(std::move(node)) {
-    const std::string actionName =
-        node_->has_parameter("arm_jtc_action")
-            ? node_->get_parameter("arm_jtc_action").as_string()
-            : "/arm_cm/follow_joint_trajectory";
-    const std::string topicName =
-        node_->has_parameter("joint_state_topic")
-            ? node_->get_parameter("joint_state_topic").as_string()
-            : "/joint_states";
+    const std::string actionName = node_->has_parameter("arm_jtc_action")
+                                       ? node_->get_parameter("arm_jtc_action").as_string()
+                                       : "/arm_cm/follow_joint_trajectory";
+    const std::string topicName = node_->has_parameter("joint_state_topic")
+                                      ? node_->get_parameter("joint_state_topic").as_string()
+                                      : "/joint_states";
 
-    actionClient_ =
-        rclcpp_action::create_client<control_msgs::action::FollowJointTrajectory>(node_, actionName);
+    actionClient_ = rclcpp_action::create_client<control_msgs::action::FollowJointTrajectory>(
+        node_, actionName);
 
     jointStateSub_ = node_->create_subscription<sensor_msgs::msg::JointState>(
         topicName, rclcpp::SensorDataQoS(),
@@ -36,20 +34,23 @@ void ArmClient::moveJoints(const JointGoal& goal) {
 
     trajectory_msgs::msg::JointTrajectoryPoint point;
     point.positions = goal.positions;
-    point.time_from_start =
-        rclcpp::Duration::from_seconds(goal.time_from_start_sec > 0.0 ? goal.time_from_start_sec
-                                                                        : 1.0);
+    point.time_from_start = rclcpp::Duration::from_seconds(
+        goal.time_from_start_sec > 0.0 ? goal.time_from_start_sec : 1.0);
 
     actionGoal.trajectory.points.push_back(point);
 
-    auto sendGoalOptions = rclcpp_action::Client<control_msgs::action::FollowJointTrajectory>::SendGoalOptions();
+    auto sendGoalOptions =
+        rclcpp_action::Client<control_msgs::action::FollowJointTrajectory>::SendGoalOptions();
     sendGoalOptions.goal_response_callback =
-        [this](rclcpp_action::ClientGoalHandle<control_msgs::action::FollowJointTrajectory>::SharedPtr goalHandle) {
+        [this](
+            rclcpp_action::ClientGoalHandle<control_msgs::action::FollowJointTrajectory>::SharedPtr
+                goalHandle) {
             std::lock_guard<std::mutex> lock(mutex_);
             activeGoal_ = goalHandle;
         };
     sendGoalOptions.result_callback =
-        [this](const rclcpp_action::ClientGoalHandle<control_msgs::action::FollowJointTrajectory>::WrappedResult&) {
+        [this](const rclcpp_action::ClientGoalHandle<
+               control_msgs::action::FollowJointTrajectory>::WrappedResult&) {
             std::lock_guard<std::mutex> lock(mutex_);
             activeGoal_.reset();
         };

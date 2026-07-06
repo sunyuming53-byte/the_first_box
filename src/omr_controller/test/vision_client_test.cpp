@@ -21,9 +21,7 @@ public:
 
     omr_vision::camera::CameraIntrinsics depth_intrinsics() const override {
         omr_vision::camera::CameraIntrinsics intr;
-        intr.K = (cv::Mat_<double>(3, 3) << 500.0, 0.0, 100.0,
-                                             0.0, 500.0, 100.0,
-                                             0.0, 0.0, 1.0);
+        intr.K = (cv::Mat_<double>(3, 3) << 500.0, 0.0, 100.0, 0.0, 500.0, 100.0, 0.0, 0.0, 1.0);
         intr.dist_coeff = cv::Mat::zeros(1, 5, CV_64F);
         return intr;
     }
@@ -111,8 +109,8 @@ TEST_F(VisionClientTest, DetectArucoMarkerFindsCorrectId) {
             break;
         }
     }
-    EXPECT_TRUE(found) << "Expected detection with label '" << expected_label
-                       << "', got " << results.size() << " results";
+    EXPECT_TRUE(found) << "Expected detection with label '" << expected_label << "', got "
+                       << results.size() << " results";
 }
 
 TEST_F(VisionClientTest, MultipleRedBlobsAllDetected) {

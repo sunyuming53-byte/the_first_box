@@ -1,19 +1,19 @@
 #include "omr_controller/orchestrator.hpp"
-#include "omr_controller/state_machine/bt_factory.hpp"
-
-#include <ament_index_cpp/get_package_share_directory.hpp>
-#include <omr_vision/camera/types.hpp>
 
 #include <fstream>
 #include <sstream>
 #include <string>
 
+#include "omr_controller/state_machine/bt_factory.hpp"
+#include <ament_index_cpp/get_package_share_directory.hpp>
+#include <omr_vision/camera/types.hpp>
+
 namespace omr_controller {
 
 TaskOrchestrator::TaskOrchestrator(const rclcpp::NodeOptions& options)
     : Node("task_orchestrator", options) {
-    auto self = std::shared_ptr<rclcpp::Node>(
-        static_cast<rclcpp::Node*>(this), [](rclcpp::Node*) {});
+    auto self =
+        std::shared_ptr<rclcpp::Node>(static_cast<rclcpp::Node*>(this), [](rclcpp::Node*) {});
     arm_ = std::make_unique<ArmClient>(self);
     gripper_ = std::make_unique<GripperClient>(self);
     vision_ = std::make_unique<VisionClient>(
@@ -50,8 +50,7 @@ void TaskOrchestrator::load_bt_xml() {
 
     std::ifstream file(full_path);
     if (!file.is_open()) {
-        RCLCPP_ERROR(get_logger(),
-                     "Failed to open BT XML: %s — tree will be empty",
+        RCLCPP_ERROR(get_logger(), "Failed to open BT XML: %s — tree will be empty",
                      full_path.c_str());
         return;
     }

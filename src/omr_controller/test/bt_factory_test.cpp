@@ -1,22 +1,20 @@
 #include "omr_controller/state_machine/bt_factory.hpp"
-#include "omr_controller/clients/arm_client.hpp"
-#include "omr_controller/clients/gripper_client.hpp"
-#include "omr_controller/clients/vision_client.hpp"
-#include "test_helpers.hpp"
-
-#include <gtest/gtest.h>
 
 #include <behaviortree_cpp/bt_factory.h>
-
-#include <rclcpp/rclcpp.hpp>
-#include <rclcpp_action/rclcpp_action.hpp>
-
-#include <opencv2/core.hpp>
-#include <opencv2/imgproc.hpp>
+#include <gtest/gtest.h>
 
 #include <memory>
 #include <stdexcept>
 #include <string>
+
+#include "omr_controller/clients/arm_client.hpp"
+#include "omr_controller/clients/gripper_client.hpp"
+#include "omr_controller/clients/vision_client.hpp"
+#include "test_helpers.hpp"
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
+#include <rclcpp/rclcpp.hpp>
+#include <rclcpp_action/rclcpp_action.hpp>
 
 namespace {
 
@@ -33,9 +31,7 @@ public:
 
     omr_vision::camera::CameraIntrinsics depth_intrinsics() const override {
         omr_vision::camera::CameraIntrinsics intr;
-        intr.K = (cv::Mat_<double>(3, 3) << 500.0, 0.0, 100.0,
-                                              0.0, 500.0, 100.0,
-                                              0.0, 0.0, 1.0);
+        intr.K = (cv::Mat_<double>(3, 3) << 500.0, 0.0, 100.0, 0.0, 500.0, 100.0, 0.0, 0.0, 1.0);
         intr.dist_coeff = cv::Mat::zeros(1, 5, CV_64F);
         return intr;
     }
@@ -47,8 +43,7 @@ private:
 
 cv::Mat makeRedBlobImage(int width, int height) {
     cv::Mat img(height, width, CV_8UC3, cv::Scalar(0, 0, 0));
-    cv::circle(img, cv::Point(width / 2, height / 2), 20,
-               cv::Scalar(0, 0, 255), cv::FILLED);
+    cv::circle(img, cv::Point(width / 2, height / 2), 20, cv::Scalar(0, 0, 255), cv::FILLED);
     return img;
 }
 
@@ -68,13 +63,9 @@ BT::NodeConfig make_config() {
 // ============================================================================
 class BtRosTest : public ::testing::Test {
 protected:
-    void SetUp() override {
-        node_ = std::make_shared<rclcpp::Node>("bt_test");
-    }
+    void SetUp() override { node_ = std::make_shared<rclcpp::Node>("bt_test"); }
 
-    void TearDown() override {
-        node_.reset();
-    }
+    void TearDown() override { node_.reset(); }
 
     rclcpp::Node::SharedPtr node_;
 };
@@ -84,8 +75,8 @@ protected:
 // ============================================================================
 
 TEST_F(BtRosTest, MoveArmActionParsesJointPositionsAndSucceeds) {
-    auto server = omr_controller::test::create_mock_jtc_server(
-        node_.get(), "/arm_cm/follow_joint_trajectory");
+    auto server = omr_controller::test::create_mock_jtc_server(node_.get(),
+                                                               "/arm_cm/follow_joint_trajectory");
     rclcpp::spin_some(node_);
 
     omr_controller::ArmClient arm(node_);
@@ -111,8 +102,8 @@ TEST_F(BtRosTest, MoveArmActionMissingArmClientThrows) {
 }
 
 TEST_F(BtRosTest, MoveArmActionDefaultSpeedRatioSucceeds) {
-    auto server = omr_controller::test::create_mock_jtc_server(
-        node_.get(), "/arm_cm/follow_joint_trajectory");
+    auto server = omr_controller::test::create_mock_jtc_server(node_.get(),
+                                                               "/arm_cm/follow_joint_trajectory");
     rclcpp::spin_some(node_);
 
     omr_controller::ArmClient arm(node_);
@@ -363,8 +354,7 @@ TEST_F(BtRosTest, TicksThroughSequence) {
     ASSERT_EQ(tree.subtrees[0]->nodes.size(), 3u);
 
     for (int i = 0; i < 3; ++i) {
-        EXPECT_EQ(tree.tickOnce(), BT::NodeStatus::SUCCESS)
-            << "tick " << i << " should succeed";
+        EXPECT_EQ(tree.tickOnce(), BT::NodeStatus::SUCCESS) << "tick " << i << " should succeed";
     }
 }
 

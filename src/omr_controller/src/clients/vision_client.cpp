@@ -19,8 +19,7 @@ omr_vision::camera::CameraIntrinsics CameraStreamAdapter::depth_intrinsics() con
     return stream_->depth_intrinsics();
 }
 
-VisionClient::VisionClient(std::unique_ptr<ICamera> camera)
-    : camera_(std::move(camera)) {}
+VisionClient::VisionClient(std::unique_ptr<ICamera> camera) : camera_(std::move(camera)) {}
 
 std::vector<DetectionResult> VisionClient::detect(const cv::Mat& frame) {
     std::vector<DetectionResult> results;
@@ -29,10 +28,8 @@ std::vector<DetectionResult> VisionClient::detect(const cv::Mat& frame) {
     cv::Mat hsv;
     cv::cvtColor(frame, hsv, cv::COLOR_BGR2HSV);
     cv::Mat mask;
-    cv::inRange(hsv,
-                cv::Scalar(color_lower_hsv_[0], color_lower_hsv_[1], color_lower_hsv_[2]),
-                cv::Scalar(color_upper_hsv_[0], color_upper_hsv_[1], color_upper_hsv_[2]),
-                mask);
+    cv::inRange(hsv, cv::Scalar(color_lower_hsv_[0], color_lower_hsv_[1], color_lower_hsv_[2]),
+                cv::Scalar(color_upper_hsv_[0], color_upper_hsv_[1], color_upper_hsv_[2]), mask);
 
     std::vector<std::vector<cv::Point>> contours;
     cv::findContours(mask, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
@@ -84,9 +81,8 @@ std::optional<std::vector<DetectionResult>> VisionClient::next_detection() {
 }
 
 void VisionClient::set_params(const std::array<int, 3>& lower_hsv,
-                               const std::array<int, 3>& upper_hsv,
-                               int aruco_dict,
-                               double aruco_marker_size_m) {
+                              const std::array<int, 3>& upper_hsv, int aruco_dict,
+                              double aruco_marker_size_m) {
     color_lower_hsv_ = lower_hsv;
     color_upper_hsv_ = upper_hsv;
     aruco_dict_ = aruco_dict;

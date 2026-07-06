@@ -1,16 +1,15 @@
 #pragma once
 
-#include "omr_controller/types.hpp"
-#include <omr_vision/camera/stream.hpp>
-#include <omr_vision/camera/types.hpp>
-
-#include <opencv2/aruco.hpp>
-#include <opencv2/core/mat.hpp>
-
 #include <array>
 #include <memory>
 #include <optional>
 #include <vector>
+
+#include "omr_controller/types.hpp"
+#include <omr_vision/camera/stream.hpp>
+#include <omr_vision/camera/types.hpp>
+#include <opencv2/aruco.hpp>
+#include <opencv2/core/mat.hpp>
 
 namespace omr_controller {
 
@@ -40,10 +39,8 @@ public:
     std::vector<DetectionResult> detect(const cv::Mat& frame);
     std::optional<std::vector<DetectionResult>> next_detection();
 
-    void set_params(const std::array<int, 3>& lower_hsv,
-                    const std::array<int, 3>& upper_hsv,
-                    int aruco_dict,
-                    double aruco_marker_size_m);
+    void set_params(const std::array<int, 3>& lower_hsv, const std::array<int, 3>& upper_hsv,
+                    int aruco_dict, double aruco_marker_size_m);
 
 private:
     std::unique_ptr<ICamera> camera_;

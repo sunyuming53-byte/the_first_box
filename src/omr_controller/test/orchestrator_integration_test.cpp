@@ -1,13 +1,13 @@
-#include "omr_controller/orchestrator.hpp"
-
 #include <gtest/gtest.h>
-#include <rclcpp/rclcpp.hpp>
-#include <std_msgs/msg/string.hpp>
 
 #include <atomic>
 #include <chrono>
 #include <memory>
 #include <thread>
+
+#include "omr_controller/orchestrator.hpp"
+#include <rclcpp/rclcpp.hpp>
+#include <std_msgs/msg/string.hpp>
 
 // ============================================================================
 // OrchestratorIntegrationTest — shared rclcpp lifecycle for all integration
@@ -34,8 +34,7 @@ TEST_F(OrchestratorIntegrationTest, NodeConstructsAndPublishesTaskState) {
 
     std::atomic<bool> received{false};
     auto sub = orchestrator_->create_subscription<std_msgs::msg::String>(
-        "/task_state", 10,
-        [&received](const std_msgs::msg::String&) { received = true; });
+        "/task_state", 10, [&received](const std_msgs::msg::String&) { received = true; });
 
     auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
     while (!received && std::chrono::steady_clock::now() < deadline) {

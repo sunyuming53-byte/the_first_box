@@ -1,18 +1,17 @@
 #pragma once
 
+#include <behaviortree_cpp/bt_factory.h>
+
+#include <memory>
+#include <string>
+
 #include "omr_controller/clients/arm_client.hpp"
 #include "omr_controller/clients/base_client.hpp"
 #include "omr_controller/clients/gripper_client.hpp"
 #include "omr_controller/clients/motor_client.hpp"
 #include "omr_controller/clients/vision_client.hpp"
-
-#include <behaviortree_cpp/bt_factory.h>
-
 #include <rclcpp/rclcpp.hpp>
 #include <std_msgs/msg/string.hpp>
-
-#include <memory>
-#include <string>
 
 namespace omr_controller {
 
