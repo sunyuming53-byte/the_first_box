@@ -47,14 +47,15 @@ auto create_mock_gripper_server(
 // ---------------------------------------------------------------------------
 class GripperClientTest : public ::testing::Test {
  protected:
+  static void SetUpTestSuite() { rclcpp::init(0, nullptr); }
+  static void TearDownTestSuite() { rclcpp::shutdown(); }
+
   void SetUp() override {
-    rclcpp::init(0, nullptr);
     node_ = std::make_shared<rclcpp::Node>("test_gripper");
   }
 
   void TearDown() override {
     node_.reset();
-    rclcpp::shutdown();
   }
 
   rclcpp::Node::SharedPtr node_;

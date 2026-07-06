@@ -7,8 +7,10 @@
 
 class ArmClientTest : public ::testing::Test {
 protected:
+    static void SetUpTestSuite() { rclcpp::init(0, nullptr); }
+    static void TearDownTestSuite() { rclcpp::shutdown(); }
+
     void SetUp() override {
-        rclcpp::init(0, nullptr);
         node_ = std::make_shared<rclcpp::Node>("test_arm_client");
         client_ = std::make_unique<omr_controller::ArmClient>(node_.get());
     }
@@ -16,7 +18,6 @@ protected:
     void TearDown() override {
         client_.reset();
         node_.reset();
-        rclcpp::shutdown();
     }
 
     std::shared_ptr<rclcpp::Node> node_;
