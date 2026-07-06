@@ -6,7 +6,9 @@
   <maintainer email="dev@realman-driver.com">RealMan Driver Team</maintainer>
   <license>MIT</license>
   <buildtool_depend>ament_cmake</buildtool_depend>
+  <exec_depend>moveit_ros_move_group</exec_depend>
   <exec_depend>omr_bringup</exec_depend>
+  <exec_depend>omr_controller</exec_depend>
   <exec_depend>robot_state_publisher</exec_depend>
   <exec_depend>joint_state_publisher</exec_depend>
   <exec_depend>xacro</exec_depend>

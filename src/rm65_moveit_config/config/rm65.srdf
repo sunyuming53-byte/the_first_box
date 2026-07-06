@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<robot name="rm_65_description">
+
+  <!-- Virtual joint: fixed connection from world to base_link -->
+  <virtual_joint name="virtual_joint" type="fixed" parent_frame="world" child_link="base_link" />
+
+  <!-- Planning groups -->
+  <group name="arm_group">
+    <chain base_link="base_link" tip_link="Link6" />
+  </group>
+
+  <!-- End-effector -->
+  <group name="endeffector">
+    <link name="Link6" />
+  </group>
+
+  <!-- ACM: disable self-collision for adjacent link pairs -->
+  <disable_collisions link1="base_link" link2="Link1" reason="Adjacent" />
+  <disable_collisions link1="Link1" link2="Link2" reason="Adjacent" />
+  <disable_collisions link1="Link2" link2="Link3" reason="Adjacent" />
+  <disable_collisions link1="Link3" link2="Link4" reason="Adjacent" />
+  <disable_collisions link1="Link4" link2="Link5" reason="Adjacent" />
+  <disable_collisions link1="Link5" link2="Link6" reason="Adjacent" />
+
+</robot>
