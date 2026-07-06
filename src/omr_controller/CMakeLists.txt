@@ -38,7 +38,6 @@ ament_target_dependencies(${PROJECT_NAME} PUBLIC
     std_msgs
     trajectory_msgs
 )
-target_link_libraries(${PROJECT_NAME} PUBLIC omr_vision)
 
 install(TARGETS ${PROJECT_NAME}
     LIBRARY DESTINATION lib
