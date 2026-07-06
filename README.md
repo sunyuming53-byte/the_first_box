@@ -188,6 +188,20 @@ flowchart TD
     CLIENTS -->|subscribes| JSB
     CLIENTS -->|action goal| DJTC
     CLIENTS -->|subscribes| DJSB
+
+    %% Door Trajectory (MoveIt2)
+    subgraph DoorTraj["Door Trajectory (MoveIt2)"]
+        DT["DoorTrajectoryNode<br/><i>rclcpp::Node + state machine (10 Hz)</i>"]
+        MG["move_group<br/><i>MoveIt2 planning pipeline</i>"]
+        DOOR["Planning Scene<br/><i>door panel + frame collision objects</i>"]
+    end
+
+    DT -->|setPoseTarget / plan / execute| MG
+    DT -->|add / update| DOOR
+    MG -->|action goal| JTC
+    MG -->|subscribes| JSB
+    DT -->|subscribes| JSB
+    MG -->|robot_description| RSP
 ```
 
 **Arm data flow:** `ArmSystem.read()` → `joint_state_broadcaster` → `/joint_states` topic. The
@@ -202,6 +216,12 @@ The `joint_trajectory_controller` (velocity-mode, PID closed-loop) receives goal
 action node delegates to a non-blocking Client (ArmClient → arm JTC, GripperClient → gripper
 action, VisionClient → RealSense + OpenCV). The full task flow (pick-and-place, inspection,
 etc.) is defined in XML files under `bt_xml/`, editable without recompilation.
+
+**Door trajectory data flow:** `DoorTrajectoryNode` computes target poses from a parametric
+`(θ, φ)` math model, feeds them to MoveIt2's `move_group` for collision-aware planning (OMPL
+with door collision objects in the planning scene), and executes via the existing `/arm_cm/follow_joint_trajectory` action. Joint-state polling tracks completion since the JTC runs
+open-loop. The `rm65_moveit_config` package provides URDF (convex collision primitives),
+SRDF, kinematics (KDL), and OMPL configuration.
 
 `rm::Arm` is a plain C++ class (not an `rclcpp::Node`) with **zero ROS dependency**.
 It lives in the `realman_arm` git submodule under `omr_hardware/third_party/`.
