@@ -94,6 +94,8 @@ bool DoorTrajectoryNode::planAndExecuteToPose(
         return false;
     }
 
+    move_group_->setStartStateToCurrentState();
+
     if (!move_group_->setPoseTarget(target)) {
         RCLCPP_ERROR(get_logger(), "setPoseTarget failed");
         return false;
@@ -238,6 +240,48 @@ void DoorTrajectoryNode::updateDoorPose(double theta_rad) {
     if (planning_scene_) {
         planning_scene_->applyCollisionObject(door_panel);
     }
+}
+
+// ── Joint-space home approach ──────────────────────────────────────────────
+
+bool DoorTrajectoryNode::planAndExecuteJointHome() {
+    ensureMoveGroup();
+
+    if (!move_group_) {
+        RCLCPP_ERROR(get_logger(),
+                     "MoveGroupInterface not available — cannot plan home");
+        return false;
+    }
+
+    move_group_->setStartStateToCurrentState();
+
+    if (!move_group_->setJointValueTarget(home_joints_)) {
+        RCLCPP_ERROR(get_logger(), "setJointValueTarget for home failed");
+        return false;
+    }
+
+    moveit::planning_interface::MoveGroupInterface::Plan plan;
+    moveit::core::MoveItErrorCode plan_result = move_group_->plan(plan);
+
+    if (!static_cast<bool>(plan_result)) {
+        RCLCPP_ERROR(get_logger(), "home plan failed: %d",
+                     static_cast<int>(plan_result.val));
+        return false;
+    }
+
+    RCLCPP_INFO(get_logger(), "home plan succeeded (%.3f s planning time)",
+                plan.planning_time_);
+
+    moveit::core::MoveItErrorCode exec_result = move_group_->execute(plan);
+
+    if (!static_cast<bool>(exec_result)) {
+        RCLCPP_ERROR(get_logger(), "home execute failed: %d",
+                     static_cast<int>(exec_result.val));
+        return false;
+    }
+
+    constexpr double kCompletionTimeoutSec = 10.0;
+    return waitForCompletion(home_joints_, kCompletionTimeoutSec);
 }
 
 }  // namespace omr_controller

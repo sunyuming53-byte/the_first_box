@@ -122,11 +122,19 @@ public:
     ///              within tolerance, false otherwise.
     virtual     bool planAndExecuteToPose(const geometry_msgs::msg::Pose& target);
 
+    // ── Joint-space motion (for test mocking) ─────────────────────────────
+
+    /// @brief Plan and execute a joint-space move to the home position.
+    ///        Uses setJointValueTarget(home_joints_) instead of setPoseTarget.
+    ///        Virtual for test mocking.
+    virtual bool planAndExecuteJointHome();
+
     // ── Collision object management ───────────────────────────────────────
 
     /// @brief Set up door collision objects (panel + frame) in the planning
     ///        scene.  Idempotent — only adds objects once per node lifetime.
-    void setupDoorCollisionObjects();
+    ///        Virtual for test mocking.
+    virtual void setupDoorCollisionObjects();
 
     /// @brief Update the door panel pose as a function of opening angle θ.
     ///        Rotation is about the Z-axis (hinge axis per the math model
@@ -366,22 +374,37 @@ inline void DoorTrajectoryNode::tick() {
         break;
     }
 
-    // ── APPROACH_HOME: verify arm is at home, compute approach pose ──────
+    // ── APPROACH_HOME: verify arm is at home; command home move if not ──
     case TrajectoryState::APPROACH_HOME: {
         if (isAtHome()) {
-            // Compute approach pose: θ=0, φ=first phi value
-            double phi_rad = phi_values_deg_[0] * M_PI / 180.0;
-            approach_pose_ = computePoseForThetaPhi(0.0, phi_rad);
+            approach_pose_ = computePoseForThetaPhi(0.0, 0.0);
             current_state_ = TrajectoryState::PLAN_APPROACH;
             publishState("PLAN_APPROACH");
             RCLCPP_INFO(get_logger(),
                         "APPROACH_HOME → PLAN_APPROACH (home confirmed)");
+        } else {
+            RCLCPP_WARN(get_logger(),
+                        "Arm not at home position, commanding home move first");
+            if (planAndExecuteJointHome()) {
+                approach_pose_ = computePoseForThetaPhi(0.0, 0.0);
+                current_state_ = TrajectoryState::PLAN_APPROACH;
+                publishState("PLAN_APPROACH");
+                RCLCPP_INFO(get_logger(),
+                            "APPROACH_HOME → PLAN_APPROACH (home commanded)");
+            } else {
+                RCLCPP_ERROR(get_logger(), "Home approach failed");
+                current_state_ = TrajectoryState::ERROR;
+                publishState("ERROR");
+            }
         }
         break;
     }
 
-    // ── PLAN_APPROACH: move to the first waypoint pose ──────────────────
+    // ── PLAN_APPROACH: collision-aware plan to first waypoint ────────────
     case TrajectoryState::PLAN_APPROACH: {
+        setupDoorCollisionObjects();
+        updateDoorPose(0.0);
+
         if (planAndExecuteToPose(approach_pose_)) {
             current_state_ = TrajectoryState::EXECUTE_APPROACH;
             publishState("EXECUTE_APPROACH");

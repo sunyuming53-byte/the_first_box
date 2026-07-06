@@ -21,10 +21,18 @@ public:
     using DoorTrajectoryNode::getCurrentWaypointIndex;
     using DoorTrajectoryNode::setJointPositionsForTesting;
     using DoorTrajectoryNode::setIdleStartTimeForTesting;
+    using DoorTrajectoryNode::door_objects_added_;
 
     void setPlanResult(bool result) { plan_result_ = result; }
     bool planWasCalled() const { return plan_called_; }
     int planCallCount() const { return plan_call_count_; }
+
+    void setJointHomeResult(bool result) { joint_home_result_ = result; }
+    bool jointHomeCalled() const { return joint_home_called_; }
+
+    bool setupDoorCollisionCalled() const {
+        return setup_door_collision_called_;
+    }
 
 protected:
     bool planAndExecuteToPose(
@@ -34,10 +42,23 @@ protected:
         return plan_result_;
     }
 
+    bool planAndExecuteJointHome() override {
+        joint_home_called_ = true;
+        return joint_home_result_;
+    }
+
+    void setupDoorCollisionObjects() override {
+        setup_door_collision_called_ = true;
+        door_objects_added_ = true;
+    }
+
 private:
     bool plan_result_ = true;
     bool plan_called_ = false;
     int plan_call_count_ = 0;
+    bool joint_home_result_ = true;
+    bool joint_home_called_ = false;
+    bool setup_door_collision_called_ = false;
 };
 
 void spinUntilState(rclcpp::Node* node,
@@ -226,4 +247,86 @@ TEST_F(TrajectorySequenceTest, MultipleWaypointsAdvanceIndex) {
     EXPECT_EQ(node->getCurrentState(),
               omr_controller::TrajectoryState::DONE);
     EXPECT_GE(node->planCallCount(), 4);
+}
+
+// ── Test 7: Approach from non-home triggers joint-space home move ──────────
+
+TEST_F(TrajectorySequenceTest, ApproachFromNonHomeTriggersJointHome) {
+    rclcpp::NodeOptions opts;
+    opts.append_parameter_override("idle_delay_sec", 0.0);
+    opts.append_parameter_override("tick_rate", 100.0);
+    auto node = std::make_shared<TrajectorySequenceTestNode>(opts);
+
+    std::vector<double> non_home = {0.5, 0.3, -0.2, 0.1, 0.4, -0.3};
+    node->setJointPositionsForTesting(non_home);
+    node->setJointHomeResult(true);
+    node->setPlanResult(true);
+    node->setIdleStartTimeForTesting(
+        node->get_clock()->now() - rclcpp::Duration::from_seconds(1.0));
+
+    spinUntilState(node.get(), omr_controller::TrajectoryState::PLAN_APPROACH);
+    EXPECT_TRUE(node->jointHomeCalled());
+    EXPECT_EQ(node->getCurrentState(),
+              omr_controller::TrajectoryState::PLAN_APPROACH);
+}
+
+// ── Test 8: Approach from home skips joint home command ────────────────────
+
+TEST_F(TrajectorySequenceTest, ApproachFromHomeSkipsJointHome) {
+    rclcpp::NodeOptions opts;
+    opts.append_parameter_override("idle_delay_sec", 0.0);
+    opts.append_parameter_override("tick_rate", 100.0);
+    auto node = std::make_shared<TrajectorySequenceTestNode>(opts);
+
+    node->setJointPositionsForTesting(node->home_joints());
+    node->setPlanResult(true);
+    node->setIdleStartTimeForTesting(
+        node->get_clock()->now() - rclcpp::Duration::from_seconds(1.0));
+
+    spinUntilState(node.get(), omr_controller::TrajectoryState::PLAN_APPROACH);
+    EXPECT_FALSE(node->jointHomeCalled())
+        << "joint home move must NOT be called when arm is already at home";
+    EXPECT_EQ(node->getCurrentState(),
+              omr_controller::TrajectoryState::PLAN_APPROACH);
+}
+
+// ── Test 9: PLAN_APPROACH sets up door collision objects ───────────────────
+
+TEST_F(TrajectorySequenceTest, PlanApproachSetsUpCollisionObjects) {
+    rclcpp::NodeOptions opts;
+    opts.append_parameter_override("idle_delay_sec", 0.0);
+    opts.append_parameter_override("tick_rate", 100.0);
+    auto node = std::make_shared<TrajectorySequenceTestNode>(opts);
+
+    node->setJointPositionsForTesting(node->home_joints());
+    node->setPlanResult(true);
+    node->setIdleStartTimeForTesting(
+        node->get_clock()->now() - rclcpp::Duration::from_seconds(1.0));
+
+    spinUntilState(node.get(),
+                   omr_controller::TrajectoryState::EXECUTE_APPROACH);
+    EXPECT_TRUE(node->setupDoorCollisionCalled());
+    EXPECT_TRUE(node->door_objects_added_);
+    EXPECT_EQ(node->getCurrentState(),
+              omr_controller::TrajectoryState::EXECUTE_APPROACH);
+}
+
+// ── Test 10: Non-home approach failure → ERROR ────────────────────────────
+
+TEST_F(TrajectorySequenceTest, NonHomeApproachFailureTransitionsToError) {
+    rclcpp::NodeOptions opts;
+    opts.append_parameter_override("idle_delay_sec", 0.0);
+    opts.append_parameter_override("tick_rate", 100.0);
+    auto node = std::make_shared<TrajectorySequenceTestNode>(opts);
+
+    std::vector<double> non_home = {0.5, 0.3, -0.2, 0.1, 0.4, -0.3};
+    node->setJointPositionsForTesting(non_home);
+    node->setJointHomeResult(false);  // home approach fails
+    node->setIdleStartTimeForTesting(
+        node->get_clock()->now() - rclcpp::Duration::from_seconds(1.0));
+
+    spinUntilState(node.get(), omr_controller::TrajectoryState::ERROR);
+    EXPECT_TRUE(node->jointHomeCalled());
+    EXPECT_EQ(node->getCurrentState(),
+              omr_controller::TrajectoryState::ERROR);
 }
