@@ -110,20 +110,26 @@ TEST_F(DoorTrajectoryNodeTest, NodeAliveAfterSpinSome) {
 // ──── State publisher exists and publishes ───────────────────────────────
 
 TEST_F(DoorTrajectoryNodeTest, StatePublisherPublishes) {
+    // Subscribe first on a helper node so we receive IDLE published
+    // during DoorTrajectoryNode construction.
+    auto helper = std::make_shared<rclcpp::Node>("helper");
     std::atomic<bool> received{false};
 
-    auto sub = node_->create_subscription<std_msgs::msg::String>(
-        "~/state", 10,
+    auto sub = helper->create_subscription<std_msgs::msg::String>(
+        "/door_trajectory_node/state", 10,
         [&received](const std_msgs::msg::String& msg) {
             EXPECT_EQ(msg.data, "IDLE");
             received = true;
         });
 
-    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+    // Now construct the DoorTrajectoryNode — IDLE is published in constructor.
+    auto dt_node = std::make_shared<omr_controller::DoorTrajectoryNode>();
+
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(1);
     while (!received && std::chrono::steady_clock::now() < deadline) {
-        rclcpp::spin_some(node_);
+        rclcpp::spin_some(helper->get_node_base_interface());
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 
-    EXPECT_TRUE(received) << "~/state did not publish 'IDLE' within 2 seconds";
+    EXPECT_TRUE(received) << "/door_trajectory_node/state did not publish 'IDLE' within 1 second";
 }

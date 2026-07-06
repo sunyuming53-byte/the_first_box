@@ -96,6 +96,8 @@ public:
 
         idle_start_time_ = get_clock()->now();
 
+        publishState("IDLE");
+
         RCLCPP_INFO(get_logger(),
                     "DoorTrajectoryNode started. "
                     "r=%.2f L=%.2f h=%.2f theta_step=%.1fdeg theta_max=%.1fdeg "
