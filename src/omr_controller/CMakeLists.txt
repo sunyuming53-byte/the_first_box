@@ -17,6 +17,7 @@ find_package(rclcpp_action REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(trajectory_msgs REQUIRED)
+find_package(OpenCV REQUIRED)
 
 file(GLOB_RECURSE LIB_SOURCES src/*.cpp)
 list(REMOVE_ITEM LIB_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
@@ -38,6 +39,7 @@ ament_target_dependencies(${PROJECT_NAME} PUBLIC
     std_msgs
     trajectory_msgs
 )
+target_link_libraries(${PROJECT_NAME} PUBLIC ${OpenCV_LIBS})
 
 install(TARGETS ${PROJECT_NAME}
     LIBRARY DESTINATION lib
@@ -57,7 +59,6 @@ ament_export_include_directories(include)
 
 if(BUILD_TESTING)
     find_package(ament_cmake_gtest REQUIRED)
-    find_package(OpenCV REQUIRED)
     find_package(realsense2 REQUIRED)
     ament_add_gtest(types_test test/test_main.cpp test/types_test.cpp)
     target_link_libraries(types_test ${PROJECT_NAME} ${OpenCV_LIBS} realsense2::realsense2)

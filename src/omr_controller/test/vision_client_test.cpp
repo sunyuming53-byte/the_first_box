@@ -39,7 +39,7 @@ cv::Mat makeRedBlobImage(int width, int height, cv::Point center, int radius) {
     return img;
 }
 
-cv::Mat makeArucoImage(int side, int marker_id, cv::aruco::PredefinedDictionaryType dict_type) {
+cv::Mat makeArucoImage(int side, int marker_id, int dict_type) {
     auto dict = cv::aruco::getPredefinedDictionary(dict_type);
     cv::Mat gray;
     cv::aruco::drawMarker(dict, marker_id, side, gray, 1);

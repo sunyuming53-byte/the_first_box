@@ -42,7 +42,7 @@ TEST_F(ArmClientTest, MovePoseThrowsLogicError) {
 }
 
 TEST_F(ArmClientTest, MoveJointsNoServerDoesNotThrow) {
-    JointGoal goal;
+    omr_controller::JointGoal goal;
     goal.positions = {0.1, 0.2, 0.3, 0.4, 0.5, 0.6};
     EXPECT_NO_THROW(client_->moveJoints(goal));
 }
