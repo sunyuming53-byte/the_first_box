@@ -63,7 +63,7 @@ if(BUILD_TESTING)
     ament_add_gtest(types_test test/test_main.cpp test/types_test.cpp)
     target_link_libraries(types_test ${PROJECT_NAME} ${OpenCV_LIBS} realsense2::realsense2)
 
-    ament_add_gtest(gripper_client_test test/test_main.cpp test/gripper_client_test.cpp)
+    ament_add_gtest(gripper_client_test test/test_main_ros.cpp test/gripper_client_test.cpp)
     target_link_libraries(gripper_client_test ${PROJECT_NAME} ${OpenCV_LIBS} realsense2::realsense2)
 
     ament_add_gtest(motor_client_test test/test_main.cpp test/motor_client_test.cpp)
@@ -72,7 +72,7 @@ if(BUILD_TESTING)
     ament_add_gtest(base_client_test test/test_main.cpp test/base_client_test.cpp)
     target_link_libraries(base_client_test ${PROJECT_NAME} ${OpenCV_LIBS} realsense2::realsense2)
 
-    ament_add_gtest(arm_client_test test/test_main.cpp test/arm_client_test.cpp)
+    ament_add_gtest(arm_client_test test/test_main_ros.cpp test/arm_client_test.cpp)
     target_link_libraries(arm_client_test ${PROJECT_NAME} ${OpenCV_LIBS} realsense2::realsense2)
 
     ament_add_gtest(vision_client_test test/test_main.cpp test/vision_client_test.cpp)
@@ -87,15 +87,15 @@ if(BUILD_TESTING)
     target_include_directories(bt_xml_test PRIVATE test)
     target_link_libraries(bt_xml_test ${PROJECT_NAME} ${OpenCV_LIBS} realsense2::realsense2)
 
-    ament_add_gtest(client_integration_test test/test_main.cpp test/client_integration_test.cpp)
+    ament_add_gtest(client_integration_test test/test_main_ros.cpp test/client_integration_test.cpp)
     target_include_directories(client_integration_test PRIVATE test)
     target_link_libraries(client_integration_test ${PROJECT_NAME} ${OpenCV_LIBS} realsense2::realsense2)
 
-    ament_add_gtest(orchestrator_test test/test_main.cpp test/orchestrator_test.cpp)
+    ament_add_gtest(orchestrator_test test/test_main_ros.cpp test/orchestrator_test.cpp)
     target_include_directories(orchestrator_test PRIVATE test)
     target_link_libraries(orchestrator_test ${PROJECT_NAME} ${OpenCV_LIBS} realsense2::realsense2)
 
-    ament_add_gtest(orchestrator_integration_test test/test_main.cpp test/orchestrator_integration_test.cpp)
+    ament_add_gtest(orchestrator_integration_test test/test_main_ros.cpp test/orchestrator_integration_test.cpp)
     target_include_directories(orchestrator_integration_test PRIVATE test)
     target_link_libraries(orchestrator_integration_test ${PROJECT_NAME} ${OpenCV_LIBS} realsense2::realsense2)
 endif()

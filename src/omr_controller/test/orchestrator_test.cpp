@@ -11,8 +11,6 @@
 
 class OrchestratorTest : public ::testing::Test {
 protected:
-    static void SetUpTestSuite() { rclcpp::init(0, nullptr); }
-
     void SetUp() override {
         orchestrator_ = std::make_shared<omr_controller::TaskOrchestrator>();
     }
