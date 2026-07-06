@@ -59,7 +59,7 @@ ament_export_include_directories(include)
 if(BUILD_TESTING)
     find_package(ament_cmake_gtest REQUIRED)
     find_package(OpenCV REQUIRED)
-    find_package(realsense2_camera_msgs REQUIRED)
+    find_package(realsense2 REQUIRED)
     ament_add_gtest(types_test test/test_main.cpp test/types_test.cpp)
     target_link_libraries(types_test ${PROJECT_NAME} ${OpenCV_LIBS} realsense2::realsense2)
 
