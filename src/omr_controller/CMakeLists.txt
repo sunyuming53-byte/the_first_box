@@ -49,7 +49,9 @@ ament_export_include_directories(include)
 
 if(BUILD_TESTING)
     find_package(ament_cmake_gtest REQUIRED)
-    # test targets added here
+    find_package(OpenCV REQUIRED)
+    ament_add_gtest(types_test test/test_main.cpp test/types_test.cpp)
+    target_link_libraries(types_test ${PROJECT_NAME} ${OpenCV_LIBS})
 endif()
 
 ament_package()
