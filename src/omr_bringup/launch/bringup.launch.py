@@ -28,6 +28,8 @@ def generate_launch_description():
                               description='Modbus slave ID for dais motor'),
         DeclareLaunchArgument('gear_ratio', default_value='1000',
                               description='Gear ratio for dais motor'),
+        DeclareLaunchArgument('launch_door_trajectory', default_value='false',
+                              description='Launch MoveIt2 door trajectory orchestrator'),
 
         # ── robot_description from xacro ─────────────────────────
         Node(
@@ -158,5 +160,20 @@ def generate_launch_description():
                 'arm_ip': LaunchConfiguration('arm_ip'),
             }],
             condition=IfCondition(LaunchConfiguration('launch_calib')),
+        ),
+
+        # ── MoveIt2 door trajectory orchestrator ─────────────────
+        Node(
+            package='omr_controller',
+            executable='door_trajectory_node',
+            name='door_trajectory_node',
+            parameters=[
+                PathJoinSubstitution([
+                    FindPackageShare('omr_bringup'),
+                    'config', 'door_trajectory_params.yaml',
+                ]),
+            ],
+            condition=IfCondition(LaunchConfiguration('launch_door_trajectory')),
+            output='screen',
         ),
     ])

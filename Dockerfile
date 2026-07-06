@@ -75,6 +75,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-humble-ament-index-cpp \
     ros-humble-behaviortree-cpp \
     ros-humble-control-msgs \
+    ros-humble-moveit-ros-planning \
+    ros-humble-moveit-planners-ompl \
+    ros-humble-moveit-ros-move-group \
+    ros-humble-moveit-simple-controller-manager \
+    ros-humble-moveit-ros-visualization \
+    ros-humble-moveit-setup-assistant \
+    ros-humble-moveit-ros-planning-interface \
     && rm -rf /var/lib/apt/lists/*
 
 # RealMan SDK — copy from submodule to /opt/realman-sdk
@@ -128,6 +135,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-humble-ament-index-cpp \
     ros-humble-behaviortree-cpp \
     ros-humble-control-msgs \
+    ros-humble-moveit-ros-planning \
+    ros-humble-moveit-planners-ompl \
+    ros-humble-moveit-ros-move-group \
+    ros-humble-moveit-simple-controller-manager \
+    ros-humble-moveit-ros-visualization \
+    ros-humble-moveit-setup-assistant \
+    ros-humble-moveit-ros-planning-interface \
     && rm -rf /var/lib/apt/lists/*
 
 # SDK runtime — libapi_c.so for arm control at runtime

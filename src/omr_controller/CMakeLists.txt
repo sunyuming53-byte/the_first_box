@@ -63,7 +63,7 @@ add_executable(task_orchestrator src/main.cpp)
 target_link_libraries(task_orchestrator ${PROJECT_NAME})
 install(TARGETS task_orchestrator DESTINATION lib/${PROJECT_NAME})
 
-add_executable(door_trajectory_node src/door_trajectory_node.cpp)
+add_executable(door_trajectory_node src/door_trajectory_node.cpp src/door_trajectory_motion.cpp)
 target_link_libraries(door_trajectory_node ${PROJECT_NAME})
 install(TARGETS door_trajectory_node DESTINATION lib/${PROJECT_NAME})
 
