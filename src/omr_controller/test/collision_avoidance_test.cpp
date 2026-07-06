@@ -39,7 +39,7 @@ protected:
     void SetUp() override {
         try {
             node_ = std::make_shared<rclcpp::Node>("collision_avoidance_test_node",
-                                                    rclcpp::NodeOptions());
+                                                   rclcpp::NodeOptions());
 
             // URDF provided by CMake at configure time (rm65_urdf.h)
             std::string urdf_str(omr_controller::test::kRm65Urdf);
