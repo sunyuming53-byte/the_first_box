@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<root BTCPP_format="4">
+  <BehaviorTree ID="PickAndPlace">
+    <Sequence>
+      <MoveArmAction joint_positions="${home_joints}" speed_ratio="30"/>
+      <Fallback>
+        <Sequence>
+          <DetectObjectAction detection_count="{count}"/>
+          <MoveArmAction joint_positions="${approach_joints}" speed_ratio="20"/>
+          <GripperAction action="close" force="60"/>
+          <MoveArmAction joint_positions="${retreat_joints}" speed_ratio="30"/>
+          <MoveArmAction joint_positions="${place_joints}" speed_ratio="30"/>
+          <GripperAction action="open" force="50"/>
+        </Sequence>
+        <Sequence>
+          <MoveArmAction joint_positions="${scan_joints}" speed_ratio="40"/>
+          <DetectObjectAction detection_count="{count}"/>
+          <MoveArmAction joint_positions="${approach_joints}" speed_ratio="20"/>
+          <GripperAction action="close" force="60"/>
+          <MoveArmAction joint_positions="${retreat_joints}" speed_ratio="30"/>
+          <MoveArmAction joint_positions="${place_joints}" speed_ratio="30"/>
+          <GripperAction action="open" force="50"/>
+        </Sequence>
+      </Fallback>
+    </Sequence>
+  </BehaviorTree>
+</root>

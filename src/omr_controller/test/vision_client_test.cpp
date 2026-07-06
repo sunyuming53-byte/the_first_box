@@ -86,16 +86,47 @@ TEST_F(VisionClientTest, DetectArucoMarkerFindsCorrectId) {
 
     auto results = client.detect(img);
 
-    // Should find at least one aruco result with the correct label.
     bool found = false;
     for (const auto& r : results) {
         if (r.label == "aruco_5") {
             found = true;
-            // Center of a 200x200 marker with 1-bit border ≈ image center.
             EXPECT_NEAR(r.center.x, 100.0, 20.0);
             EXPECT_NEAR(r.center.y, 100.0, 20.0);
             break;
         }
     }
     EXPECT_TRUE(found) << "Expected detection with label 'aruco_5'";
+}
+
+TEST_F(VisionClientTest, MultipleRedBlobsAllDetected) {
+    cv::Mat img(200, 200, CV_8UC3, cv::Scalar(0, 0, 0));
+    cv::circle(img, cv::Point(50, 50), 15, cv::Scalar(0, 0, 255), cv::FILLED);
+    cv::circle(img, cv::Point(150, 50), 15, cv::Scalar(0, 0, 255), cv::FILLED);
+    cv::circle(img, cv::Point(100, 150), 15, cv::Scalar(0, 0, 255), cv::FILLED);
+
+    VisionClient client = makeClient(img);
+    auto results = client.detect(img);
+
+    EXPECT_EQ(results.size(), 3u);
+}
+
+TEST_F(VisionClientTest, NoTargetAllGreenReturnsEmpty) {
+    cv::Mat img(200, 200, CV_8UC3, cv::Scalar(0, 255, 0));
+
+    VisionClient client = makeClient(img);
+    auto results = client.detect(img);
+
+    EXPECT_TRUE(results.empty());
+}
+
+TEST_F(VisionClientTest, DetectionConfidenceInRange) {
+    cv::Mat img = makeRedBlobImage(200, 200, cv::Point(100, 100), 20);
+
+    VisionClient client = makeClient(img);
+    auto results = client.detect(img);
+
+    for (const auto& r : results) {
+        EXPECT_GE(r.confidence, 0.0);
+        EXPECT_LE(r.confidence, 1.0);
+    }
 }

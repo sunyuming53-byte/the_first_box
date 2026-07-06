@@ -40,3 +40,10 @@ TEST_F(ArmClientTest, MovePoseThrowsLogicError) {
     geometry_msgs::msg::Pose pose;
     EXPECT_THROW(client_->movePose(pose), std::logic_error);
 }
+
+TEST_F(ArmClientTest, MoveJointsNoServerReturnsNull) {
+    JointGoal goal;
+    goal.positions = {0.1, 0.2, 0.3, 0.4, 0.5, 0.6};
+    auto handle = client_->moveJoints(goal);
+    EXPECT_EQ(handle, nullptr);
+}
