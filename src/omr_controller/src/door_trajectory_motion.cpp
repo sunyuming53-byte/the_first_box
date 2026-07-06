@@ -142,4 +142,102 @@ bool DoorTrajectoryNode::planAndExecuteToPose(
     return waitForCompletion(target_joints, kCompletionTimeoutSec);
 }
 
+// ── Collision object builders ──────────────────────────────────────────────
+
+moveit_msgs::msg::CollisionObject DoorTrajectoryNode::buildDoorPanelMsg(
+    double theta_rad) const {
+    moveit_msgs::msg::CollisionObject door_panel;
+    door_panel.id = "door_panel";
+    door_panel.header.frame_id = planning_frame_;
+    door_panel.operation = moveit_msgs::msg::CollisionObject::ADD;
+
+    shape_msgs::msg::SolidPrimitive primitive;
+    primitive.type = shape_msgs::msg::SolidPrimitive::BOX;
+    primitive.dimensions.resize(3);
+    primitive.dimensions[shape_msgs::msg::SolidPrimitive::BOX_X] =
+        door_panel_size_[0];
+    primitive.dimensions[shape_msgs::msg::SolidPrimitive::BOX_Y] =
+        door_panel_size_[1];
+    primitive.dimensions[shape_msgs::msg::SolidPrimitive::BOX_Z] =
+        door_panel_size_[2];
+
+    tf2::Quaternion q;
+    q.setRPY(0.0, 0.0, theta_rad);
+
+    geometry_msgs::msg::Pose pose;
+    pose.position.x = 0.0;
+    pose.position.y = 0.0;
+    pose.position.z = 0.0;
+    pose.orientation.x = q.x();
+    pose.orientation.y = q.y();
+    pose.orientation.z = q.z();
+    pose.orientation.w = q.w();
+
+    door_panel.primitives.push_back(primitive);
+    door_panel.primitive_poses.push_back(pose);
+
+    return door_panel;
+}
+
+moveit_msgs::msg::CollisionObject DoorTrajectoryNode::buildDoorFrameMsg() const {
+    moveit_msgs::msg::CollisionObject door_frame;
+    door_frame.id = "door_frame";
+    door_frame.header.frame_id = planning_frame_;
+    door_frame.operation = moveit_msgs::msg::CollisionObject::ADD;
+
+    shape_msgs::msg::SolidPrimitive primitive;
+    primitive.type = shape_msgs::msg::SolidPrimitive::CYLINDER;
+    primitive.dimensions.resize(2);
+    primitive.dimensions[shape_msgs::msg::SolidPrimitive::CYLINDER_HEIGHT] =
+        door_panel_size_[2];
+    primitive.dimensions[shape_msgs::msg::SolidPrimitive::CYLINDER_RADIUS] =
+        door_frame_radius_;
+
+    geometry_msgs::msg::Pose pose;
+    pose.position.x = 0.0;
+    pose.position.y = 0.0;
+    pose.position.z = 0.0;
+    pose.orientation.w = 1.0;
+
+    door_frame.primitives.push_back(primitive);
+    door_frame.primitive_poses.push_back(pose);
+
+    return door_frame;
+}
+
+// ── Planning scene management ──────────────────────────────────────────────
+
+void DoorTrajectoryNode::setupDoorCollisionObjects() {
+    if (door_objects_added_) return;
+
+    if (!planning_scene_) {
+        planning_scene_ =
+            std::make_unique<moveit::planning_interface::PlanningSceneInterface>();
+    }
+
+    auto door_panel = buildDoorPanelMsg(0.0);
+    planning_scene_->applyCollisionObject(door_panel);
+
+    auto door_frame = buildDoorFrameMsg();
+    planning_scene_->applyCollisionObject(door_frame);
+
+    door_objects_added_ = true;
+    RCLCPP_INFO(get_logger(),
+                "Door collision objects added to planning scene: "
+                "panel box %.2fx%.2fx%.2f m, frame cylinder r=%.2f m h=%.2f m "
+                "in frame '%s'",
+                door_panel_size_[0], door_panel_size_[1], door_panel_size_[2],
+                door_frame_radius_, door_panel_size_[2],
+                planning_frame_.c_str());
+}
+
+void DoorTrajectoryNode::updateDoorPose(double theta_rad) {
+    auto door_panel = buildDoorPanelMsg(theta_rad);
+    door_panel.operation = moveit_msgs::msg::CollisionObject::MOVE;
+
+    if (planning_scene_) {
+        planning_scene_->applyCollisionObject(door_panel);
+    }
+}
+
 }  // namespace omr_controller

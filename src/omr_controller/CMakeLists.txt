@@ -21,6 +21,7 @@ find_package(std_msgs REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(trajectory_msgs REQUIRED)
 find_package(OpenCV REQUIRED)
+find_package(realsense2 REQUIRED)
 
 file(GLOB_RECURSE LIB_SOURCES src/*.cpp)
 list(REMOVE_ITEM LIB_SOURCES
@@ -71,7 +72,6 @@ ament_export_include_directories(include)
 
 if(BUILD_TESTING)
     find_package(ament_cmake_gtest REQUIRED)
-    find_package(realsense2 REQUIRED)
     ament_add_gtest(types_test test/test_main.cpp test/types_test.cpp)
     target_link_libraries(types_test ${PROJECT_NAME} ${OpenCV_LIBS} realsense2::realsense2)
 
@@ -124,6 +124,12 @@ if(BUILD_TESTING)
 
     ament_add_gtest(moveit_integration_test test/test_main_ros.cpp test/moveit_integration_test.cpp)
     target_link_libraries(moveit_integration_test ${PROJECT_NAME} ${OpenCV_LIBS} realsense2::realsense2)
+
+    ament_add_gtest(trajectory_sequence_test test/test_main_ros.cpp test/trajectory_sequence_test.cpp)
+    target_link_libraries(trajectory_sequence_test ${PROJECT_NAME} ${OpenCV_LIBS} realsense2::realsense2)
+
+    ament_add_gtest(door_collision_test test/test_main_ros.cpp test/door_collision_test.cpp)
+    target_link_libraries(door_collision_test ${PROJECT_NAME} ${OpenCV_LIBS} realsense2::realsense2)
 endif()
 
 ament_package()
