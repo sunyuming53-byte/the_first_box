@@ -56,9 +56,12 @@ jobs:
               set -euo pipefail
               set +u; source /opt/ros/humble/setup.bash; set -u
               colcon build --cmake-args -DBUILD_TESTING=ON
-              colcon test --return-code-on-test-failure --event-handlers console_direct+ || {
+              colcon test --return-code-on-test-failure || {
                 echo "=== Test failures ==="
-                cat build/omr_controller/Testing/Temporary/LastTest.log 2>/dev/null || true
+                for f in build/omr_controller/test_results/omr_controller/*.xml; do
+                  echo "--- $(basename $f) ---"
+                  grep -E 'failure|error|testcase' "$f" | head -30
+                done
                 exit 1
               }
             "
