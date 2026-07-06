@@ -67,7 +67,6 @@ public:
 ///   "vision_client"  -> VisionClient*
 ///   "ros_node"       -> rclcpp::Node::SharedPtr (for DoorTrajectoryAction)
 BT::Tree build_tree(const std::string& xml_text, ArmClient& arm, GripperClient& gripper,
-                    VisionClient& vision,
-                    rclcpp::Node::SharedPtr ros_node = nullptr);
+                    VisionClient& vision, rclcpp::Node::SharedPtr ros_node = nullptr);
 
 }  // namespace omr_controller

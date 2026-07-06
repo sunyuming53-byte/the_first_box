@@ -66,10 +66,8 @@ private:
 };
 
 // Tick the BT node until it reaches the target state or timeout.
-void tickUntilState(TrajectorySequenceTestNode* node,
-                    omr_controller::TrajectoryState target,
-                    rclcpp::Node* ros_node,
-                    int max_ticks = 500) {
+void tickUntilState(TrajectorySequenceTestNode* node, omr_controller::TrajectoryState target,
+                    rclcpp::Node* ros_node, int max_ticks = 500) {
     for (int i = 0; i < max_ticks; ++i) {
         rclcpp::spin_some(ros_node->get_node_base_interface());
         auto status = node->executeTick();
@@ -105,8 +103,8 @@ TEST_F(TrajectorySequenceTest, IdleToApproachHomeToPlanApproach) {
 
     EXPECT_EQ(node_->getCurrentState(), omr_controller::TrajectoryState::IDLE);
 
-    node_->setIdleStartTimeForTesting(
-        node_->rosClock()->now() - rclcpp::Duration::from_seconds(1.0));
+    node_->setIdleStartTimeForTesting(node_->rosClock()->now() -
+                                      rclcpp::Duration::from_seconds(1.0));
 
     tickUntilState(node_.get(), omr_controller::TrajectoryState::PLAN_APPROACH, ros_node_.get());
     EXPECT_EQ(node_->getCurrentState(), omr_controller::TrajectoryState::PLAN_APPROACH);
@@ -129,8 +127,7 @@ TEST_F(TrajectorySequenceTest, PrepareWaypointsCount) {
 
     node->setJointPositionsForTesting(node->home_joints());
     node->setPlanResult(true);
-    node->setIdleStartTimeForTesting(
-        node->rosClock()->now() - rclcpp::Duration::from_seconds(1.0));
+    node->setIdleStartTimeForTesting(node->rosClock()->now() - rclcpp::Duration::from_seconds(1.0));
 
     tickUntilState(node.get(), omr_controller::TrajectoryState::PLANNING_WAYPOINT, ros_node_.get());
     EXPECT_EQ(node->getCurrentState(), omr_controller::TrajectoryState::PLANNING_WAYPOINT);
@@ -159,8 +156,7 @@ TEST_F(TrajectorySequenceTest, SingleWaypointFullCycle) {
 
     node->setJointPositionsForTesting(node->home_joints());
     node->setPlanResult(true);
-    node->setIdleStartTimeForTesting(
-        node->rosClock()->now() - rclcpp::Duration::from_seconds(1.0));
+    node->setIdleStartTimeForTesting(node->rosClock()->now() - rclcpp::Duration::from_seconds(1.0));
 
     tickUntilState(node.get(), omr_controller::TrajectoryState::PLANNING_WAYPOINT, ros_node_.get());
     EXPECT_EQ(node->getCurrentState(), omr_controller::TrajectoryState::PLANNING_WAYPOINT);
@@ -181,8 +177,7 @@ TEST_F(TrajectorySequenceTest, PlanFailureTransitionsToError) {
 
     node->setJointPositionsForTesting(node->home_joints());
     node->setPlanResult(false);
-    node->setIdleStartTimeForTesting(
-        node->rosClock()->now() - rclcpp::Duration::from_seconds(1.0));
+    node->setIdleStartTimeForTesting(node->rosClock()->now() - rclcpp::Duration::from_seconds(1.0));
 
     tickUntilState(node.get(), omr_controller::TrajectoryState::ERROR, ros_node_.get());
     EXPECT_EQ(node->getCurrentState(), omr_controller::TrajectoryState::ERROR);
@@ -200,8 +195,7 @@ TEST_F(TrajectorySequenceTest, WaypointFailureTransitionsToError) {
 
     node->setJointPositionsForTesting(node->home_joints());
     node->setPlanResult(true);
-    node->setIdleStartTimeForTesting(
-        node->rosClock()->now() - rclcpp::Duration::from_seconds(1.0));
+    node->setIdleStartTimeForTesting(node->rosClock()->now() - rclcpp::Duration::from_seconds(1.0));
 
     tickUntilState(node.get(), omr_controller::TrajectoryState::PLANNING_WAYPOINT, ros_node_.get());
     EXPECT_EQ(node->getCurrentState(), omr_controller::TrajectoryState::PLANNING_WAYPOINT);
@@ -226,8 +220,7 @@ TEST_F(TrajectorySequenceTest, MultipleWaypointsAdvanceIndex) {
 
     node->setJointPositionsForTesting(node->home_joints());
     node->setPlanResult(true);
-    node->setIdleStartTimeForTesting(
-        node->rosClock()->now() - rclcpp::Duration::from_seconds(1.0));
+    node->setIdleStartTimeForTesting(node->rosClock()->now() - rclcpp::Duration::from_seconds(1.0));
 
     tickUntilState(node.get(), omr_controller::TrajectoryState::PLANNING_WAYPOINT, ros_node_.get());
     EXPECT_EQ(node->getCurrentState(), omr_controller::TrajectoryState::PLANNING_WAYPOINT);
@@ -251,8 +244,7 @@ TEST_F(TrajectorySequenceTest, ApproachFromNonHomeTriggersJointHome) {
     node->setJointPositionsForTesting(non_home);
     node->setJointHomeResult(true);
     node->setPlanResult(true);
-    node->setIdleStartTimeForTesting(
-        node->rosClock()->now() - rclcpp::Duration::from_seconds(1.0));
+    node->setIdleStartTimeForTesting(node->rosClock()->now() - rclcpp::Duration::from_seconds(1.0));
 
     tickUntilState(node.get(), omr_controller::TrajectoryState::PLAN_APPROACH, ros_node_.get());
     EXPECT_TRUE(node->jointHomeCalled());
@@ -269,8 +261,7 @@ TEST_F(TrajectorySequenceTest, ApproachFromHomeSkipsJointHome) {
 
     node->setJointPositionsForTesting(node->home_joints());
     node->setPlanResult(true);
-    node->setIdleStartTimeForTesting(
-        node->rosClock()->now() - rclcpp::Duration::from_seconds(1.0));
+    node->setIdleStartTimeForTesting(node->rosClock()->now() - rclcpp::Duration::from_seconds(1.0));
 
     tickUntilState(node.get(), omr_controller::TrajectoryState::PLAN_APPROACH, ros_node_.get());
     EXPECT_FALSE(node->jointHomeCalled())
@@ -288,8 +279,7 @@ TEST_F(TrajectorySequenceTest, PlanApproachSetsUpCollisionObjects) {
 
     node->setJointPositionsForTesting(node->home_joints());
     node->setPlanResult(true);
-    node->setIdleStartTimeForTesting(
-        node->rosClock()->now() - rclcpp::Duration::from_seconds(1.0));
+    node->setIdleStartTimeForTesting(node->rosClock()->now() - rclcpp::Duration::from_seconds(1.0));
 
     tickUntilState(node.get(), omr_controller::TrajectoryState::EXECUTE_APPROACH, ros_node_.get());
     EXPECT_TRUE(node->setupDoorCollisionCalled());
@@ -308,8 +298,7 @@ TEST_F(TrajectorySequenceTest, NonHomeApproachFailureTransitionsToError) {
     std::vector<double> non_home = {0.5, 0.3, -0.2, 0.1, 0.4, -0.3};
     node->setJointPositionsForTesting(non_home);
     node->setJointHomeResult(false);  // home approach fails
-    node->setIdleStartTimeForTesting(
-        node->rosClock()->now() - rclcpp::Duration::from_seconds(1.0));
+    node->setIdleStartTimeForTesting(node->rosClock()->now() - rclcpp::Duration::from_seconds(1.0));
 
     tickUntilState(node.get(), omr_controller::TrajectoryState::ERROR, ros_node_.get());
     EXPECT_TRUE(node->jointHomeCalled());

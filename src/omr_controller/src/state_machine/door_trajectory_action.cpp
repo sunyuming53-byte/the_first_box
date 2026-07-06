@@ -1,9 +1,9 @@
 #include "omr_controller/state_machine/door_trajectory_action.hpp"
 
+#include <cmath>
 #include <tf2/LinearMath/Quaternion.h>
 
 #include <algorithm>
-#include <cmath>
 #include <sstream>
 #include <thread>
 
@@ -88,8 +88,7 @@ DoorTrajectoryAction::DoorTrajectoryAction(const std::string& name, const BT::No
 BT::NodeStatus DoorTrajectoryAction::onStart() {
     // ── Get the ROS node from the blackboard ────────────────────────────────
     if (!config().blackboard->get("ros_node", ros_node_) || !ros_node_) {
-        RCLCPP_FATAL(rclcpp::get_logger("door_trajectory"),
-                     "Blackboard key 'ros_node' not found");
+        RCLCPP_FATAL(rclcpp::get_logger("door_trajectory"), "Blackboard key 'ros_node' not found");
         return BT::NodeStatus::FAILURE;
     }
 
@@ -271,8 +270,8 @@ BT::NodeStatus DoorTrajectoryAction::onRunning() {
                 return BT::NodeStatus::SUCCESS;
             }
 
-            RCLCPP_INFO(ros_node_->get_logger(), "Planning waypoint %zu/%zu",
-                        current_waypoint_ + 1, waypoints_.size());
+            RCLCPP_INFO(ros_node_->get_logger(), "Planning waypoint %zu/%zu", current_waypoint_ + 1,
+                        waypoints_.size());
 
             if (planAndExecuteToPose(waypoints_[current_waypoint_])) {
                 current_state_ = TrajectoryState::EXECUTING_WAYPOINT;
@@ -311,12 +310,10 @@ BT::NodeStatus DoorTrajectoryAction::onRunning() {
         }
 
         // ── DONE: terminal state ───────────────────────────────────────────
-        case TrajectoryState::DONE:
-            return BT::NodeStatus::SUCCESS;
+        case TrajectoryState::DONE: return BT::NodeStatus::SUCCESS;
 
         // ── ERROR: terminal state ──────────────────────────────────────────
-        case TrajectoryState::ERROR:
-            return BT::NodeStatus::FAILURE;
+        case TrajectoryState::ERROR: return BT::NodeStatus::FAILURE;
     }
 
     return BT::NodeStatus::FAILURE;
@@ -356,8 +353,8 @@ void DoorTrajectoryAction::ensureMoveGroup() {
 
     try {
         moveit::planning_interface::MoveGroupInterface::Options opts("arm_group");
-        move_group_ = std::make_shared<moveit::planning_interface::MoveGroupInterface>(ros_node_,
-                                                                                       opts);
+        move_group_ =
+            std::make_shared<moveit::planning_interface::MoveGroupInterface>(ros_node_, opts);
         move_group_->setPlanningTime(5.0);
         RCLCPP_INFO(ros_node_->get_logger(), "MoveGroupInterface initialised for arm_group");
     } catch (const std::exception& e) {
@@ -437,8 +434,7 @@ bool DoorTrajectoryAction::planAndExecuteToPose(const geometry_msgs::msg::Pose& 
     moveit::core::MoveItErrorCode plan_result = move_group_->plan(plan);
 
     if (!static_cast<bool>(plan_result)) {
-        RCLCPP_ERROR(ros_node_->get_logger(), "plan failed: %d",
-                     static_cast<int>(plan_result.val));
+        RCLCPP_ERROR(ros_node_->get_logger(), "plan failed: %d", static_cast<int>(plan_result.val));
         return false;
     }
 

@@ -65,7 +65,10 @@ TEST(PickAndPlaceXmlTest, ParsesWithAllNodesRegistered) {
     factory.registerNodeType<omr_controller::WaitAction>("WaitAction");
     factory.registerNodeType<omr_controller::DoorTrajectoryAction>("DoorTrajectoryAction");
 
-    EXPECT_NO_THROW({ auto tree = factory.createTreeFromText(xml_text); (void)tree; });
+    EXPECT_NO_THROW({
+        auto tree = factory.createTreeFromText(xml_text);
+        (void) tree;
+    });
 }
 
 TEST(PickAndPlaceXmlTest, HasCorrectStructure) {

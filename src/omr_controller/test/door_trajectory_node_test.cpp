@@ -1,11 +1,10 @@
-#include "omr_controller/state_machine/door_trajectory_action.hpp"
-
 #include <gtest/gtest.h>
 
 #include <chrono>
 #include <memory>
 #include <thread>
 
+#include "omr_controller/state_machine/door_trajectory_action.hpp"
 #include <rclcpp/rclcpp.hpp>
 
 namespace {
@@ -32,9 +31,7 @@ protected:
 
 // ──── Construction and parameter defaults ────────────────────────────
 
-TEST_F(DoorTrajectoryNodeTest, RegistersCorrectly) {
-    EXPECT_NE(node_, nullptr);
-}
+TEST_F(DoorTrajectoryNodeTest, RegistersCorrectly) { EXPECT_NE(node_, nullptr); }
 
 TEST_F(DoorTrajectoryNodeTest, ScalarParametersHaveDefaults) {
     EXPECT_DOUBLE_EQ(node_->r(), 2.0);

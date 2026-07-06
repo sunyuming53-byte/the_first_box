@@ -120,7 +120,6 @@ public:
     geometry_msgs::msg::Pose computePoseForThetaPhi(double theta_rad, double phi_rad) const;
 
 protected:
-
     /// @brief MoveGroupInterface — lazy-initialised on first planAndExecuteToPose().
     std::shared_ptr<moveit::planning_interface::MoveGroupInterface> move_group_;
 

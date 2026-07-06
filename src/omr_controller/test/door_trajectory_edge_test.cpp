@@ -77,10 +77,8 @@ private:
     bool setup_door_collision_called_ = false;
 };
 
-void tickUntilState(EdgeTestNode* node,
-                    omr_controller::TrajectoryState target,
-                    rclcpp::Node* ros_node,
-                    int max_ticks = 500) {
+void tickUntilState(EdgeTestNode* node, omr_controller::TrajectoryState target,
+                    rclcpp::Node* ros_node, int max_ticks = 500) {
     for (int i = 0; i < max_ticks; ++i) {
         rclcpp::spin_some(ros_node->get_node_base_interface());
         auto status = node->executeTick();
@@ -127,8 +125,7 @@ TEST_F(DoorTrajectoryEdgeTest, PlanningFailsForAllWaypointsTransitionsToError) {
 
     node->setJointPositionsForTesting(node->home_joints());
     node->setPlanResult(true);
-    node->setIdleStartTimeForTesting(
-        node->rosClock()->now() - rclcpp::Duration::from_seconds(1.0));
+    node->setIdleStartTimeForTesting(node->rosClock()->now() - rclcpp::Duration::from_seconds(1.0));
 
     tickUntilState(node.get(), omr_controller::TrajectoryState::PLANNING_WAYPOINT, ros_node_.get());
     EXPECT_EQ(node->getCurrentState(), omr_controller::TrajectoryState::PLANNING_WAYPOINT);
@@ -152,8 +149,7 @@ TEST_F(DoorTrajectoryEdgeTest, ExtremeThetaValuesProduceValidPoses) {
 
     node->setJointPositionsForTesting(node->home_joints());
     node->setPlanResult(true);
-    node->setIdleStartTimeForTesting(
-        node->rosClock()->now() - rclcpp::Duration::from_seconds(1.0));
+    node->setIdleStartTimeForTesting(node->rosClock()->now() - rclcpp::Duration::from_seconds(1.0));
 
     tickUntilState(node.get(), omr_controller::TrajectoryState::PLANNING_WAYPOINT, ros_node_.get());
     EXPECT_EQ(node->getCurrentState(), omr_controller::TrajectoryState::PLANNING_WAYPOINT);
@@ -192,8 +188,7 @@ TEST_F(DoorTrajectoryEdgeTest, ApproachFromNonHomeSetsUpCollisionObjects) {
     node->setJointPositionsForTesting(non_home);
     node->setJointHomeResult(true);
     node->setPlanResult(true);
-    node->setIdleStartTimeForTesting(
-        node->rosClock()->now() - rclcpp::Duration::from_seconds(1.0));
+    node->setIdleStartTimeForTesting(node->rosClock()->now() - rclcpp::Duration::from_seconds(1.0));
 
     tickUntilState(node.get(), omr_controller::TrajectoryState::PLAN_APPROACH, ros_node_.get());
     EXPECT_TRUE(node->jointHomeCalled());
@@ -223,8 +218,7 @@ TEST_F(DoorTrajectoryEdgeTest, MissingTransformParamDefaultsToZero) {
 
     node->setJointPositionsForTesting(node->home_joints());
     node->setPlanResult(true);
-    node->setIdleStartTimeForTesting(
-        node->rosClock()->now() - rclcpp::Duration::from_seconds(1.0));
+    node->setIdleStartTimeForTesting(node->rosClock()->now() - rclcpp::Duration::from_seconds(1.0));
 
     tickUntilState(node.get(), omr_controller::TrajectoryState::PLAN_APPROACH, ros_node_.get());
     EXPECT_EQ(node->getCurrentState(), omr_controller::TrajectoryState::PLAN_APPROACH);
@@ -252,8 +246,7 @@ TEST_F(DoorTrajectoryEdgeTest, ThetaLockedPerPlanCycle) {
 
     node->setJointPositionsForTesting(node->home_joints());
     node->setPlanResult(true);
-    node->setIdleStartTimeForTesting(
-        node->rosClock()->now() - rclcpp::Duration::from_seconds(1.0));
+    node->setIdleStartTimeForTesting(node->rosClock()->now() - rclcpp::Duration::from_seconds(1.0));
 
     tickUntilState(node.get(), omr_controller::TrajectoryState::DONE, ros_node_.get(), 1000);
     EXPECT_EQ(node->getCurrentState(), omr_controller::TrajectoryState::DONE);

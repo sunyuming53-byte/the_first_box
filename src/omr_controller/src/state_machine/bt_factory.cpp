@@ -145,8 +145,7 @@ BT::NodeStatus WaitAction::tick() {
 // ============================================================================
 
 BT::Tree build_tree(const std::string& xml_text, ArmClient& arm, GripperClient& gripper,
-                    VisionClient& vision,
-                    rclcpp::Node::SharedPtr ros_node) {
+                    VisionClient& vision, rclcpp::Node::SharedPtr ros_node) {
     BT::BehaviorTreeFactory factory;
 
     factory.registerNodeType<MoveArmAction>("MoveArmAction");
