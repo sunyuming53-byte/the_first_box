@@ -9,26 +9,38 @@ namespace omr_controller {
 namespace {
 
 // ──── Table 1 verification values (r=2.0, L=1.5, h=0.0) ────
-// Each entry: theta_deg, phi_deg, Cx_expected, Cy_expected, Cz_expected
+// Each entry: theta_deg, phi_deg, omega_deg, Cx_expected, Cy_expected, Cz_expected
 
 struct Table1Case {
     double theta_deg;
     double phi_deg;
+    double omega_deg;
     double cx;
     double cy;
     double cz;
 };
 
-// Using exact values from the paper (±0.001 tolerance)
+// Exact values from Eq.12:  C_x = r·cθ - L·sθ·sφ - L·cθ·cφ·sω
+//                           C_y = r·sθ + L·cθ·sφ - L·sθ·cφ·sω
+//                           C_z = h + L·(1 - cφ·cω)
+// with r=2.0, L=1.5, h=0.0  (±0.001 tolerance)
 constexpr Table1Case kTable1[] = {
-    {0.0, 0.0, 2.0000, 0.0000, 0.0000},    {0.0, 45.0, 2.0000, 1.0607, 0.4393},
-    {0.0, 90.0, 2.0000, 1.5000, 1.5000},   {0.0, 180.0, 2.0000, 0.0000, 3.0000},
-    {30.0, 0.0, 1.7321, 1.0000, 0.0000},   {30.0, 45.0, 1.2017, 1.9186, 0.4393},
-    {30.0, 90.0, 0.9821, 2.2990, 1.5000},  {30.0, 180.0, 1.7321, 1.0000, 3.0000},
-    {60.0, 0.0, 1.0000, 1.7321, 0.0000},   {60.0, 45.0, 0.0814, 2.2624, 0.4393},
-    {60.0, 90.0, -0.2990, 2.4821, 1.5000}, {60.0, 180.0, 1.0000, 1.7321, 3.0000},
-    {90.0, 0.0, 0.0000, 2.0000, 0.0000},   {90.0, 45.0, -1.0607, 2.0000, 0.4393},
-    {90.0, 90.0, -1.5000, 2.0000, 1.5000}, {90.0, 180.0, -0.0000, 2.0000, 3.0000},
+    {0.0, 0.0, 0.0, 2.0000, 0.0000, 0.0000},
+    {0.0, 45.0, 0.0, 2.0000, 1.0607, 0.4393},
+    {0.0, 45.0, 30.0, 1.4697, 1.0607, 0.5814},
+    {90.0, 90.0, 0.0, -1.5000, 2.0000, 1.5000},
+    {90.0, 90.0, 45.0, -1.5000, 2.0000, 1.5000},
+    {30.0, 45.0, 30.0, 0.7424, 1.6534, 0.5814},
+    {0.0, 90.0, 0.0, 2.0000, 1.5000, 1.5000},
+    {30.0, 0.0, 30.0, 1.0825, 0.6250, 0.2010},
+    {30.0, 180.0, 45.0, 2.6506, 1.5303, 2.5607},
+    {45.0, 90.0, 45.0, 0.3536, 2.4749, 1.5000},
+    {60.0, 30.0, 60.0, -0.2120, 1.1328, 0.8505},
+    {90.0, 30.0, 60.0, -0.7500, 0.8750, 0.8505},
+    {45.0, 45.0, 90.0, -0.0858, 1.4142, 1.5000},
+    {0.0, 0.0, 90.0, 0.5000, 0.0000, 1.5000},
+    {90.0, 0.0, 45.0, 0.0000, 0.9393, 0.4393},
+    {180.0, 45.0, 30.0, -1.4697, -1.0607, 0.5814},
 };
 
 constexpr double kR = 2.0;
@@ -45,8 +57,9 @@ TEST_P(Table1Test, ComputeCMatches) {
     const auto& tc = GetParam();
     double theta = deg2rad(tc.theta_deg);
     double phi = deg2rad(tc.phi_deg);
+    double omega = deg2rad(tc.omega_deg);
 
-    cv::Mat C = computeC(theta, phi, kR, kL, kH);
+    cv::Mat C = computeC(theta, phi, omega, kR, kL, kH);
 
     EXPECT_NEAR(C.at<double>(0, 0), tc.cx, kTol);
     EXPECT_NEAR(C.at<double>(1, 0), tc.cy, kTol);
@@ -58,11 +71,13 @@ INSTANTIATE_TEST_SUITE_P(All16Cases, Table1Test, ::testing::ValuesIn(kTable1));
 // ──── R_T orthonormality ────
 
 TEST(RTTest, ColumnsAreOrthonormal) {
-    // Test at a few nontrivial angles
-    const double angles[][2] = {{0.3, 0.5}, {0.7, 1.2}, {1.0, 2.0}, {2.0, 1.5}, {0.1, 3.0}};
+    // Test at a few nontrivial angles covering the 3D parameter space
+    const double angles[][3] = {
+        {0.3, 0.5, 0.0}, {0.7, 1.2, 0.4}, {1.0, 2.0, 0.8},
+        {2.0, 1.5, 1.2}, {0.1, 3.0, 0.6}};
 
-    for (const auto& [theta, phi] : angles) {
-        cv::Mat R = computeRT(theta, phi);
+    for (const auto& [theta, phi, omega] : angles) {
+        cv::Mat R = computeRT(theta, phi, omega);
 
         // Extract columns
         cv::Mat c0 = R.col(0);
@@ -70,33 +85,35 @@ TEST(RTTest, ColumnsAreOrthonormal) {
         cv::Mat c2 = R.col(2);
 
         // Dot products: c_i · c_j = 0 for i≠j, = 1 for i=j
-        EXPECT_NEAR(c0.dot(c1), 0.0, kTol) << "θ=" << theta << " φ=" << phi;
-        EXPECT_NEAR(c0.dot(c2), 0.0, kTol) << "θ=" << theta << " φ=" << phi;
-        EXPECT_NEAR(c1.dot(c2), 0.0, kTol) << "θ=" << theta << " φ=" << phi;
+        EXPECT_NEAR(c0.dot(c1), 0.0, kTol) << "θ=" << theta << " φ=" << phi << " ω=" << omega;
+        EXPECT_NEAR(c0.dot(c2), 0.0, kTol) << "θ=" << theta << " φ=" << phi << " ω=" << omega;
+        EXPECT_NEAR(c1.dot(c2), 0.0, kTol) << "θ=" << theta << " φ=" << phi << " ω=" << omega;
 
-        EXPECT_NEAR(c0.dot(c0), 1.0, kTol) << "θ=" << theta << " φ=" << phi;
-        EXPECT_NEAR(c1.dot(c1), 1.0, kTol) << "θ=" << theta << " φ=" << phi;
-        EXPECT_NEAR(c2.dot(c2), 1.0, kTol) << "θ=" << theta << " φ=" << phi;
+        EXPECT_NEAR(c0.dot(c0), 1.0, kTol) << "θ=" << theta << " φ=" << phi << " ω=" << omega;
+        EXPECT_NEAR(c1.dot(c1), 1.0, kTol) << "θ=" << theta << " φ=" << phi << " ω=" << omega;
+        EXPECT_NEAR(c2.dot(c2), 1.0, kTol) << "θ=" << theta << " φ=" << phi << " ω=" << omega;
     }
 }
 
 TEST(RTTest, DeterminantIsOne) {
-    // Test at a few nontrivial angles
-    const double angles[][2] = {{0.3, 0.5}, {0.7, 1.2}, {1.0, 2.0}, {2.0, 1.5}, {0.1, 3.0}};
+    // Test at a few nontrivial angles covering the 3D parameter space
+    const double angles[][3] = {
+        {0.3, 0.5, 0.0}, {0.7, 1.2, 0.4}, {1.0, 2.0, 0.8},
+        {2.0, 1.5, 1.2}, {0.1, 3.0, 0.6}};
 
-    for (const auto& [theta, phi] : angles) {
-        cv::Mat R = computeRT(theta, phi);
+    for (const auto& [theta, phi, omega] : angles) {
+        cv::Mat R = computeRT(theta, phi, omega);
         double det = cv::determinant(R);
-        EXPECT_NEAR(det, 1.0, kTol) << "θ=" << theta << " φ=" << phi;
+        EXPECT_NEAR(det, 1.0, kTol) << "θ=" << theta << " φ=" << phi << " ω=" << omega;
     }
 }
 
 TEST(RTTest, PhiZero_Columns_ez_u_ezCrossU) {
-    // At φ=0, R_T = [e_z, u, e_z×u]
+    // At φ=0, ω=0: R_T = [e_z, u, e_z×u]
     const double theta_vals[] = {0.0, 0.5, 1.0, 1.5, 2.0, 2.5, kPi};
 
     for (double theta : theta_vals) {
-        cv::Mat R = computeRT(theta, 0.0);
+        cv::Mat R = computeRT(theta, 0.0, 0.0);
 
         // Column 0 should be e_z = (0, 0, 1)
         EXPECT_NEAR(R.at<double>(0, 0), 0.0, kTol);
@@ -120,28 +137,28 @@ TEST(RTTest, PhiZero_Columns_ez_u_ezCrossU) {
 // ──── C special cases ────
 
 TEST(CTest, PhiZero_Cz_is_h) {
-    // φ=0 → C_z = h (any θ)
+    // φ=0, ω=0 → C_z = h (any θ)
     const double theta_vals[] = {0.0, 0.5, 1.0, 2.0, kPi};
     for (double theta : theta_vals) {
-        cv::Mat C = computeC(theta, 0.0, kR, kL, kH);
+        cv::Mat C = computeC(theta, 0.0, 0.0, kR, kL, kH);
         EXPECT_NEAR(C.at<double>(2, 0), kH, kTol) << "θ=" << theta;
     }
 }
 
 TEST(CTest, PhiPi_Cz_is_h_plus_2L) {
-    // φ=π → C_z = h + 2L
+    // φ=π, ω=0 → C_z = h + 2L
     const double theta_vals[] = {0.0, 0.5, 1.0, 2.0, kPi};
     for (double theta : theta_vals) {
-        cv::Mat C = computeC(theta, kPi, kR, kL, kH);
+        cv::Mat C = computeC(theta, kPi, 0.0, kR, kL, kH);
         EXPECT_NEAR(C.at<double>(2, 0), kH + 2 * kL, kTol) << "θ=" << theta;
     }
 }
 
 TEST(CTest, ThetaZero_Cx_is_r) {
-    // θ=0 → C_x = r (any φ)
+    // θ=0, ω=0 → C_x = r (any φ)
     const double phi_vals[] = {0.0, 0.5, 1.0, 2.0, kPi};
     for (double phi : phi_vals) {
-        cv::Mat C = computeC(0.0, phi, kR, kL, kH);
+        cv::Mat C = computeC(0.0, phi, 0.0, kR, kL, kH);
         EXPECT_NEAR(C.at<double>(0, 0), kR, kTol) << "φ=" << phi;
     }
 }
@@ -150,11 +167,14 @@ TEST(CTest, ThetaZero_Cx_is_r) {
 
 TEST(WorldTTargetTest, OriginMapsToOrigin) {
     // world_T_target · (C, 1)^T = (0, 0, 0, 1)^T
-    const double cases[][2] = {{0.0, 0.0}, {0.5, 0.3}, {1.0, 1.5}, {2.0, 3.0}, {0.0, kPi}};
+    // Structural invariant: holds for ANY θ, φ, ω
+    const double cases[][3] = {
+        {0.0, 0.0, 0.0}, {0.5, 0.3, 0.2}, {1.0, 1.5, 0.7},
+        {2.0, 3.0, 0.5}, {0.0, kPi, 0.8}};
 
-    for (const auto& [theta, phi] : cases) {
-        cv::Mat C = computeC(theta, phi, kR, kL, kH);
-        cv::Mat T = computeWorldTTarget(theta, phi, kR, kL, kH);
+    for (const auto& [theta, phi, omega] : cases) {
+        cv::Mat C = computeC(theta, phi, omega, kR, kL, kH);
+        cv::Mat T = computeWorldTTarget(theta, phi, omega, kR, kL, kH);
 
         // Build homogeneous C
         cv::Mat C_hom = cv::Mat::ones(4, 1, CV_64F);
@@ -164,22 +184,24 @@ TEST(WorldTTargetTest, OriginMapsToOrigin) {
 
         cv::Mat result = T * C_hom;
 
-        EXPECT_NEAR(result.at<double>(0, 0), 0.0, kTol) << "θ=" << theta << " φ=" << phi;
-        EXPECT_NEAR(result.at<double>(1, 0), 0.0, kTol) << "θ=" << theta << " φ=" << phi;
-        EXPECT_NEAR(result.at<double>(2, 0), 0.0, kTol) << "θ=" << theta << " φ=" << phi;
-        EXPECT_NEAR(result.at<double>(3, 0), 1.0, kTol) << "θ=" << theta << " φ=" << phi;
+        EXPECT_NEAR(result.at<double>(0, 0), 0.0, kTol) << "θ=" << theta << " φ=" << phi << " ω=" << omega;
+        EXPECT_NEAR(result.at<double>(1, 0), 0.0, kTol) << "θ=" << theta << " φ=" << phi << " ω=" << omega;
+        EXPECT_NEAR(result.at<double>(2, 0), 0.0, kTol) << "θ=" << theta << " φ=" << phi << " ω=" << omega;
+        EXPECT_NEAR(result.at<double>(3, 0), 1.0, kTol) << "θ=" << theta << " φ=" << phi << " ω=" << omega;
     }
 }
 
 // Additional verification: bottom endpoint B = C - L·x̂_T maps to (-L, 0, 0, 1)
 TEST(WorldTTargetTest, BottomEndpointMapsToMinusL) {
     // B = C - L·x̂_T (world coords), should map to (-L, 0, 0) in target frame
-    const double cases[][2] = {{0.0, 0.3}, {0.5, 0.7}, {1.0, 1.2}};
+    // Structural invariant: holds for ANY θ, φ, ω
+    const double cases[][3] = {
+        {0.0, 0.3, 0.0}, {0.5, 0.7, 0.4}, {1.0, 1.2, 0.9}};
 
-    for (const auto& [theta, phi] : cases) {
-        cv::Mat C = computeC(theta, phi, kR, kL, kH);
-        cv::Mat R = computeRT(theta, phi);
-        cv::Mat T = computeWorldTTarget(theta, phi, kR, kL, kH);
+    for (const auto& [theta, phi, omega] : cases) {
+        cv::Mat C = computeC(theta, phi, omega, kR, kL, kH);
+        cv::Mat R = computeRT(theta, phi, omega);
+        cv::Mat T = computeWorldTTarget(theta, phi, omega, kR, kL, kH);
 
         // x̂_T is R's first column
         cv::Mat xT = R.col(0);
@@ -194,21 +216,22 @@ TEST(WorldTTargetTest, BottomEndpointMapsToMinusL) {
 
         cv::Mat result = T * B_hom;
 
-        EXPECT_NEAR(result.at<double>(0, 0), -kL, kTol) << "θ=" << theta << " φ=" << phi;
-        EXPECT_NEAR(result.at<double>(1, 0), 0.0, kTol) << "θ=" << theta << " φ=" << phi;
-        EXPECT_NEAR(result.at<double>(2, 0), 0.0, kTol) << "θ=" << theta << " φ=" << phi;
-        EXPECT_NEAR(result.at<double>(3, 0), 1.0, kTol) << "θ=" << theta << " φ=" << phi;
+        EXPECT_NEAR(result.at<double>(0, 0), -kL, kTol) << "θ=" << theta << " φ=" << phi << " ω=" << omega;
+        EXPECT_NEAR(result.at<double>(1, 0), 0.0, kTol) << "θ=" << theta << " φ=" << phi << " ω=" << omega;
+        EXPECT_NEAR(result.at<double>(2, 0), 0.0, kTol) << "θ=" << theta << " φ=" << phi << " ω=" << omega;
+        EXPECT_NEAR(result.at<double>(3, 0), 1.0, kTol) << "θ=" << theta << " φ=" << phi << " ω=" << omega;
     }
 }
 
 // Top endpoint T = C + L·x̂_T maps to (L, 0, 0, 1)
 TEST(WorldTTargetTest, TopEndpointMapsToL) {
-    const double cases[][2] = {{0.0, 0.3}, {0.5, 0.7}, {1.0, 1.2}};
+    const double cases[][3] = {
+        {0.0, 0.3, 0.0}, {0.5, 0.7, 0.4}, {1.0, 1.2, 0.9}};
 
-    for (const auto& [theta, phi] : cases) {
-        cv::Mat C = computeC(theta, phi, kR, kL, kH);
-        cv::Mat R = computeRT(theta, phi);
-        cv::Mat T = computeWorldTTarget(theta, phi, kR, kL, kH);
+    for (const auto& [theta, phi, omega] : cases) {
+        cv::Mat C = computeC(theta, phi, omega, kR, kL, kH);
+        cv::Mat R = computeRT(theta, phi, omega);
+        cv::Mat T = computeWorldTTarget(theta, phi, omega, kR, kL, kH);
 
         cv::Mat xT = R.col(0);
 
@@ -222,21 +245,22 @@ TEST(WorldTTargetTest, TopEndpointMapsToL) {
 
         cv::Mat result = T * T_hom;
 
-        EXPECT_NEAR(result.at<double>(0, 0), kL, kTol) << "θ=" << theta << " φ=" << phi;
-        EXPECT_NEAR(result.at<double>(1, 0), 0.0, kTol) << "θ=" << theta << " φ=" << phi;
-        EXPECT_NEAR(result.at<double>(2, 0), 0.0, kTol) << "θ=" << theta << " φ=" << phi;
-        EXPECT_NEAR(result.at<double>(3, 0), 1.0, kTol) << "θ=" << theta << " φ=" << phi;
+        EXPECT_NEAR(result.at<double>(0, 0), kL, kTol) << "θ=" << theta << " φ=" << phi << " ω=" << omega;
+        EXPECT_NEAR(result.at<double>(1, 0), 0.0, kTol) << "θ=" << theta << " φ=" << phi << " ω=" << omega;
+        EXPECT_NEAR(result.at<double>(2, 0), 0.0, kTol) << "θ=" << theta << " φ=" << phi << " ω=" << omega;
+        EXPECT_NEAR(result.at<double>(3, 0), 1.0, kTol) << "θ=" << theta << " φ=" << phi << " ω=" << omega;
     }
 }
 
 // Point C + ŷ_T maps to (0, 1, 0, 1)
 TEST(WorldTTargetTest, AlongYAxisMapsToYUnit) {
-    const double cases[][2] = {{0.0, 0.3}, {0.5, 0.7}, {1.0, 1.2}};
+    const double cases[][3] = {
+        {0.0, 0.3, 0.0}, {0.5, 0.7, 0.4}, {1.0, 1.2, 0.9}};
 
-    for (const auto& [theta, phi] : cases) {
-        cv::Mat C = computeC(theta, phi, kR, kL, kH);
-        cv::Mat R = computeRT(theta, phi);
-        cv::Mat T = computeWorldTTarget(theta, phi, kR, kL, kH);
+    for (const auto& [theta, phi, omega] : cases) {
+        cv::Mat C = computeC(theta, phi, omega, kR, kL, kH);
+        cv::Mat R = computeRT(theta, phi, omega);
+        cv::Mat T = computeWorldTTarget(theta, phi, omega, kR, kL, kH);
 
         cv::Mat yT = R.col(1);
 
@@ -250,10 +274,10 @@ TEST(WorldTTargetTest, AlongYAxisMapsToYUnit) {
 
         cv::Mat result = T * P_hom;
 
-        EXPECT_NEAR(result.at<double>(0, 0), 0.0, kTol) << "θ=" << theta << " φ=" << phi;
-        EXPECT_NEAR(result.at<double>(1, 0), 1.0, kTol) << "θ=" << theta << " φ=" << phi;
-        EXPECT_NEAR(result.at<double>(2, 0), 0.0, kTol) << "θ=" << theta << " φ=" << phi;
-        EXPECT_NEAR(result.at<double>(3, 0), 1.0, kTol) << "θ=" << theta << " φ=" << phi;
+        EXPECT_NEAR(result.at<double>(0, 0), 0.0, kTol) << "θ=" << theta << " φ=" << phi << " ω=" << omega;
+        EXPECT_NEAR(result.at<double>(1, 0), 1.0, kTol) << "θ=" << theta << " φ=" << phi << " ω=" << omega;
+        EXPECT_NEAR(result.at<double>(2, 0), 0.0, kTol) << "θ=" << theta << " φ=" << phi << " ω=" << omega;
+        EXPECT_NEAR(result.at<double>(3, 0), 1.0, kTol) << "θ=" << theta << " φ=" << phi << " ω=" << omega;
     }
 }
 

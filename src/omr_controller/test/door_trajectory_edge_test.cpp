@@ -120,6 +120,7 @@ TEST_F(DoorTrajectoryEdgeTest, PlanningFailsForAllWaypointsTransitionsToError) {
     cfg.input_ports["theta_max_deg"] = "10.0";
     cfg.input_ports["theta_step_deg"] = "5.0";
     cfg.input_ports["phi_values"] = "0,90";
+    cfg.input_ports["omega_values"] = "0";
     auto node = std::make_shared<EdgeTestNode>("door_traj", cfg);
     node->executeTick();
 
@@ -144,6 +145,7 @@ TEST_F(DoorTrajectoryEdgeTest, ExtremeThetaValuesProduceValidPoses) {
     cfg.input_ports["theta_max_deg"] = "180.0";
     cfg.input_ports["theta_step_deg"] = "30.0";
     cfg.input_ports["phi_values"] = "0,45,90";
+    cfg.input_ports["omega_values"] = "0";
     auto node = std::make_shared<EdgeTestNode>("door_traj", cfg);
     node->executeTick();
 
@@ -159,7 +161,10 @@ TEST_F(DoorTrajectoryEdgeTest, ExtremeThetaValuesProduceValidPoses) {
 
     int expected_theta_steps = (180 / 30) + 1;
     int expected_phi_count = 3;
-    size_t expected_waypoints = static_cast<size_t>(expected_theta_steps) * expected_phi_count;
+    int expected_omega_count = 1;
+    size_t expected_waypoints =
+        static_cast<size_t>(expected_theta_steps) * expected_phi_count *
+        expected_omega_count;
     EXPECT_EQ(waypoints.size(), expected_waypoints);
 
     for (size_t i = 0; i < waypoints.size(); ++i) {
@@ -241,6 +246,7 @@ TEST_F(DoorTrajectoryEdgeTest, ThetaLockedPerPlanCycle) {
     cfg.input_ports["theta_max_deg"] = "20.0";
     cfg.input_ports["theta_step_deg"] = "10.0";
     cfg.input_ports["phi_values"] = "0,90";
+    cfg.input_ports["omega_values"] = "0";
     auto node = std::make_shared<EdgeTestNode>("door_traj", cfg);
     node->executeTick();
 

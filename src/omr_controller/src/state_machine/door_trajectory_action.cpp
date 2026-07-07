@@ -26,6 +26,8 @@ BT::PortsList DoorTrajectoryAction::providedPorts() {
         BT::InputPort<double>("theta_step_deg", 5.0, "Door opening angle step (deg)"),
         BT::InputPort<std::string>("phi_values", "0,15,30,45,60,75,90",
                                    "Comma-separated segment rotation angles (deg)"),
+        BT::InputPort<std::string>("omega_values", "15,30,45,60,75,90",
+                                   "Comma-separated gimbal rotation angles (deg)"),
         // Arm config
         BT::InputPort<std::string>("home_joints", "0,0,0,0,0,0",
                                    "Comma-separated home joint positions (rad)"),
@@ -45,6 +47,43 @@ BT::PortsList DoorTrajectoryAction::providedPorts() {
 // =============================================================================
 // Helpers
 // =============================================================================
+
+namespace {
+/// Apply 4×4 homogeneous transform (CV_64F) to a geometry_msgs::Pose.
+geometry_msgs::msg::Pose transformPose(const cv::Mat& T,
+                                       const geometry_msgs::msg::Pose& src) {
+    cv::Mat R = T(cv::Rect(0, 0, 3, 3));
+    tf2::Matrix3x3 rot_mat(R.at<double>(0, 0), R.at<double>(0, 1), R.at<double>(0, 2),
+                            R.at<double>(1, 0), R.at<double>(1, 1), R.at<double>(1, 2),
+                            R.at<double>(2, 0), R.at<double>(2, 1), R.at<double>(2, 2));
+
+    // Transform position: p_world = R * p_src + t
+    geometry_msgs::msg::Pose dst;
+    dst.position.x =
+        R.at<double>(0, 0) * src.position.x + R.at<double>(0, 1) * src.position.y +
+        R.at<double>(0, 2) * src.position.z + T.at<double>(0, 3);
+    dst.position.y =
+        R.at<double>(1, 0) * src.position.x + R.at<double>(1, 1) * src.position.y +
+        R.at<double>(1, 2) * src.position.z + T.at<double>(1, 3);
+    dst.position.z =
+        R.at<double>(2, 0) * src.position.x + R.at<double>(2, 1) * src.position.y +
+        R.at<double>(2, 2) * src.position.z + T.at<double>(2, 3);
+
+    // Transform orientation: q_world = q_R * q_src
+    tf2::Quaternion q_src(src.orientation.x, src.orientation.y, src.orientation.z,
+                          src.orientation.w);
+    tf2::Quaternion q_R;
+    rot_mat.getRotation(q_R);
+    q_R.normalize();
+    tf2::Quaternion q_result = q_R * q_src;
+
+    dst.orientation.x = q_result.x();
+    dst.orientation.y = q_result.y();
+    dst.orientation.z = q_result.z();
+    dst.orientation.w = q_result.w();
+    return dst;
+}
+}  // namespace
 
 std::vector<double> DoorTrajectoryAction::parseDoubles(const std::string& str) {
     std::vector<double> result;
@@ -131,6 +170,14 @@ BT::NodeStatus DoorTrajectoryAction::onStart() {
         phi_values_deg_ = parseDoubles(phi_str);
     }
 
+    std::string omega_str;
+    if (getInput("omega_values", omega_str)) {
+        omega_values_deg_ = parseDoubles(omega_str);
+    }
+    if (omega_values_deg_.empty()) {
+        omega_values_deg_ = {15.0, 30.0, 45.0, 60.0, 75.0, 90.0};
+    }
+
     std::string home_str;
     if (getInput("home_joints", home_str)) {
         home_joints_ = parseDoubles(home_str);
@@ -145,6 +192,41 @@ BT::NodeStatus DoorTrajectoryAction::onStart() {
     }
     if (door_panel_size_.size() != 3) {
         door_panel_size_ = {2.0, 0.05, 0.8};
+    }
+
+    // ── Compute and cache T_base_hinge from hinge_transform ──────────────────
+    {
+        double tx = T_armBase_doorHinge_[0];
+        double ty = T_armBase_doorHinge_[1];
+        double tz = T_armBase_doorHinge_[2];
+        double rx = T_armBase_doorHinge_[3];
+        double ry = T_armBase_doorHinge_[4];
+        double rz = T_armBase_doorHinge_[5];
+
+        double cr = std::cos(rx);
+        double sr = std::sin(rx);
+        double cp = std::cos(ry);
+        double sp = std::sin(ry);
+        double cy = std::cos(rz);
+        double sy = std::sin(rz);
+
+        cv::Mat R = cv::Mat_<double>(3, 3);
+        R.at<double>(0, 0) = cy * cp;
+        R.at<double>(0, 1) = cy * sp * sr - sy * cr;
+        R.at<double>(0, 2) = cy * sp * cr + sy * sr;
+        R.at<double>(1, 0) = sy * cp;
+        R.at<double>(1, 1) = sy * sp * sr + cy * cr;
+        R.at<double>(1, 2) = sy * sp * cr - cy * sr;
+        R.at<double>(2, 0) = -sp;
+        R.at<double>(2, 1) = cp * sr;
+        R.at<double>(2, 2) = cp * cr;
+
+        T_base_hinge_cache_ = cv::Mat::eye(4, 4, CV_64F);
+        cv::Mat roi = T_base_hinge_cache_(cv::Rect(0, 0, 3, 3));
+        R.copyTo(roi);
+        T_base_hinge_cache_.at<double>(0, 3) = tx;
+        T_base_hinge_cache_.at<double>(1, 3) = ty;
+        T_base_hinge_cache_.at<double>(2, 3) = tz;
     }
 
     // ── Subscribe to /joint_states ──────────────────────────────────────────
@@ -164,8 +246,10 @@ BT::NodeStatus DoorTrajectoryAction::onStart() {
 
     RCLCPP_INFO(ros_node_->get_logger(),
                 "DoorTrajectoryAction started. "
-                "r=%.2f L=%.2f h=%.2f theta_step=%.1fdeg theta_max=%.1fdeg",
-                r_, L_, h_, theta_step_deg_, theta_max_deg_);
+                "r=%.2f L=%.2f h=%.2f theta_step=%.1fdeg theta_max=%.1fdeg "
+                "%zu phi values %zu omega values",
+                r_, L_, h_, theta_step_deg_, theta_max_deg_,
+                phi_values_deg_.size(), omega_values_deg_.size());
 
     return BT::NodeStatus::RUNNING;
 }
@@ -189,7 +273,7 @@ BT::NodeStatus DoorTrajectoryAction::onRunning() {
         // ── APPROACH_HOME: verify arm is at home; command home move if not ──
         case TrajectoryState::APPROACH_HOME: {
             if (isAtHome()) {
-                approach_pose_ = computePoseForThetaPhi(0.0, 0.0);
+                approach_pose_ = computePoseForThetaPhiOmega(0.0, 0.0, 0.0);
                 current_state_ = TrajectoryState::PLAN_APPROACH;
                 RCLCPP_INFO(ros_node_->get_logger(),
                             "APPROACH_HOME -> PLAN_APPROACH (home confirmed)");
@@ -197,7 +281,7 @@ BT::NodeStatus DoorTrajectoryAction::onRunning() {
                 RCLCPP_WARN(ros_node_->get_logger(),
                             "Arm not at home position, commanding home move first");
                 if (planAndExecuteJointHome()) {
-                    approach_pose_ = computePoseForThetaPhi(0.0, 0.0);
+                    approach_pose_ = computePoseForThetaPhiOmega(0.0, 0.0, 0.0);
                     current_state_ = TrajectoryState::PLAN_APPROACH;
                     RCLCPP_INFO(ros_node_->get_logger(),
                                 "APPROACH_HOME -> PLAN_APPROACH (home commanded)");
@@ -234,22 +318,32 @@ BT::NodeStatus DoorTrajectoryAction::onRunning() {
             return BT::NodeStatus::RUNNING;
         }
 
-        // ── PREPARE_WAYPOINTS: pre-compute all (θ, φ) waypoint poses ──────
+        // ── PREPARE_WAYPOINTS: pre-compute all (θ, φ, ω) waypoint poses ──────
         case TrajectoryState::PREPARE_WAYPOINTS: {
             waypoints_.clear();
             current_waypoint_ = 0;
+            waypoint_thetas_.clear();
 
             for (double theta_deg = 0.0; theta_deg <= theta_max_deg_ + 1e-9;
                  theta_deg += theta_step_deg_) {
                 double theta_rad = theta_deg * M_PI / 180.0;
                 for (double phi_deg : phi_values_deg_) {
                     double phi_rad = phi_deg * M_PI / 180.0;
-                    waypoints_.push_back(computePoseForThetaPhi(theta_rad, phi_rad));
+                    for (double omega_deg : omega_values_deg_) {
+                        double omega_rad = omega_deg * M_PI / 180.0;
+                        waypoints_.push_back(
+                            computePoseForThetaPhiOmega(theta_rad, phi_rad, omega_rad));
+                        waypoint_thetas_.push_back(theta_rad);
+                    }
                 }
             }
 
-            RCLCPP_INFO(ros_node_->get_logger(), "PREPARE_WAYPOINTS: %zu waypoints computed",
-                        waypoints_.size());
+            RCLCPP_INFO(ros_node_->get_logger(),
+                        "PREPARE_WAYPOINTS: %zu waypoints computed "
+                        "(%zu θ × %zu φ × %zu ω)",
+                        waypoints_.size(),
+                        static_cast<size_t>(std::ceil((theta_max_deg_ / theta_step_deg_) + 1)),
+                        phi_values_deg_.size(), omega_values_deg_.size());
 
             if (waypoints_.empty()) {
                 RCLCPP_ERROR(ros_node_->get_logger(), "No waypoints generated");
@@ -514,42 +608,41 @@ bool DoorTrajectoryAction::planAndExecuteJointHome() {
 // Collision object builders
 // =============================================================================
 
-moveit_msgs::msg::CollisionObject DoorTrajectoryAction::buildDoorPanelMsg(double theta_rad) const {
-    moveit_msgs::msg::CollisionObject door_panel;
-    door_panel.id = "door_panel";
-    door_panel.header.frame_id = planning_frame_;
-    door_panel.operation = moveit_msgs::msg::CollisionObject::ADD;
+moveit_msgs::msg::CollisionObject DoorTrajectoryAction::buildDoorPanelMsg(
+    double theta_rad, const cv::Mat& T_base_hinge) const {
+    moveit_msgs::msg::CollisionObject obj;
+    obj.id = "door_panel";
+    obj.header.frame_id = planning_frame_;
+    obj.operation = moveit_msgs::msg::CollisionObject::ADD;
 
     shape_msgs::msg::SolidPrimitive primitive;
     primitive.type = shape_msgs::msg::SolidPrimitive::BOX;
-    primitive.dimensions.resize(3);
-    primitive.dimensions[shape_msgs::msg::SolidPrimitive::BOX_X] = door_panel_size_[0];
-    primitive.dimensions[shape_msgs::msg::SolidPrimitive::BOX_Y] = door_panel_size_[1];
-    primitive.dimensions[shape_msgs::msg::SolidPrimitive::BOX_Z] = door_panel_size_[2];
+    primitive.dimensions = {door_panel_size_[0], door_panel_size_[1], door_panel_size_[2]};
 
+    // Pose in hinge frame: center at (width/2·cosθ, width/2·sinθ, height/2), rotated by θ
+    // around z
+    geometry_msgs::msg::Pose hinge_pose;
+    hinge_pose.position.x = door_panel_size_[0] / 2.0 * std::cos(theta_rad);
+    hinge_pose.position.y = door_panel_size_[0] / 2.0 * std::sin(theta_rad);
+    hinge_pose.position.z = door_panel_size_[2] / 2.0;
     tf2::Quaternion q;
     q.setRPY(0.0, 0.0, theta_rad);
+    hinge_pose.orientation.x = q.x();
+    hinge_pose.orientation.y = q.y();
+    hinge_pose.orientation.z = q.z();
+    hinge_pose.orientation.w = q.w();
 
-    geometry_msgs::msg::Pose pose;
-    pose.position.x = 0.0;
-    pose.position.y = 0.0;
-    pose.position.z = 0.0;
-    pose.orientation.x = q.x();
-    pose.orientation.y = q.y();
-    pose.orientation.z = q.z();
-    pose.orientation.w = q.w();
-
-    door_panel.primitives.push_back(primitive);
-    door_panel.primitive_poses.push_back(pose);
-
-    return door_panel;
+    obj.primitives.push_back(primitive);
+    obj.primitive_poses.push_back(transformPose(T_base_hinge, hinge_pose));
+    return obj;
 }
 
-moveit_msgs::msg::CollisionObject DoorTrajectoryAction::buildDoorFrameMsg() const {
-    moveit_msgs::msg::CollisionObject door_frame;
-    door_frame.id = "door_frame";
-    door_frame.header.frame_id = planning_frame_;
-    door_frame.operation = moveit_msgs::msg::CollisionObject::ADD;
+moveit_msgs::msg::CollisionObject DoorTrajectoryAction::buildDoorFrameMsg(
+    const cv::Mat& T_base_hinge) const {
+    moveit_msgs::msg::CollisionObject obj;
+    obj.id = "door_frame";
+    obj.header.frame_id = planning_frame_;
+    obj.operation = moveit_msgs::msg::CollisionObject::ADD;
 
     shape_msgs::msg::SolidPrimitive primitive;
     primitive.type = shape_msgs::msg::SolidPrimitive::CYLINDER;
@@ -557,16 +650,16 @@ moveit_msgs::msg::CollisionObject DoorTrajectoryAction::buildDoorFrameMsg() cons
     primitive.dimensions[shape_msgs::msg::SolidPrimitive::CYLINDER_HEIGHT] = door_panel_size_[2];
     primitive.dimensions[shape_msgs::msg::SolidPrimitive::CYLINDER_RADIUS] = door_frame_radius_;
 
-    geometry_msgs::msg::Pose pose;
-    pose.position.x = 0.0;
-    pose.position.y = 0.0;
-    pose.position.z = 0.0;
-    pose.orientation.w = 1.0;
+    // Pose in hinge frame: at origin, orient cylinder along z
+    geometry_msgs::msg::Pose hinge_pose;
+    hinge_pose.position.x = 0.0;
+    hinge_pose.position.y = 0.0;
+    hinge_pose.position.z = door_panel_size_[2] / 2.0;
+    hinge_pose.orientation.w = 1.0;
 
-    door_frame.primitives.push_back(primitive);
-    door_frame.primitive_poses.push_back(pose);
-
-    return door_frame;
+    obj.primitives.push_back(primitive);
+    obj.primitive_poses.push_back(transformPose(T_base_hinge, hinge_pose));
+    return obj;
 }
 
 // =============================================================================
@@ -580,10 +673,10 @@ void DoorTrajectoryAction::setupDoorCollisionObjects() {
         planning_scene_ = std::make_unique<moveit::planning_interface::PlanningSceneInterface>();
     }
 
-    auto door_panel = buildDoorPanelMsg(0.0);
+    auto door_panel = buildDoorPanelMsg(0.0, T_base_hinge_cache_);
     planning_scene_->applyCollisionObject(door_panel);
 
-    auto door_frame = buildDoorFrameMsg();
+    auto door_frame = buildDoorFrameMsg(T_base_hinge_cache_);
     planning_scene_->applyCollisionObject(door_frame);
 
     door_objects_added_ = true;
@@ -596,7 +689,7 @@ void DoorTrajectoryAction::setupDoorCollisionObjects() {
 }
 
 void DoorTrajectoryAction::updateDoorPose(double theta_rad) {
-    auto door_panel = buildDoorPanelMsg(theta_rad);
+    auto door_panel = buildDoorPanelMsg(theta_rad, T_base_hinge_cache_);
     door_panel.operation = moveit_msgs::msg::CollisionObject::MOVE;
 
     if (planning_scene_) {
@@ -608,42 +701,11 @@ void DoorTrajectoryAction::updateDoorPose(double theta_rad) {
 // Pose computation (math model)
 // =============================================================================
 
-geometry_msgs::msg::Pose DoorTrajectoryAction::computePoseForThetaPhi(double theta_rad,
-                                                                      double phi_rad) const {
-    double tx = T_armBase_doorHinge_[0];
-    double ty = T_armBase_doorHinge_[1];
-    double tz = T_armBase_doorHinge_[2];
-    double rx = T_armBase_doorHinge_[3];
-    double ry = T_armBase_doorHinge_[4];
-    double rz = T_armBase_doorHinge_[5];
-
-    double cr = std::cos(rx);
-    double sr = std::sin(rx);
-    double cp = std::cos(ry);
-    double sp = std::sin(ry);
-    double cy = std::cos(rz);
-    double sy = std::sin(rz);
-
-    cv::Mat R = cv::Mat_<double>(3, 3);
-    R.at<double>(0, 0) = cy * cp;
-    R.at<double>(0, 1) = cy * sp * sr - sy * cr;
-    R.at<double>(0, 2) = cy * sp * cr + sy * sr;
-    R.at<double>(1, 0) = sy * cp;
-    R.at<double>(1, 1) = sy * sp * sr + cy * cr;
-    R.at<double>(1, 2) = sy * sp * cr - cy * sr;
-    R.at<double>(2, 0) = -sp;
-    R.at<double>(2, 1) = cp * sr;
-    R.at<double>(2, 2) = cp * cr;
-
-    cv::Mat T_base_hinge = cv::Mat::eye(4, 4, CV_64F);
-    cv::Mat roi = T_base_hinge(cv::Rect(0, 0, 3, 3));
-    R.copyTo(roi);
-    T_base_hinge.at<double>(0, 3) = tx;
-    T_base_hinge.at<double>(1, 3) = ty;
-    T_base_hinge.at<double>(2, 3) = tz;
-
-    cv::Mat T_hinge_target = computeWorldTTarget(theta_rad, phi_rad, r_, L_, h_);
-    cv::Mat T_base_target = T_base_hinge * T_hinge_target;
+geometry_msgs::msg::Pose DoorTrajectoryAction::computePoseForThetaPhiOmega(double theta_rad,
+                                                                            double phi_rad,
+                                                                            double omega_rad) const {
+    cv::Mat T_hinge_target = computeWorldTTarget(theta_rad, phi_rad, omega_rad, r_, L_, h_);
+    cv::Mat T_base_target = T_base_hinge_cache_ * T_hinge_target;
 
     return homogeneous_to_pose(T_base_target);
 }
