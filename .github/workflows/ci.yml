@@ -47,10 +47,7 @@ jobs:
               set +u; source /opt/ros/humble/setup.bash; set -u
               colcon build --symlink-install
               colcon build --cmake-args -DBUILD_TESTING=ON
-              colcon test --return-code-on-test-failure --event-handlers console_direct+ || {
-                find build -name LastTest.log -exec cat {} \; 2>/dev/null
-                exit 1
-              }
+              colcon test --return-code-on-test-failure
             "
 
   lint:
