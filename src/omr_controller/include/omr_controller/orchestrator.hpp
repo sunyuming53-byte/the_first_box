@@ -23,7 +23,7 @@ public:
     std::unique_ptr<GripperClient> gripper_;
     std::unique_ptr<VisionClient> vision_;
     std::unique_ptr<MotorClientStub> motor_;
-    std::unique_ptr<BaseClientStub> base_;
+    std::unique_ptr<BaseClientImpl> base_;
 
 private:
     void tick();

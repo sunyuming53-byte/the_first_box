@@ -67,7 +67,7 @@ TEST_F(IntegrationTest, ArmGripperSequence) {
 TEST_F(IntegrationTest, AllFiveClientsConstructWithoutConflict) {
     // Stubs need no ROS infrastructure.
     MotorClientStub motor;
-    BaseClientStub base;
+    BaseClientImpl base(node_);
 
     // VisionClient needs a fake camera.
     struct LocalFakeCamera : public ICamera {
@@ -101,11 +101,11 @@ TEST_F(IntegrationTest, AllFiveClientsConstructWithoutConflict) {
 }
 
 // ---------------------------------------------------------------------------
-// MotorClientStub and BaseClientStub return expected defaults together.
+// MotorClientStub and BaseClientImpl return expected defaults together.
 // ---------------------------------------------------------------------------
-TEST_F(IntegrationTest, MotorAndBaseStubsReturnDefaults) {
+TEST_F(IntegrationTest, MotorAndBaseClientsReturnDefaults) {
     MotorClientStub motor;
-    BaseClientStub base;
+    BaseClientImpl base(node_);
 
     // Motor default values.
     EXPECT_FALSE(motor.enable());
@@ -120,9 +120,9 @@ TEST_F(IntegrationTest, MotorAndBaseStubsReturnDefaults) {
     EXPECT_FALSE(state.connected);
     EXPECT_FALSE(state.servo_enabled);
 
-    // Base default values.
-    EXPECT_FALSE(base.move(0.3, 0.1));
-    EXPECT_FALSE(base.stop());
+    // Base default values — real impl returns true on move/stop.
+    EXPECT_TRUE(base.move(0.3, 0.1));
+    EXPECT_TRUE(base.stop());
 
     auto pose = base.getPose();
     ASSERT_EQ(pose.size(), 3u);

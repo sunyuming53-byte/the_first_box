@@ -28,6 +28,18 @@ def generate_launch_description():
                               description='Modbus slave ID for dais motor'),
         DeclareLaunchArgument('gear_ratio', default_value='1000',
                               description='Gear ratio for dais motor'),
+        DeclareLaunchArgument('launch_m65', default_value='false',
+                               description='Launch M65 chassis driver (diff_drive_controller + M65BaseHardware)'),
+        DeclareLaunchArgument('m65_serial_port', default_value='/dev/ttyBase',
+                               description='Serial port for M65 chassis'),
+        DeclareLaunchArgument('m65_baud_rate', default_value='115200',
+                               description='Baud rate for M65 chassis'),
+        DeclareLaunchArgument('wheel_separation', default_value='0.355',
+                              description='Wheel separation for M65 chassis'),
+        DeclareLaunchArgument('wheel_radius', default_value='0.0625',
+                              description='Wheel radius for M65 chassis'),
+        DeclareLaunchArgument('encoder_cpr', default_value='0',
+                              description='Encoder CPR for M65 chassis'),
         DeclareLaunchArgument('launch_door_trajectory', default_value='false',
                               description='Launch MoveIt2 door trajectory orchestrator (deprecated, use BT XML)'),
         DeclareLaunchArgument('launch_moveit', default_value='false',
@@ -143,6 +155,67 @@ def generate_launch_description():
             executable='spawner',
             arguments=['joint_trajectory_controller', '--controller-manager', '/dais_controller_manager'],
             condition=IfCondition(LaunchConfiguration('launch_dais')),
+        ),
+
+        # ── M65 robot_state_publisher ──────────────────────────
+        Node(
+            package='robot_state_publisher',
+            executable='robot_state_publisher',
+            name='m65_robot_state_publisher',
+            parameters=[{
+                'robot_description': Command([
+                    FindExecutable(name='xacro'), ' ',
+                    PathJoinSubstitution([FindPackageShare('omr_bringup'), 'urdf', 'm65.ros2_control.xacro']),
+                    ' serial_port:=', LaunchConfiguration('m65_serial_port'),
+                    ' baud_rate:=', LaunchConfiguration('m65_baud_rate'),
+                    ' wheel_separation:=', LaunchConfiguration('wheel_separation'),
+                    ' wheel_radius:=', LaunchConfiguration('wheel_radius'),
+                    ' encoder_cpr:=', LaunchConfiguration('encoder_cpr'),
+                ]),
+            }],
+            condition=IfCondition(LaunchConfiguration('launch_m65')),
+        ),
+
+        # ── M65 controller manager (ros2_control) ─────────────
+        Node(
+            package='controller_manager',
+            executable='ros2_control_node',
+            name='m65_controller_manager',
+            parameters=[
+                PathJoinSubstitution([
+                    FindPackageShare('omr_bringup'),
+                    'config', 'm65_controllers.yaml',
+                ]),
+                {
+                    'robot_description': Command([
+                        FindExecutable(name='xacro'), ' ',
+                        PathJoinSubstitution([FindPackageShare('omr_bringup'), 'urdf', 'm65.ros2_control.xacro']),
+                        ' serial_port:=', LaunchConfiguration('m65_serial_port'),
+                        ' baud_rate:=', LaunchConfiguration('m65_baud_rate'),
+                        ' wheel_separation:=', LaunchConfiguration('wheel_separation'),
+                        ' wheel_radius:=', LaunchConfiguration('wheel_radius'),
+                        ' encoder_cpr:=', LaunchConfiguration('encoder_cpr'),
+                    ]),
+                },
+            ],
+            condition=IfCondition(LaunchConfiguration('launch_m65')),
+            output='screen',
+        ),
+
+        # ── M65 joint_state_broadcaster spawner ───────────────
+        Node(
+            package='controller_manager',
+            executable='spawner',
+            arguments=['joint_state_broadcaster', '--controller-manager', '/m65_controller_manager'],
+            condition=IfCondition(LaunchConfiguration('launch_m65')),
+        ),
+
+        # ── M65 diff_drive_controller spawner ────────────────
+        Node(
+            package='controller_manager',
+            executable='spawner',
+            arguments=['diff_drive_controller', '--controller-manager', '/m65_controller_manager'],
+            condition=IfCondition(LaunchConfiguration('launch_m65')),
         ),
 
         # ── RealSense camera ──────────────────────────────────────
