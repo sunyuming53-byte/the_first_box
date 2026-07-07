@@ -1,6 +1,9 @@
 find_package(GTest REQUIRED)
 
 add_executable(test_serial_framing test_serial_framing.cpp)
+# Force this target to be built even when the parent was added
+# with EXCLUDE_FROM_ALL (needed by CI test step)
+set_target_properties(test_serial_framing PROPERTIES EXCLUDE_FROM_ALL FALSE)
 target_include_directories(test_serial_framing PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../include
     ${CMAKE_CURRENT_SOURCE_DIR}/../src)
