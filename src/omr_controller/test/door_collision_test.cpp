@@ -39,10 +39,12 @@ protected:
     std::shared_ptr<DoorCollisionTest> node_;
 };
 
+const cv::Mat kIdentity = cv::Mat::eye(4, 4, CV_64F);
+
 // ──── Door frame message structure ─────────────────────────────────────────
 
 TEST_F(DoorCollisionObjectTest, BuildDoorFrameMsgHasCorrectStructure) {
-    auto msg = node_->buildDoorFrameMsg();
+    auto msg = node_->buildDoorFrameMsg(kIdentity);
 
     EXPECT_EQ(msg.id, "door_frame");
     EXPECT_EQ(msg.header.frame_id, "base_link");
@@ -60,7 +62,7 @@ TEST_F(DoorCollisionObjectTest, BuildDoorFrameMsgHasCorrectStructure) {
     ASSERT_EQ(msg.primitive_poses.size(), 1u);
     EXPECT_DOUBLE_EQ(msg.primitive_poses[0].position.x, 0.0);
     EXPECT_DOUBLE_EQ(msg.primitive_poses[0].position.y, 0.0);
-    EXPECT_DOUBLE_EQ(msg.primitive_poses[0].position.z, 0.0);
+    EXPECT_DOUBLE_EQ(msg.primitive_poses[0].position.z, 0.4);
     EXPECT_DOUBLE_EQ(msg.primitive_poses[0].orientation.x, 0.0);
     EXPECT_DOUBLE_EQ(msg.primitive_poses[0].orientation.y, 0.0);
     EXPECT_DOUBLE_EQ(msg.primitive_poses[0].orientation.z, 0.0);
@@ -70,7 +72,7 @@ TEST_F(DoorCollisionObjectTest, BuildDoorFrameMsgHasCorrectStructure) {
 // ──── Door panel message structure at theta = 0 ────────────────────────────
 
 TEST_F(DoorCollisionObjectTest, BuildDoorPanelMsgAtThetaZero) {
-    auto msg = node_->buildDoorPanelMsg(0.0);
+    auto msg = node_->buildDoorPanelMsg(0.0, kIdentity);
 
     EXPECT_EQ(msg.id, "door_panel");
     EXPECT_EQ(msg.operation, moveit_msgs::msg::CollisionObject::ADD);
@@ -84,9 +86,10 @@ TEST_F(DoorCollisionObjectTest, BuildDoorPanelMsgAtThetaZero) {
     EXPECT_DOUBLE_EQ(msg.primitives[0].dimensions[shape_msgs::msg::SolidPrimitive::BOX_Z], 0.8);
 
     ASSERT_EQ(msg.primitive_poses.size(), 1u);
-    EXPECT_DOUBLE_EQ(msg.primitive_poses[0].position.x, 0.0);
+    // hinge-frame pose at (width/2, 0, height/2) = (1.0, 0, 0.4) transformed by identity
+    EXPECT_DOUBLE_EQ(msg.primitive_poses[0].position.x, 1.0);
     EXPECT_DOUBLE_EQ(msg.primitive_poses[0].position.y, 0.0);
-    EXPECT_DOUBLE_EQ(msg.primitive_poses[0].position.z, 0.0);
+    EXPECT_DOUBLE_EQ(msg.primitive_poses[0].position.z, 0.4);
     EXPECT_DOUBLE_EQ(msg.primitive_poses[0].orientation.x, 0.0);
     EXPECT_DOUBLE_EQ(msg.primitive_poses[0].orientation.y, 0.0);
     EXPECT_DOUBLE_EQ(msg.primitive_poses[0].orientation.z, 0.0);
@@ -97,7 +100,7 @@ TEST_F(DoorCollisionObjectTest, BuildDoorPanelMsgAtThetaZero) {
 
 TEST_F(DoorCollisionObjectTest, QuaternionForTheta30Deg) {
     double theta = 30.0 * M_PI / 180.0;
-    auto msg = node_->buildDoorPanelMsg(theta);
+    auto msg = node_->buildDoorPanelMsg(theta, kIdentity);
 
     const auto& q = msg.primitive_poses[0].orientation;
     double half = 15.0 * M_PI / 180.0;
@@ -109,7 +112,7 @@ TEST_F(DoorCollisionObjectTest, QuaternionForTheta30Deg) {
 
 TEST_F(DoorCollisionObjectTest, QuaternionForTheta90Deg) {
     double theta = 90.0 * M_PI / 180.0;
-    auto msg = node_->buildDoorPanelMsg(theta);
+    auto msg = node_->buildDoorPanelMsg(theta, kIdentity);
 
     const auto& q = msg.primitive_poses[0].orientation;
     double half = 45.0 * M_PI / 180.0;
@@ -121,7 +124,7 @@ TEST_F(DoorCollisionObjectTest, QuaternionForTheta90Deg) {
 
 TEST_F(DoorCollisionObjectTest, QuaternionForTheta360Deg) {
     double theta = 360.0 * M_PI / 180.0;
-    auto msg = node_->buildDoorPanelMsg(theta);
+    auto msg = node_->buildDoorPanelMsg(theta, kIdentity);
 
     const auto& q = msg.primitive_poses[0].orientation;
     EXPECT_NEAR(std::abs(q.w), 1.0, 1e-9);
@@ -133,8 +136,8 @@ TEST_F(DoorCollisionObjectTest, QuaternionForTheta360Deg) {
 // ──── Different orientations produce different messages ────────────────────
 
 TEST_F(DoorCollisionObjectTest, ThetaZeroVsTheta90ProducesDifferentOrientation) {
-    auto msg0 = node_->buildDoorPanelMsg(0.0);
-    auto msg90 = node_->buildDoorPanelMsg(90.0 * M_PI / 180.0);
+    auto msg0 = node_->buildDoorPanelMsg(0.0, kIdentity);
+    auto msg90 = node_->buildDoorPanelMsg(90.0 * M_PI / 180.0, kIdentity);
 
     const auto& q0 = msg0.primitive_poses[0].orientation;
     const auto& q90 = msg90.primitive_poses[0].orientation;
@@ -144,18 +147,28 @@ TEST_F(DoorCollisionObjectTest, ThetaZeroVsTheta90ProducesDifferentOrientation) 
     EXPECT_TRUE(differs);
 }
 
-// ──── Position unchanged across theta values ───────────────────────────────
+// ──── Position varies with theta (panel center rotates around hinge) ───────
 
-TEST_F(DoorCollisionObjectTest, PanelPositionUnchangedWithTheta) {
-    auto msg0 = node_->buildDoorPanelMsg(0.0);
-    auto msg45 = node_->buildDoorPanelMsg(45.0 * M_PI / 180.0);
-    auto msg90 = node_->buildDoorPanelMsg(90.0 * M_PI / 180.0);
+TEST_F(DoorCollisionObjectTest, PanelPositionVariesWithTheta) {
+    auto msg0 = node_->buildDoorPanelMsg(0.0, kIdentity);
+    auto msg45 = node_->buildDoorPanelMsg(45.0 * M_PI / 180.0, kIdentity);
+    auto msg90 = node_->buildDoorPanelMsg(90.0 * M_PI / 180.0, kIdentity);
 
-    for (const auto* msg : {&msg0, &msg45, &msg90}) {
-        EXPECT_DOUBLE_EQ(msg->primitive_poses[0].position.x, 0.0);
-        EXPECT_DOUBLE_EQ(msg->primitive_poses[0].position.y, 0.0);
-        EXPECT_DOUBLE_EQ(msg->primitive_poses[0].position.z, 0.0);
-    }
+    // theta=0: panel at (1.0, 0, 0.4)
+    EXPECT_NEAR(msg0.primitive_poses[0].position.x, 1.0, 1e-9);
+    EXPECT_NEAR(msg0.primitive_poses[0].position.y, 0.0, 1e-9);
+    EXPECT_NEAR(msg0.primitive_poses[0].position.z, 0.4, 1e-9);
+
+    // theta=45: panel at (width/2*cos45, width/2*sin45, height/2) = (0.707, 0.707, 0.4)
+    double s45 = std::sin(45.0 * M_PI / 180.0);
+    EXPECT_NEAR(msg45.primitive_poses[0].position.x, s45, 1e-9);
+    EXPECT_NEAR(msg45.primitive_poses[0].position.y, s45, 1e-9);
+    EXPECT_NEAR(msg45.primitive_poses[0].position.z, 0.4, 1e-9);
+
+    // theta=90: panel at (0, 1.0, 0.4)
+    EXPECT_NEAR(msg90.primitive_poses[0].position.x, 0.0, 1e-9);
+    EXPECT_NEAR(msg90.primitive_poses[0].position.y, 1.0, 1e-9);
+    EXPECT_NEAR(msg90.primitive_poses[0].position.z, 0.4, 1e-9);
 }
 
 // ──── Custom dimensions are respected ──────────────────────────────────────
@@ -168,7 +181,7 @@ TEST(DoorCollisionCustomParamTest, CustomPanelSizeAffectsMsg) {
     auto node = std::make_shared<DoorCollisionTest>("door_traj", cfg);
     node->executeTick();
 
-    auto msg = node->buildDoorPanelMsg(0.0);
+    auto msg = node->buildDoorPanelMsg(0.0, kIdentity);
     ASSERT_EQ(msg.primitives[0].dimensions.size(), 3u);
     EXPECT_DOUBLE_EQ(msg.primitives[0].dimensions[shape_msgs::msg::SolidPrimitive::BOX_X], 1.0);
     EXPECT_DOUBLE_EQ(msg.primitives[0].dimensions[shape_msgs::msg::SolidPrimitive::BOX_Y], 0.02);
@@ -183,7 +196,7 @@ TEST(DoorCollisionCustomParamTest, CustomFrameRadiusAffectsMsg) {
     auto node = std::make_shared<DoorCollisionTest>("door_traj", cfg);
     node->executeTick();
 
-    auto msg = node->buildDoorFrameMsg();
+    auto msg = node->buildDoorFrameMsg(kIdentity);
     EXPECT_DOUBLE_EQ(msg.primitives[0].dimensions[shape_msgs::msg::SolidPrimitive::CYLINDER_RADIUS],
                      0.1);
 }

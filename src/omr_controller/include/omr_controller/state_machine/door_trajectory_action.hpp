@@ -63,6 +63,7 @@ public:
     double theta_step_deg() const { return theta_step_deg_; }
     double theta_max_deg() const { return theta_max_deg_; }
     const std::vector<double>& phi_values_deg() const { return phi_values_deg_; }
+    const std::vector<double>& omega_values_deg() const { return omega_values_deg_; }
     const std::vector<double>& home_joints() const { return home_joints_; }
     double joint_state_tolerance() const { return joint_state_tolerance_; }
     double idle_delay_sec() const { return idle_delay_sec_; }
@@ -111,13 +112,16 @@ public:
     // ── Collision object builders (public for test access) ────────────────
 
     /// @brief Build the door_panel CollisionObject message.
-    moveit_msgs::msg::CollisionObject buildDoorPanelMsg(double theta_rad) const;
+    moveit_msgs::msg::CollisionObject buildDoorPanelMsg(double theta_rad,
+                                                        const cv::Mat& T_base_hinge) const;
 
     /// @brief Build the door_frame CollisionObject message.
-    moveit_msgs::msg::CollisionObject buildDoorFrameMsg() const;
+    moveit_msgs::msg::CollisionObject buildDoorFrameMsg(const cv::Mat& T_base_hinge) const;
 
-    /// @brief Compute a single waypoint pose for given (θ, φ) in radians.
-    geometry_msgs::msg::Pose computePoseForThetaPhi(double theta_rad, double phi_rad) const;
+    /// @brief Compute a single waypoint pose for given (θ, φ, ω) in radians.
+    ///        Uses the gimbal-joint three-parameter kinematic model.
+    geometry_msgs::msg::Pose computePoseForThetaPhiOmega(double theta_rad, double phi_rad,
+                                                         double omega_rad) const;
 
 protected:
     /// @brief MoveGroupInterface — lazy-initialised on first planAndExecuteToPose().
@@ -187,12 +191,17 @@ private:
     double theta_step_deg_;
     double theta_max_deg_;
     std::vector<double> phi_values_deg_;
+    std::vector<double> omega_values_deg_;
     std::vector<double> home_joints_;
     double joint_state_tolerance_;
     double idle_delay_sec_;
     std::vector<double> door_panel_size_;
     double door_frame_radius_;
     std::string planning_frame_;
+
+    /// @brief Cached 4×4 homogeneous transform from base_link to door hinge frame.
+    ///        Computed once in onStart() from hinge_transform port.
+    cv::Mat T_base_hinge_cache_;
 
     // ── ROS interfaces (from blackboard) ─────────────────────────────────
     rclcpp::Node::SharedPtr ros_node_;

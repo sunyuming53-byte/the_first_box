@@ -122,6 +122,7 @@ TEST_F(TrajectorySequenceTest, PrepareWaypointsCount) {
     cfg2.input_ports["theta_step_deg"] = "10.0";
     cfg2.input_ports["theta_max_deg"] = "30.0";
     cfg2.input_ports["phi_values"] = "0,45,90";
+    cfg2.input_ports["omega_values"] = "0";
     auto node = std::make_shared<TrajectorySequenceTestNode>("door_traj", cfg2);
     node->executeTick();
 
@@ -138,10 +139,13 @@ TEST_F(TrajectorySequenceTest, PrepareWaypointsCount) {
     double theta_step = 10.0;
     int expected_theta_steps = static_cast<int>((theta_max - theta_min) / theta_step) + 1;
     int expected_phi_count = 3;
-    size_t expected_waypoints = static_cast<size_t>(expected_theta_steps) * expected_phi_count;
+    int expected_omega_count = 1;
+    size_t expected_waypoints =
+        static_cast<size_t>(expected_theta_steps) * expected_phi_count * expected_omega_count;
 
     EXPECT_EQ(waypoints.size(), expected_waypoints)
-        << expected_theta_steps << " theta steps x " << expected_phi_count << " phi values";
+        << expected_theta_steps << " theta steps x " << expected_phi_count << " phi values x "
+        << expected_omega_count << " omega values";
 }
 
 // ── Test 3: Single waypoint full cycle ─────────────────────────────────────
@@ -151,6 +155,7 @@ TEST_F(TrajectorySequenceTest, SingleWaypointFullCycle) {
     cfg2.input_ports["idle_delay_sec"] = "0.0";
     cfg2.input_ports["theta_max_deg"] = "0.0";
     cfg2.input_ports["phi_values"] = "0";
+    cfg2.input_ports["omega_values"] = "0";
     auto node = std::make_shared<TrajectorySequenceTestNode>("door_traj", cfg2);
     node->executeTick();
 
@@ -190,6 +195,7 @@ TEST_F(TrajectorySequenceTest, WaypointFailureTransitionsToError) {
     cfg2.input_ports["idle_delay_sec"] = "0.0";
     cfg2.input_ports["theta_max_deg"] = "10.0";
     cfg2.input_ports["phi_values"] = "0";
+    cfg2.input_ports["omega_values"] = "0";
     auto node = std::make_shared<TrajectorySequenceTestNode>("door_traj", cfg2);
     node->executeTick();
 
@@ -215,6 +221,7 @@ TEST_F(TrajectorySequenceTest, MultipleWaypointsAdvanceIndex) {
     cfg2.input_ports["theta_max_deg"] = "5.0";
     cfg2.input_ports["theta_step_deg"] = "5.0";
     cfg2.input_ports["phi_values"] = "0,90";
+    cfg2.input_ports["omega_values"] = "0";
     auto node = std::make_shared<TrajectorySequenceTestNode>("door_traj", cfg2);
     node->executeTick();
 
