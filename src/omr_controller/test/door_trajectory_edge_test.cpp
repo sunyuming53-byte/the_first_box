@@ -163,8 +163,7 @@ TEST_F(DoorTrajectoryEdgeTest, ExtremeThetaValuesProduceValidPoses) {
     int expected_phi_count = 3;
     int expected_omega_count = 1;
     size_t expected_waypoints =
-        static_cast<size_t>(expected_theta_steps) * expected_phi_count *
-        expected_omega_count;
+        static_cast<size_t>(expected_theta_steps) * expected_phi_count * expected_omega_count;
     EXPECT_EQ(waypoints.size(), expected_waypoints);
 
     for (size_t i = 0; i < waypoints.size(); ++i) {

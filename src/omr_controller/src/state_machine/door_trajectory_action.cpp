@@ -50,24 +50,20 @@ BT::PortsList DoorTrajectoryAction::providedPorts() {
 
 namespace {
 /// Apply 4×4 homogeneous transform (CV_64F) to a geometry_msgs::Pose.
-geometry_msgs::msg::Pose transformPose(const cv::Mat& T,
-                                       const geometry_msgs::msg::Pose& src) {
+geometry_msgs::msg::Pose transformPose(const cv::Mat& T, const geometry_msgs::msg::Pose& src) {
     cv::Mat R = T(cv::Rect(0, 0, 3, 3));
     tf2::Matrix3x3 rot_mat(R.at<double>(0, 0), R.at<double>(0, 1), R.at<double>(0, 2),
-                            R.at<double>(1, 0), R.at<double>(1, 1), R.at<double>(1, 2),
-                            R.at<double>(2, 0), R.at<double>(2, 1), R.at<double>(2, 2));
+                           R.at<double>(1, 0), R.at<double>(1, 1), R.at<double>(1, 2),
+                           R.at<double>(2, 0), R.at<double>(2, 1), R.at<double>(2, 2));
 
     // Transform position: p_world = R * p_src + t
     geometry_msgs::msg::Pose dst;
-    dst.position.x =
-        R.at<double>(0, 0) * src.position.x + R.at<double>(0, 1) * src.position.y +
-        R.at<double>(0, 2) * src.position.z + T.at<double>(0, 3);
-    dst.position.y =
-        R.at<double>(1, 0) * src.position.x + R.at<double>(1, 1) * src.position.y +
-        R.at<double>(1, 2) * src.position.z + T.at<double>(1, 3);
-    dst.position.z =
-        R.at<double>(2, 0) * src.position.x + R.at<double>(2, 1) * src.position.y +
-        R.at<double>(2, 2) * src.position.z + T.at<double>(2, 3);
+    dst.position.x = R.at<double>(0, 0) * src.position.x + R.at<double>(0, 1) * src.position.y +
+                     R.at<double>(0, 2) * src.position.z + T.at<double>(0, 3);
+    dst.position.y = R.at<double>(1, 0) * src.position.x + R.at<double>(1, 1) * src.position.y +
+                     R.at<double>(1, 2) * src.position.z + T.at<double>(1, 3);
+    dst.position.z = R.at<double>(2, 0) * src.position.x + R.at<double>(2, 1) * src.position.y +
+                     R.at<double>(2, 2) * src.position.z + T.at<double>(2, 3);
 
     // Transform orientation: q_world = q_R * q_src
     tf2::Quaternion q_src(src.orientation.x, src.orientation.y, src.orientation.z,
@@ -248,8 +244,8 @@ BT::NodeStatus DoorTrajectoryAction::onStart() {
                 "DoorTrajectoryAction started. "
                 "r=%.2f L=%.2f h=%.2f theta_step=%.1fdeg theta_max=%.1fdeg "
                 "%zu phi values %zu omega values",
-                r_, L_, h_, theta_step_deg_, theta_max_deg_,
-                phi_values_deg_.size(), omega_values_deg_.size());
+                r_, L_, h_, theta_step_deg_, theta_max_deg_, phi_values_deg_.size(),
+                omega_values_deg_.size());
 
     return BT::NodeStatus::RUNNING;
 }
@@ -608,8 +604,8 @@ bool DoorTrajectoryAction::planAndExecuteJointHome() {
 // Collision object builders
 // =============================================================================
 
-moveit_msgs::msg::CollisionObject DoorTrajectoryAction::buildDoorPanelMsg(
-    double theta_rad, const cv::Mat& T_base_hinge) const {
+moveit_msgs::msg::CollisionObject
+DoorTrajectoryAction::buildDoorPanelMsg(double theta_rad, const cv::Mat& T_base_hinge) const {
     moveit_msgs::msg::CollisionObject obj;
     obj.id = "door_panel";
     obj.header.frame_id = planning_frame_;
@@ -637,8 +633,8 @@ moveit_msgs::msg::CollisionObject DoorTrajectoryAction::buildDoorPanelMsg(
     return obj;
 }
 
-moveit_msgs::msg::CollisionObject DoorTrajectoryAction::buildDoorFrameMsg(
-    const cv::Mat& T_base_hinge) const {
+moveit_msgs::msg::CollisionObject
+DoorTrajectoryAction::buildDoorFrameMsg(const cv::Mat& T_base_hinge) const {
     moveit_msgs::msg::CollisionObject obj;
     obj.id = "door_frame";
     obj.header.frame_id = planning_frame_;
@@ -702,8 +698,8 @@ void DoorTrajectoryAction::updateDoorPose(double theta_rad) {
 // =============================================================================
 
 geometry_msgs::msg::Pose DoorTrajectoryAction::computePoseForThetaPhiOmega(double theta_rad,
-                                                                            double phi_rad,
-                                                                            double omega_rad) const {
+                                                                           double phi_rad,
+                                                                           double omega_rad) const {
     cv::Mat T_hinge_target = computeWorldTTarget(theta_rad, phi_rad, omega_rad, r_, L_, h_);
     cv::Mat T_base_target = T_base_hinge_cache_ * T_hinge_target;
 

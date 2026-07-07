@@ -25,22 +25,14 @@ struct Table1Case {
 //                           C_z = h + L·(1 - cφ·cω)
 // with r=2.0, L=1.5, h=0.0  (±0.001 tolerance)
 constexpr Table1Case kTable1[] = {
-    {0.0, 0.0, 0.0, 2.0000, 0.0000, 0.0000},
-    {0.0, 45.0, 0.0, 2.0000, 1.0607, 0.4393},
-    {0.0, 45.0, 30.0, 1.4697, 1.0607, 0.5814},
-    {90.0, 90.0, 0.0, -1.5000, 2.0000, 1.5000},
-    {90.0, 90.0, 45.0, -1.5000, 2.0000, 1.5000},
-    {30.0, 45.0, 30.0, 0.7424, 1.6534, 0.5814},
-    {0.0, 90.0, 0.0, 2.0000, 1.5000, 1.5000},
-    {30.0, 0.0, 30.0, 1.0825, 0.6250, 0.2010},
-    {30.0, 180.0, 45.0, 2.6506, 1.5303, 2.5607},
-    {45.0, 90.0, 45.0, 0.3536, 2.4749, 1.5000},
-    {60.0, 30.0, 60.0, -0.2120, 1.1328, 0.8505},
-    {90.0, 30.0, 60.0, -0.7500, 0.8750, 0.8505},
-    {45.0, 45.0, 90.0, -0.0858, 1.4142, 1.5000},
-    {0.0, 0.0, 90.0, 0.5000, 0.0000, 1.5000},
-    {90.0, 0.0, 45.0, 0.0000, 0.9393, 0.4393},
-    {180.0, 45.0, 30.0, -1.4697, -1.0607, 0.5814},
+    {0.0, 0.0, 0.0, 2.0000, 0.0000, 0.0000},     {0.0, 45.0, 0.0, 2.0000, 1.0607, 0.4393},
+    {0.0, 45.0, 30.0, 1.4697, 1.0607, 0.5814},   {90.0, 90.0, 0.0, -1.5000, 2.0000, 1.5000},
+    {90.0, 90.0, 45.0, -1.5000, 2.0000, 1.5000}, {30.0, 45.0, 30.0, 0.7424, 1.6534, 0.5814},
+    {0.0, 90.0, 0.0, 2.0000, 1.5000, 1.5000},    {30.0, 0.0, 30.0, 1.0825, 0.6250, 0.2010},
+    {30.0, 180.0, 45.0, 2.6506, 1.5303, 2.5607}, {45.0, 90.0, 45.0, 0.3536, 2.4749, 1.5000},
+    {60.0, 30.0, 60.0, -0.2120, 1.1328, 0.8505}, {90.0, 30.0, 60.0, -0.7500, 0.8750, 0.8505},
+    {45.0, 45.0, 90.0, -0.0858, 1.4142, 1.5000}, {0.0, 0.0, 90.0, 0.5000, 0.0000, 1.5000},
+    {90.0, 0.0, 45.0, 0.0000, 0.9393, 0.4393},   {180.0, 45.0, 30.0, -1.4697, -1.0607, 0.5814},
 };
 
 constexpr double kR = 2.0;
@@ -73,8 +65,7 @@ INSTANTIATE_TEST_SUITE_P(All16Cases, Table1Test, ::testing::ValuesIn(kTable1));
 TEST(RTTest, ColumnsAreOrthonormal) {
     // Test at a few nontrivial angles covering the 3D parameter space
     const double angles[][3] = {
-        {0.3, 0.5, 0.0}, {0.7, 1.2, 0.4}, {1.0, 2.0, 0.8},
-        {2.0, 1.5, 1.2}, {0.1, 3.0, 0.6}};
+        {0.3, 0.5, 0.0}, {0.7, 1.2, 0.4}, {1.0, 2.0, 0.8}, {2.0, 1.5, 1.2}, {0.1, 3.0, 0.6}};
 
     for (const auto& [theta, phi, omega] : angles) {
         cv::Mat R = computeRT(theta, phi, omega);
@@ -98,8 +89,7 @@ TEST(RTTest, ColumnsAreOrthonormal) {
 TEST(RTTest, DeterminantIsOne) {
     // Test at a few nontrivial angles covering the 3D parameter space
     const double angles[][3] = {
-        {0.3, 0.5, 0.0}, {0.7, 1.2, 0.4}, {1.0, 2.0, 0.8},
-        {2.0, 1.5, 1.2}, {0.1, 3.0, 0.6}};
+        {0.3, 0.5, 0.0}, {0.7, 1.2, 0.4}, {1.0, 2.0, 0.8}, {2.0, 1.5, 1.2}, {0.1, 3.0, 0.6}};
 
     for (const auto& [theta, phi, omega] : angles) {
         cv::Mat R = computeRT(theta, phi, omega);
@@ -169,8 +159,7 @@ TEST(WorldTTargetTest, OriginMapsToOrigin) {
     // world_T_target · (C, 1)^T = (0, 0, 0, 1)^T
     // Structural invariant: holds for ANY θ, φ, ω
     const double cases[][3] = {
-        {0.0, 0.0, 0.0}, {0.5, 0.3, 0.2}, {1.0, 1.5, 0.7},
-        {2.0, 3.0, 0.5}, {0.0, kPi, 0.8}};
+        {0.0, 0.0, 0.0}, {0.5, 0.3, 0.2}, {1.0, 1.5, 0.7}, {2.0, 3.0, 0.5}, {0.0, kPi, 0.8}};
 
     for (const auto& [theta, phi, omega] : cases) {
         cv::Mat C = computeC(theta, phi, omega, kR, kL, kH);
@@ -184,10 +173,14 @@ TEST(WorldTTargetTest, OriginMapsToOrigin) {
 
         cv::Mat result = T * C_hom;
 
-        EXPECT_NEAR(result.at<double>(0, 0), 0.0, kTol) << "θ=" << theta << " φ=" << phi << " ω=" << omega;
-        EXPECT_NEAR(result.at<double>(1, 0), 0.0, kTol) << "θ=" << theta << " φ=" << phi << " ω=" << omega;
-        EXPECT_NEAR(result.at<double>(2, 0), 0.0, kTol) << "θ=" << theta << " φ=" << phi << " ω=" << omega;
-        EXPECT_NEAR(result.at<double>(3, 0), 1.0, kTol) << "θ=" << theta << " φ=" << phi << " ω=" << omega;
+        EXPECT_NEAR(result.at<double>(0, 0), 0.0, kTol)
+            << "θ=" << theta << " φ=" << phi << " ω=" << omega;
+        EXPECT_NEAR(result.at<double>(1, 0), 0.0, kTol)
+            << "θ=" << theta << " φ=" << phi << " ω=" << omega;
+        EXPECT_NEAR(result.at<double>(2, 0), 0.0, kTol)
+            << "θ=" << theta << " φ=" << phi << " ω=" << omega;
+        EXPECT_NEAR(result.at<double>(3, 0), 1.0, kTol)
+            << "θ=" << theta << " φ=" << phi << " ω=" << omega;
     }
 }
 
@@ -195,8 +188,7 @@ TEST(WorldTTargetTest, OriginMapsToOrigin) {
 TEST(WorldTTargetTest, BottomEndpointMapsToMinusL) {
     // B = C - L·x̂_T (world coords), should map to (-L, 0, 0) in target frame
     // Structural invariant: holds for ANY θ, φ, ω
-    const double cases[][3] = {
-        {0.0, 0.3, 0.0}, {0.5, 0.7, 0.4}, {1.0, 1.2, 0.9}};
+    const double cases[][3] = {{0.0, 0.3, 0.0}, {0.5, 0.7, 0.4}, {1.0, 1.2, 0.9}};
 
     for (const auto& [theta, phi, omega] : cases) {
         cv::Mat C = computeC(theta, phi, omega, kR, kL, kH);
@@ -216,17 +208,20 @@ TEST(WorldTTargetTest, BottomEndpointMapsToMinusL) {
 
         cv::Mat result = T * B_hom;
 
-        EXPECT_NEAR(result.at<double>(0, 0), -kL, kTol) << "θ=" << theta << " φ=" << phi << " ω=" << omega;
-        EXPECT_NEAR(result.at<double>(1, 0), 0.0, kTol) << "θ=" << theta << " φ=" << phi << " ω=" << omega;
-        EXPECT_NEAR(result.at<double>(2, 0), 0.0, kTol) << "θ=" << theta << " φ=" << phi << " ω=" << omega;
-        EXPECT_NEAR(result.at<double>(3, 0), 1.0, kTol) << "θ=" << theta << " φ=" << phi << " ω=" << omega;
+        EXPECT_NEAR(result.at<double>(0, 0), -kL, kTol)
+            << "θ=" << theta << " φ=" << phi << " ω=" << omega;
+        EXPECT_NEAR(result.at<double>(1, 0), 0.0, kTol)
+            << "θ=" << theta << " φ=" << phi << " ω=" << omega;
+        EXPECT_NEAR(result.at<double>(2, 0), 0.0, kTol)
+            << "θ=" << theta << " φ=" << phi << " ω=" << omega;
+        EXPECT_NEAR(result.at<double>(3, 0), 1.0, kTol)
+            << "θ=" << theta << " φ=" << phi << " ω=" << omega;
     }
 }
 
 // Top endpoint T = C + L·x̂_T maps to (L, 0, 0, 1)
 TEST(WorldTTargetTest, TopEndpointMapsToL) {
-    const double cases[][3] = {
-        {0.0, 0.3, 0.0}, {0.5, 0.7, 0.4}, {1.0, 1.2, 0.9}};
+    const double cases[][3] = {{0.0, 0.3, 0.0}, {0.5, 0.7, 0.4}, {1.0, 1.2, 0.9}};
 
     for (const auto& [theta, phi, omega] : cases) {
         cv::Mat C = computeC(theta, phi, omega, kR, kL, kH);
@@ -245,17 +240,20 @@ TEST(WorldTTargetTest, TopEndpointMapsToL) {
 
         cv::Mat result = T * T_hom;
 
-        EXPECT_NEAR(result.at<double>(0, 0), kL, kTol) << "θ=" << theta << " φ=" << phi << " ω=" << omega;
-        EXPECT_NEAR(result.at<double>(1, 0), 0.0, kTol) << "θ=" << theta << " φ=" << phi << " ω=" << omega;
-        EXPECT_NEAR(result.at<double>(2, 0), 0.0, kTol) << "θ=" << theta << " φ=" << phi << " ω=" << omega;
-        EXPECT_NEAR(result.at<double>(3, 0), 1.0, kTol) << "θ=" << theta << " φ=" << phi << " ω=" << omega;
+        EXPECT_NEAR(result.at<double>(0, 0), kL, kTol)
+            << "θ=" << theta << " φ=" << phi << " ω=" << omega;
+        EXPECT_NEAR(result.at<double>(1, 0), 0.0, kTol)
+            << "θ=" << theta << " φ=" << phi << " ω=" << omega;
+        EXPECT_NEAR(result.at<double>(2, 0), 0.0, kTol)
+            << "θ=" << theta << " φ=" << phi << " ω=" << omega;
+        EXPECT_NEAR(result.at<double>(3, 0), 1.0, kTol)
+            << "θ=" << theta << " φ=" << phi << " ω=" << omega;
     }
 }
 
 // Point C + ŷ_T maps to (0, 1, 0, 1)
 TEST(WorldTTargetTest, AlongYAxisMapsToYUnit) {
-    const double cases[][3] = {
-        {0.0, 0.3, 0.0}, {0.5, 0.7, 0.4}, {1.0, 1.2, 0.9}};
+    const double cases[][3] = {{0.0, 0.3, 0.0}, {0.5, 0.7, 0.4}, {1.0, 1.2, 0.9}};
 
     for (const auto& [theta, phi, omega] : cases) {
         cv::Mat C = computeC(theta, phi, omega, kR, kL, kH);
@@ -274,10 +272,14 @@ TEST(WorldTTargetTest, AlongYAxisMapsToYUnit) {
 
         cv::Mat result = T * P_hom;
 
-        EXPECT_NEAR(result.at<double>(0, 0), 0.0, kTol) << "θ=" << theta << " φ=" << phi << " ω=" << omega;
-        EXPECT_NEAR(result.at<double>(1, 0), 1.0, kTol) << "θ=" << theta << " φ=" << phi << " ω=" << omega;
-        EXPECT_NEAR(result.at<double>(2, 0), 0.0, kTol) << "θ=" << theta << " φ=" << phi << " ω=" << omega;
-        EXPECT_NEAR(result.at<double>(3, 0), 1.0, kTol) << "θ=" << theta << " φ=" << phi << " ω=" << omega;
+        EXPECT_NEAR(result.at<double>(0, 0), 0.0, kTol)
+            << "θ=" << theta << " φ=" << phi << " ω=" << omega;
+        EXPECT_NEAR(result.at<double>(1, 0), 1.0, kTol)
+            << "θ=" << theta << " φ=" << phi << " ω=" << omega;
+        EXPECT_NEAR(result.at<double>(2, 0), 0.0, kTol)
+            << "θ=" << theta << " φ=" << phi << " ω=" << omega;
+        EXPECT_NEAR(result.at<double>(3, 0), 1.0, kTol)
+            << "θ=" << theta << " φ=" << phi << " ω=" << omega;
     }
 }
 
