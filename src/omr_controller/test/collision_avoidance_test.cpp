@@ -37,15 +37,14 @@ std::string readFile(const std::string& path) {
 class CollisionAvoidanceTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        node_ = std::make_shared<rclcpp::Node>("collision_avoidance_test_node",
-                                                rclcpp::NodeOptions());
+        node_ =
+            std::make_shared<rclcpp::Node>("collision_avoidance_test_node", rclcpp::NodeOptions());
 
         // URDF provided by CMake at configure time (rm65_urdf.h)
         std::string urdf_str(omr_controller::test::kRm65Urdf);
 
         // SRDF path resolved at runtime
-        std::string pkg_share =
-            ament_index_cpp::get_package_share_directory("rm65_moveit_config");
+        std::string pkg_share = ament_index_cpp::get_package_share_directory("rm65_moveit_config");
         std::string srdf_path = pkg_share + "/config/rm65.srdf";
         std::string srdf_str = readFile(srdf_path);
 
