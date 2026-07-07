@@ -2,11 +2,13 @@
 
 #include <behaviortree_cpp/bt_factory.h>
 
+#include <memory>
 #include <string>
 
 #include "omr_controller/clients/arm_client.hpp"
 #include "omr_controller/clients/gripper_client.hpp"
 #include "omr_controller/clients/vision_client.hpp"
+#include <rclcpp/rclcpp.hpp>
 
 namespace omr_controller {
 
@@ -63,7 +65,8 @@ public:
 ///   "arm_client"     -> ArmClient*
 ///   "gripper_client" -> GripperClient*
 ///   "vision_client"  -> VisionClient*
+///   "ros_node"       -> rclcpp::Node::SharedPtr (for DoorTrajectoryAction)
 BT::Tree build_tree(const std::string& xml_text, ArmClient& arm, GripperClient& gripper,
-                    VisionClient& vision);
+                    VisionClient& vision, rclcpp::Node::SharedPtr ros_node = nullptr);
 
 }  // namespace omr_controller

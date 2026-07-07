@@ -1,0 +1,42 @@
+# ompl_planning.yaml — OMPL planner configuration for RM65 arm
+# Primary: RRTConnect, Fallback: RRTstar, Timeout: 5.0s
+
+planner_configs:
+  RRTConnect:
+    type: geometric::RRTConnect
+    range: 0.0
+  RRTstar:
+    type: geometric::RRTstar
+    range: 0.0
+
+arm_group:
+  default_planner_config: RRTConnect
+  planner_configs:
+    - RRTConnect
+    - RRTstar
+  projection_evaluator: joints(joint1,joint2)
+  longest_valid_segment_fraction: 0.005
+  ename: arm_group
+  planner_interface: ompl_interface/OMPLPlanner
+  planning_adapters:
+    - default_planner_request_adapters/AddTimeOptimalParameterization
+    - default_planner_request_adapters/ResolveConstraintFrames
+    - default_planner_request_adapters/FixWorkspaceBounds
+    - default_planner_request_adapters/FixStartStateBounds
+    - default_planner_request_adapters/FixStartStateCollision
+    - default_planner_request_adapters/FixStartStatePathConstraints
+
+request_adapters: >-
+    default_planner_request_adapters/AddTimeOptimalParameterization
+    default_planner_request_adapters/ResolveConstraintFrames
+    default_planner_request_adapters/FixWorkspaceBounds
+    default_planner_request_adapters/FixStartStateBounds
+    default_planner_request_adapters/FixStartStateCollision
+    default_planner_request_adapters/FixStartStatePathConstraints
+
+planning_pipelines:
+  pipeline_names: ["ompl"]
+  ompl:
+    planning_time: 5.0
+    max_planning_time: 5.0
+    maximum_waypoint_distance: 0.03

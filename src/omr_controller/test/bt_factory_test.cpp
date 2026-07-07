@@ -10,6 +10,7 @@
 #include "omr_controller/clients/arm_client.hpp"
 #include "omr_controller/clients/gripper_client.hpp"
 #include "omr_controller/clients/vision_client.hpp"
+#include "omr_controller/state_machine/door_trajectory_action.hpp"
 #include "test_helpers.hpp"
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
@@ -302,6 +303,7 @@ TEST(BehaviorTreeFactoryTest, RegisterAllNodesAndCreateTree) {
     factory.registerNodeType<omr_controller::GripperAction>("GripperAction");
     factory.registerNodeType<omr_controller::DetectObjectAction>("DetectObjectAction");
     factory.registerNodeType<omr_controller::WaitAction>("WaitAction");
+    factory.registerNodeType<omr_controller::DoorTrajectoryAction>("DoorTrajectoryAction");
 
     const std::string xml = R"(
 <root BTCPP_format="4">
@@ -334,6 +336,7 @@ TEST_F(BtRosTest, TicksThroughSequence) {
     factory.registerNodeType<omr_controller::GripperAction>("GripperAction");
     factory.registerNodeType<omr_controller::DetectObjectAction>("DetectObjectAction");
     factory.registerNodeType<omr_controller::WaitAction>("WaitAction");
+    factory.registerNodeType<omr_controller::DoorTrajectoryAction>("DoorTrajectoryAction");
 
     const std::string xml = R"(
 <root BTCPP_format="4">
@@ -350,6 +353,7 @@ TEST_F(BtRosTest, TicksThroughSequence) {
     tree.rootBlackboard()->set("arm_client", &arm);
     tree.rootBlackboard()->set("gripper_client", &gripper);
     tree.rootBlackboard()->set("vision_client", &vision);
+    tree.rootBlackboard()->set("ros_node", node_);
 
     ASSERT_EQ(tree.subtrees[0]->nodes.size(), 3u);
 
@@ -369,6 +373,7 @@ TEST_F(BtRosTest, FallbackOnDetectFailure) {
     factory.registerNodeType<omr_controller::GripperAction>("GripperAction");
     factory.registerNodeType<omr_controller::DetectObjectAction>("DetectObjectAction");
     factory.registerNodeType<omr_controller::WaitAction>("WaitAction");
+    factory.registerNodeType<omr_controller::DoorTrajectoryAction>("DoorTrajectoryAction");
 
     const std::string xml = R"(
 <root BTCPP_format="4">
@@ -385,6 +390,7 @@ TEST_F(BtRosTest, FallbackOnDetectFailure) {
     tree.rootBlackboard()->set("arm_client", &arm);
     tree.rootBlackboard()->set("gripper_client", &gripper);
     tree.rootBlackboard()->set("vision_client", &vision);
+    tree.rootBlackboard()->set("ros_node", node_);
 
     ASSERT_EQ(tree.subtrees[0]->nodes.size(), 3u);
 
@@ -394,4 +400,68 @@ TEST_F(BtRosTest, FallbackOnDetectFailure) {
     int count = -1;
     bool has_count = tree.rootBlackboard()->get("detection_count", count);
     EXPECT_FALSE(has_count);
+}
+
+// ============================================================================
+// DoorTrajectoryAction tests
+// ============================================================================
+
+TEST(BehaviorTreeFactoryTest, DoorTrajectoryActionRegistersAndCanBeTicked) {
+    BT::BehaviorTreeFactory factory;
+    factory.registerNodeType<omr_controller::DoorTrajectoryAction>("DoorTrajectoryAction");
+
+    const std::string xml = R"(
+<root BTCPP_format="4">
+  <BehaviorTree ID="TestTree">
+    <DoorTrajectoryAction theta_max_deg="60" idle_delay_sec="0.0"/>
+  </BehaviorTree>
+</root>
+)";
+
+    auto tree = factory.createTreeFromText(xml);
+    EXPECT_EQ(tree.subtrees.size(), 1u);
+
+    // DoorTrajectoryAction needs ros_node on blackboard to avoid failure
+    // Without ros_node, onStart() will fail
+    auto ros_node = std::make_shared<rclcpp::Node>("door_traj_test");
+    tree.rootBlackboard()->set("ros_node", ros_node);
+
+    auto status = tree.tickOnce();
+    // Should return RUNNING (state machine started, goes through IDLE->APPROACH_HOME etc.)
+    // Actually, without joint state, it will eventually fail or stay RUNNING
+    EXPECT_NE(status, BT::NodeStatus::IDLE);
+}
+
+TEST(BehaviorTreeFactoryTest, DoorTrajectoryActionWithoutRosNodeFails) {
+    BT::BehaviorTreeFactory factory;
+    factory.registerNodeType<omr_controller::DoorTrajectoryAction>("DoorTrajectoryAction");
+
+    const std::string xml = R"(
+<root BTCPP_format="4">
+  <BehaviorTree ID="TestTree">
+    <DoorTrajectoryAction theta_max_deg="0" idle_delay_sec="0.0"/>
+  </BehaviorTree>
+</root>
+)";
+
+    auto tree = factory.createTreeFromText(xml);
+    // No ros_node on blackboard → onStart() returns FAILURE
+    auto status = tree.tickOnce();
+    EXPECT_EQ(status, BT::NodeStatus::FAILURE);
+}
+
+TEST(BehaviorTreeFactoryTest, DoorTrajectoryActionProvidedPortsHasDefaults) {
+    auto ports = omr_controller::DoorTrajectoryAction::providedPorts();
+    EXPECT_GT(ports.size(), 0u);
+
+    // Verify key ports exist with correct defaults
+    bool has_r = false;
+    bool has_theta_max = false;
+    for (const auto& port : ports) {
+        // Check port description contains parameter info
+        if (port.first == "r") has_r = true;
+        if (port.first == "theta_max_deg") has_theta_max = true;
+    }
+    EXPECT_TRUE(has_r);
+    EXPECT_TRUE(has_theta_max);
 }

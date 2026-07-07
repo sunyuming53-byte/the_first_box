@@ -75,13 +75,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-humble-ament-index-cpp \
     ros-humble-behaviortree-cpp \
     ros-humble-control-msgs \
+    ros-humble-moveit-ros-planning \
+    ros-humble-moveit-planners-ompl \
+    ros-humble-moveit-ros-move-group \
+    ros-humble-moveit-simple-controller-manager \
+    ros-humble-moveit-ros-visualization \
+    ros-humble-moveit-setup-assistant \
+    ros-humble-moveit-ros-planning-interface \
     && rm -rf /var/lib/apt/lists/*
 
 # RealMan SDK — copy from submodule to /opt/realman-sdk
 RUN mkdir -p /opt/realman-sdk/lib
 COPY src/omr_hardware/third_party/realman_arm/third_party/RM_API2/C/include/ /opt/realman-sdk/include/
 COPY src/omr_hardware/third_party/realman_arm/third_party/RM_API2/C/linux/linux_x86_c_vv1.1.5/libapi_c.so /opt/realman-sdk/lib/
-ENV LD_LIBRARY_PATH=/opt/realman-sdk/lib:$LD_LIBRARY_PATH
+ENV LD_LIBRARY_PATH=/opt/realman-sdk/lib
 
 # oh-my-zsh + powerlevel10k + plugins (as root; copied to ubuntu user in develop stage)
 RUN sh -c "$(curl -fsSL --retry 5 --retry-delay 10 https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended \
@@ -128,12 +135,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-humble-ament-index-cpp \
     ros-humble-behaviortree-cpp \
     ros-humble-control-msgs \
+    ros-humble-moveit-ros-planning \
+    ros-humble-moveit-planners-ompl \
+    ros-humble-moveit-ros-move-group \
+    ros-humble-moveit-simple-controller-manager \
+    ros-humble-moveit-ros-visualization \
+    ros-humble-moveit-setup-assistant \
+    ros-humble-moveit-ros-planning-interface \
     && rm -rf /var/lib/apt/lists/*
 
 # SDK runtime — libapi_c.so for arm control at runtime
 RUN mkdir -p /opt/realman-sdk/lib
 COPY src/omr_hardware/third_party/realman_arm/third_party/RM_API2/C/linux/linux_x86_c_vv1.1.5/libapi_c.so /opt/realman-sdk/lib/
-ENV LD_LIBRARY_PATH=/opt/realman-sdk/lib:$LD_LIBRARY_PATH
+ENV LD_LIBRARY_PATH=/opt/realman-sdk/lib
 
 RUN --mount=type=bind,source=src,target=/tmp/src,readonly \
     apt-get update && \
@@ -156,6 +170,8 @@ RUN sh -c "$(curl -fsSL --retry 5 --retry-delay 10 https://raw.githubusercontent
 # Stage 2 — Develop
 # =============================================================================
 FROM realman-base-dev AS realman-develop
+
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \

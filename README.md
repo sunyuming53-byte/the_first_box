@@ -79,14 +79,27 @@ pipeline/                            # ROS2 workspace root
 │   │   │   │   ├── base_client.hpp   #     BaseClient (abstract) + BaseClientStub
 │   │   │   │   └── vision_client.hpp #     VisionClient → CameraStream + OpenCV detect
 │   │   │   ├── state_machine/
-│   │   │   │   └── bt_factory.hpp    #     BT.CPP custom nodes registration
+│   │   │   │   ├── bt_factory.hpp                #  BT.CPP custom nodes registration
+│   │   │   │   └── door_trajectory_action.hpp    #  DoorTrajectoryAction (BT::StatefulActionNode)
+│   │   │   ├── door_math.hpp          #     Door trajectory math model C(θ,φ) + R_T(θ,φ)
+│   │   │   ├── geometry_utils.hpp     #     homogeneous_to_pose() conversion utility
 │   │   │   └── types.hpp             #     Core data types
 │   │   ├── src/                      #   Implementation files
+│   │   │   ├── orchestrator.cpp
+│   │   │   ├── state_machine/
+│   │   │   │   └── door_trajectory_action.cpp # DoorTrajectoryAction: MoveIt2 + state machine + collision
+│   │   │   └── clients/
 │   │   ├── bt_xml/                   #   Behavior tree XML definitions
 │   │   │   └── pick_and_place.xml
 │   │   ├── launch/                   #   controller.launch.py
 │   │   ├── config/                   #   controller.yaml
 │   │   ├── test/                     #   11 test binaries (100% pass)
+│   │   ├── CMakeLists.txt
+│   │   └── package.xml
+│   ├── rm65_moveit_config/           # ament_cmake — MoveIt2 config for RM65 (no compiled code)
+│   │   ├── config/                    #   SRDF, kinematics (KDL), OMPL, controller config
+│   │   ├── launch/                    #   move_group.launch.py
+│   │   ├── urdf/                      #   RM65 URDF with geometric collision primitives
 │   │   ├── CMakeLists.txt
 │   │   └── package.xml
 │   └── omr_bringup/                  # ament_cmake — launch + config + URDF (no compiled code)
@@ -167,14 +180,31 @@ flowchart TD
         ORCH["TaskOrchestrator<br/><i>rclcpp::Node + BT.CPP tick loop (20 Hz)</i>"]
         BT["BehaviorTree.CPP v4<br/><i>pick_and_place.xml</i>"]
         CLIENTS["Client Layer<br/><i>Arm | Gripper | Motor | Base | Vision</i>"]
+        DTA["DoorTrajectoryAction<br/><i>BT::StatefulActionNode</i>"]
     end
 
     ORCH --> BT
     BT --> CLIENTS
+    BT --> DTA
     CLIENTS -->|action goal| JTC
     CLIENTS -->|subscribes| JSB
     CLIENTS -->|action goal| DJTC
     CLIENTS -->|subscribes| DJSB
+    DTA -->|setPoseTarget / plan / execute| MG
+    DTA -->|add / update| DOOR
+    DTA -->|subscribes| JSB
+
+    %% MoveIt2 Planning
+    subgraph MoveIt["MoveIt2 Planning"]
+        MG["move_group<br/><i>collision-aware planning (OMPL)</i>"]
+        SCENE["Planning Scene<br/><i>application-managed collision objects</i>"]
+    end
+
+    MG -->|action goal| JTC
+    MG -->|subscribes| JSB
+    MG -->|robot_description| RSP
+    DT -->|setPoseTarget / plan / execute| MG
+    DT -->|add / update| SCENE
 ```
 
 **Arm data flow:** `ArmSystem.read()` → `joint_state_broadcaster` → `/joint_states` topic. The
@@ -189,6 +219,12 @@ The `joint_trajectory_controller` (velocity-mode, PID closed-loop) receives goal
 action node delegates to a non-blocking Client (ArmClient → arm JTC, GripperClient → gripper
 action, VisionClient → RealSense + OpenCV). The full task flow (pick-and-place, inspection,
 etc.) is defined in XML files under `bt_xml/`, editable without recompilation.
+
+**MoveIt2 data flow:** \`move_group\` provides collision-aware planning via OMPL, sending
+trajectories to the existing `/arm_cm/follow_joint_trajectory` action. The planning scene
+and collision objects are managed by application-level BT nodes — \`move_group\` itself
+is task-agnostic. Configuration lives in \`rm65_moveit_config\` (URDF with convex
+collision primitives, SRDF, KDL kinematics, OMPL config).
 
 `rm::Arm` is a plain C++ class (not an `rclcpp::Node`) with **zero ROS dependency**.
 It lives in the `realman_arm` git submodule under `omr_hardware/third_party/`.
@@ -228,6 +264,40 @@ The bringup loads the RM65 URDF (kinematics + meshes), starts ros2_control_node 
 
 The bringup now supports `launch_dais:=true` to start a second `controller_manager` for the D-AIS motor at 50Hz (velocity-mode JTC with PID). Dais hw params are configurable via launch args.
 
+### MoveIt2 collision-aware planning
+
+The workspace includes a `rm65_moveit_config` package with MoveIt2 configuration
+(SRDF, KDL kinematics, OMPL planners) for the RM65 arm. The URDF uses geometric
+collision primitives (cylinders + boxes) instead of STL meshes for FCL compatibility.
+
+`move_group` launches as a persistent planning service alongside the ros2_control
+pipeline. Application-level BT nodes manage the planning scene and collision objects
+— `move_group` itself is task-agnostic.
+
+```bash
+# Launch arm + MoveIt2
+ros2 launch omr_bringup bringup.launch.py launch_moveit:=true
+```
+
+**Example: door trajectory**
+
+`DoorTrajectoryAction` (`BT::StatefulActionNode`) demonstrates MoveIt2 usage for a
+specific task. It computes target poses from a parametric `(θ, φ)` math model,
+registers task-specific collision objects (door panel + frame) in the planning scene,
+and delegates planning and execution to `move_group`. All business logic — the math
+model, collision object geometry, trajectory schedule — lives in the controller package,
+not in MoveIt2 config.
+
+```xml
+<!-- Example BT XML usage -->
+<DoorTrajectoryAction
+  r="2.0" L="1.5" h="0.0"
+  hinge_transform="0,0,0,0,0,0"
+  theta_max_deg="90" theta_step_deg="5"
+  phi_values="0,15,30,45,60,75,90"
+  home_joints="0,0,0,0,0,0"/>
+```
+
 ## Building
 
 The SDK is discovered at `/opt/realman-sdk` (or `$REALMAN_SDK`) via
@@ -261,6 +331,7 @@ graph TD
     hw --> calib
     hw --> bringup
     calib --> bringup
+    bringup --> moveit["rm65_moveit_config<br/><i>ament_cmake (config only)</i>"]
 ```
 
 `colcon build` resolves this automatically, but it matters when building packages individually or adding cross-package dependencies.

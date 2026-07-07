@@ -1,5 +1,30 @@
 # AGENTS.md — RealMan ROS2 Workspace
 
+## Pre-push gate
+
+**Code MUST pass the full Docker-based build + test cycle before it is pushed.**
+
+Always verify changes inside the develop container (the same environment CI uses):
+
+```bash
+# 1. Rebuild image if dependencies changed
+docker compose build develop
+
+# 2. Build and test inside the container
+docker compose exec develop bash -c '
+  source /opt/ros/humble/setup.bash
+  colcon build --symlink-install
+  colcon build --cmake-args -DBUILD_TESTING=ON
+  source install/setup.bash
+  colcon test --packages-select omr_controller --event-handlers console_direct+
+'
+```
+
+No commit may be pushed if the Docker build or any test fails. If a test
+genuinely cannot run in Docker (e.g., requires live robot hardware), it
+must be skipped explicitly with a documented reason — never simply
+commented out or disabled without explanation.
+
 ## Build
 
 ```bash

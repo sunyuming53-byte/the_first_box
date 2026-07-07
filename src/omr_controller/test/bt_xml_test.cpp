@@ -6,6 +6,7 @@
 #include <string>
 
 #include "omr_controller/state_machine/bt_factory.hpp"
+#include "omr_controller/state_machine/door_trajectory_action.hpp"
 
 // ============================================================================
 // Helpers
@@ -62,8 +63,12 @@ TEST(PickAndPlaceXmlTest, ParsesWithAllNodesRegistered) {
     factory.registerNodeType<omr_controller::GripperAction>("GripperAction");
     factory.registerNodeType<omr_controller::DetectObjectAction>("DetectObjectAction");
     factory.registerNodeType<omr_controller::WaitAction>("WaitAction");
+    factory.registerNodeType<omr_controller::DoorTrajectoryAction>("DoorTrajectoryAction");
 
-    EXPECT_NO_THROW({ factory.createTreeFromText(xml_text); });
+    EXPECT_NO_THROW({
+        auto tree = factory.createTreeFromText(xml_text);
+        (void) tree;
+    });
 }
 
 TEST(PickAndPlaceXmlTest, HasCorrectStructure) {
@@ -75,6 +80,7 @@ TEST(PickAndPlaceXmlTest, HasCorrectStructure) {
     factory.registerNodeType<omr_controller::GripperAction>("GripperAction");
     factory.registerNodeType<omr_controller::DetectObjectAction>("DetectObjectAction");
     factory.registerNodeType<omr_controller::WaitAction>("WaitAction");
+    factory.registerNodeType<omr_controller::DoorTrajectoryAction>("DoorTrajectoryAction");
 
     BT::Tree tree = factory.createTreeFromText(xml_text);
 

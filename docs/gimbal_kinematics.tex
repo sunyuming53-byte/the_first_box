@@ -1,0 +1,645 @@
+% !TEX program = pdflatex
+\documentclass[12pt,a4paper]{article}
+
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{float}
+\usepackage{fancyhdr}
+\usepackage{xcolor}
+
+\geometry{left=2.5cm,right=2.5cm,top=3cm,bottom=2.5cm,headheight=15pt,headsep=8mm}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!60!black,
+  urlcolor=blue!60!black,
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small ChiefTechLabs}
+\fancyhead[R]{\small Nanjing Ugen Robot Co., Ltd}
+\fancyfoot[C]{\thepage}
+
+\title{\Huge\textbf{Gimbal Kinematics of a Line Segment}\\[4pt]
+       \Huge\textbf{on a Rotating Rectangle}\\[12pt]
+       \large Two-Axis Pivot Rotation \& Homogeneous Transformation\\[8pt]
+       \normalsize Classification: Internal}
+\author{Lorenzo Feng}
+\date{\today}
+
+% ---- Shortcuts ----
+\newcommand{\uv}{\mathbf{u}}
+\newcommand{\uva}{\mathbf{u}_1}
+\newcommand{\uvb}{\mathbf{u}_2}
+\newcommand{\cross}{\times}
+\newcommand{\Rd}{\mathbf{R}}
+\newcommand{\Rone}{\Rd_1}
+\newcommand{\Rtwo}{\Rd_2}
+\newcommand{\RT}{\Rd_T}
+\newcommand{\Rcom}{\Rd}
+\newcommand{\skewop}[1]{[#1]_\times}
+
+\begin{document}
+
+\maketitle
+
+\vspace{1.5cm}
+
+\begin{center}
+\begin{minipage}{0.75\textwidth}
+\large
+\textbf{Objective:} Extend the single-axis segment rotation to a two-axis
+gimbal: the segment rotates by $\phi$ about its first gimbal axis $\uva$, then by
+$\omega$ about a perpendicular second axis $\uvb$ ($\omega\in(0,\pi/2)$),
+both passing through the top endpoint.
+Derive the parametric trajectory $C(\theta,\phi,\omega)$ and the $4\times4$
+homogeneous transformation matrix from the world frame to a body-fixed frame.
+\end{minipage}
+\end{center}
+
+\vfill
+
+\clearpage
+\tableofcontents
+\clearpage
+
+%=====================================================================
+\section{Problem Setup}
+%=====================================================================
+
+A rectangle rotates about its left vertical edge, which coincides with the $z$-axis.
+A line segment (perpendicular to the rectangle plane, i.e.\ parallel to the $z$-axis)
+is attached to the rectangle. The segment undergoes a two-axis gimbal rotation about
+axes passing through its top endpoint.
+
+\begin{itemize}[leftmargin=*]
+  \item The rectangle's rotation edge is the $z$-axis $(0,0,z)$.
+  \item At $\theta=0$ the rectangle lies in the $xz$-plane; the segment center is
+    at $(r,\,0,\,h)$, at distance $r$ from the $z$-axis.
+  \item $h$ is the height of the center point, $L$ is the half-length (full length $2L$).
+  \item \textbf{First gimbal axis} (in world coordinates, rotated with the rectangle):
+    $\uva = (\cos\theta,\; \sin\theta,\; 0)$.  The segment rotates by $\phi$
+    about this axis through its top endpoint.
+  \item \textbf{Second gimbal axis} (perpendicular to the first, also fixed in world space
+    once $\theta$ is chosen):
+    $\uvb = (-\sin\theta,\; \cos\theta,\; 0)$.  The segment rotates by $\omega$
+    about this axis through its top endpoint, with $\omega \in (0,\frac{\pi}{2})$.
+  \item $\uva \cdot \uvb = 0$; both are horizontal unit vectors in the $xy$-plane.
+    $\uvb$ is $\uva$ rotated by $+90^\circ$ about $z$.
+\end{itemize}
+
+We seek the parametric equation of the \emph{center point} of the segment after
+all three rotations $(\theta,\phi,\omega)$, the target-frame axes, and the
+homogeneous transformation matrix.
+
+%=====================================================================
+\section{Reference Positions}
+%=====================================================================
+
+\subsection{Center point after rectangle rotation only}
+
+\[
+  P(\theta) = \big( r\cos\theta,\; r\sin\theta,\; h \big).
+\]
+
+\subsection{Top endpoint (gimbal centre)}
+
+Since the segment is initially vertical, the top endpoint is $+L$ above the center:
+\begin{equation}\label{eq:top}
+  T(\theta) = P(\theta) + (0,\; 0,\; L)
+            = \big( r\cos\theta,\; r\sin\theta,\; h+L \big).
+\end{equation}
+
+\subsection{Vector from top to center}
+
+\begin{equation}\label{eq:d}
+  \mathbf{d} = P - T = (0,\; 0,\; -L).
+\end{equation}
+
+%=====================================================================
+\section{Rotation Matrices via Rodrigues' Formula}
+%=====================================================================
+
+Rodrigues' formula for a rotation by $\alpha$ about a unit axis $\uv$:
+\begin{equation}\label{eq:rodrigues}
+  \Rd_{\uv}(\alpha) = I + \sin\alpha\,\skewop{\uv} + (1-\cos\alpha)\,\skewop{\uv}^2,
+\end{equation}
+where $\skewop{\uv}$ is the skew-symmetric cross-product matrix.
+
+\subsection{First rotation --- \texorpdfstring{$\Rone = \Rd_{\uva}(\phi)$}{R1 = R\_u1(phi)}}
+
+Let $s_\theta = \sin\theta$, $c_\theta = \cos\theta$, $s_\phi = \sin\phi$, $c_\phi = \cos\phi$,
+$s_\omega = \sin\omega$, $c_\omega = \cos\omega$.
+
+\begin{align}
+  \Rone &=
+  \begin{bmatrix}
+    1 - (1-c_\phi)s_\theta^2      & (1-c_\phi)s_\theta c_\theta &  s_\phi s_\theta  \\[2pt]
+    (1-c_\phi)s_\theta c_\theta   & 1 - (1-c_\phi)c_\theta^2    & -s_\phi c_\theta  \\[2pt]
+    -s_\phi s_\theta              &  s_\phi c_\theta            &  c_\phi
+  \end{bmatrix}. \label{eq:R1}
+\end{align}
+
+\subsection{Second rotation --- \texorpdfstring{$\Rtwo = \Rd_{\uvb}(\omega)$}{R2 = R\_u2(omega)}}
+
+\begin{align}
+  \Rtwo &=
+  \begin{bmatrix}
+    1 - (1-c_\omega)c_\theta^2      & -(1-c_\omega)s_\theta c_\theta &  s_\omega c_\theta  \\[2pt]
+    -(1-c_\omega)s_\theta c_\theta  &  1 - (1-c_\omega)s_\theta^2    &  s_\omega s_\theta  \\[2pt]
+    -s_\omega c_\theta              & -s_\omega s_\theta             &  c_\omega
+  \end{bmatrix}. \label{eq:R2}
+\end{align}
+
+\medskip
+\noindent\textbf{Constraint: $\omega\in(0,\pi/2)$.}
+The second gimbal angle is restricted to the first quadrant
+($\omega \in (0^\circ, 90^\circ)$), modelling a physical hinge that cannot
+close past zero or open beyond horizontal.
+\medskip
+
+\subsection{Composite rotation --- \texorpdfstring{$\Rcom = \Rtwo \Rone$}{R = R2 R1}}
+
+Applying $\phi$ then $\omega$ yields the combined orientation of the segment body.
+The third column (segment direction $\hat{\mathbf{x}}_T$) is particularly simple:
+
+\begin{equation}\label{eq:xhat}
+  \boxed{
+  \hat{\mathbf{x}}_T = \Rcom\,\mathbf{e}_z
+  = \begin{pmatrix}
+      s_\theta s_\phi + c_\theta c_\phi s_\omega \\[2pt]
+      -c_\theta s_\phi + s_\theta c_\phi s_\omega \\[2pt]
+      c_\phi c_\omega
+    \end{pmatrix}}.
+\end{equation}
+
+The full $3\times3$ product $\Rtwo\Rone$ is unwieldy in closed form;
+compose $\Rone$ and $\Rtwo$ numerically in implementation.
+
+%=====================================================================
+\section{Trajectory of the Segment Centre}
+%=====================================================================
+
+The centre in body-frame coordinates is $(0,0,-L)$.  After the composite rotation
+and translation by $T$:
+
+\begin{align}
+  C(\theta,\phi,\omega) &= T + \Rcom\,(0,0,-L)^\mathsf{T}
+                        = T - L\,\hat{\mathbf{x}}_T \nonumber \\[4pt]
+  &= \begin{pmatrix}
+       r\cos\theta - L\sin\theta\sin\phi - L\cos\theta\cos\phi\sin\omega \\[8pt]
+       r\sin\theta + L\cos\theta\sin\phi - L\sin\theta\cos\phi\sin\omega \\[8pt]
+       h + L\,(1 - \cos\phi\cos\omega)
+     \end{pmatrix}. \label{eq:center}
+\end{align}
+
+\begin{equation}\label{eq:result}
+\boxed{
+C(\theta,\phi,\omega)
+=
+\begin{pmatrix}
+    r\cos\theta - L\sin\theta\sin\phi - L\cos\theta\cos\phi\sin\omega \\[8pt]
+    r\sin\theta + L\cos\theta\sin\phi - L\sin\theta\cos\phi\sin\omega \\[8pt]
+    h + L\,\bigl(1 - \cos\phi\cos\omega\bigr)
+  \end{pmatrix}.
+}
+\end{equation}
+
+\begin{table}[htbp]
+  \centering
+  \caption{Parameter definitions}
+  \begin{tabular}{@{}lll@{}}
+    \toprule
+    Symbol      & Meaning                                          & Range \\
+    \midrule
+    $\theta$    & Rectangle rotation about $z$-axis                & $[0,2\pi)$ \\
+    $\phi$      & First gimbal rotation about $\uva$ (through $T$) & $[0,2\pi)$ \\
+    $\omega$    & Second gimbal rotation about $\uvb$ (through $T$) & $(0,\pi/2)$ \\
+    $r$         & Distance from segment to $z$-axis                 & \\
+    $h$         & Height of segment center (at $\theta=\phi=\omega=0$) & \\
+    $L$         & Half-length of the segment                        & \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+%=====================================================================
+\section{Verification}\label{sec:verify}
+%=====================================================================
+
+\subsection*{Case 1: $\phi = \omega = 0$ (no gimbal rotation)}
+
+\[
+C(\theta,0,0) = \big( r\cos\theta,\; r\sin\theta,\; h \big) = P(\theta).
+\]
+The center returns to its position on the rotating rectangle. 
+
+\subsection*{Case 2: $\omega = 0$ (single-axis rotation about $\uva$)}
+
+\[
+C(\theta,\phi,0) = \begin{pmatrix}
+    r\cos\theta - L\sin\theta\sin\phi \\
+    r\sin\theta + L\cos\theta\sin\phi \\
+    h + L(1-\cos\phi)
+  \end{pmatrix},
+\]
+which matches the single-axis result of the companion document. 
+
+\subsection*{Case 3: $\phi = 0$ (single-axis rotation about $\uvb$)}
+
+\[
+C(\theta,0,\omega) = \begin{pmatrix}
+    r\cos\theta - L\cos\theta\sin\omega \\
+    r\sin\theta - L\sin\theta\sin\omega \\
+    h + L(1-\cos\omega)
+  \end{pmatrix}.
+\]
+The $\omega$ rotation tilts the segment in the direction of $-\uva$ (since
+$\uvb$ is at $+90^\circ$ from $\uva$).  For $\theta=0$ this gives
+$C(0,0,\omega) = (r - L\sin\omega,\; 0,\; h+L(1-\cos\omega))$ --- the
+center traces a circle of radius $L$ in the $xz$-plane. 
+
+\subsection*{Case 4: $\phi = \pi/2$, $\omega$ arbitrary (segment tilted then hinged)}
+
+\[
+C(\theta,\tfrac{\pi}{2},\omega) = \begin{pmatrix}
+    r\cos\theta - L\sin\theta \\
+    r\sin\theta + L\cos\theta \\
+    h + L
+  \end{pmatrix}.
+\]
+The $z$-coordinate becomes $h+L$ (segment horizontal); $\omega$ has no further
+effect because the segment is already perpendicular to $\uvb$'s plane of action. 
+
+\subsection*{Case 5: $\omega = \pi/2$ (second hinge fully open)}
+
+\[
+C(\theta,\phi,\tfrac{\pi}{2}) = \begin{pmatrix}
+    r\cos\theta - L\sin\theta\sin\phi - L\cos\theta\cos\phi \\
+    r\sin\theta + L\cos\theta\sin\phi - L\sin\theta\cos\phi \\
+    h + L
+  \end{pmatrix}.
+\]
+At $\omega=\pi/2$ the segment lies flat in the $xy$-plane (height $h+L$).
+The $x,y$ components simplify to a rotation of $(-L,0,0)$ by $\theta$ about $z$
+plus the $\phi$-tilted top endpoint:
+$C = (r\cos\theta,\, r\sin\theta,\, h+L) + \Rone\bigl|_{z=0}\,(-L,0,0)^\mathsf{T}$. 
+
+\subsection*{Case 6: Distance preservation}
+
+For fixed $(\theta,\phi,\omega)$ the distance from $C$ to the top endpoint $T$ is always $L$:
+$\|C - T\| = \|L\,\hat{\mathbf{x}}_T\| = L$.  The center moves on a sphere of radius $L$
+centered at $T(\theta)$. 
+
+%=====================================================================
+\section{Interpretation}
+%=====================================================================
+
+For fixed $\theta$, $(\phi,\omega) \mapsto C$ is a composition of two rotations
+of $(0,0,-L)$ about orthogonal axes, yielding a point on the sphere of radius $L$
+centered at $T(\theta)$.  The $z$-coordinate $h + L(1 - c_\phi c_\omega)$ ranges
+from $h$ (at $\phi=\pm\pi/2$ or $\omega=\pi/2$) to $h+2L$ (at $\phi=\omega=\pi$,
+though $\omega$ is bounded below $\pi/2$ so the maximum is at $\phi=\pi$, $\omega\to0$).
+
+For fixed $\phi$ and $\omega$, varying $\theta$ sweeps a curve on a cylindrical
+surface of approximate radius $r$ around the $z$-axis, with a compound sinusoidal
+ripple of amplitude $L(\sin\phi + \cos\phi\sin\omega)$ from both gimbal angles.
+
+%=====================================================================
+\section{Target Frame}
+%=====================================================================
+
+\subsection{Frame definition}
+
+Attach a right-handed coordinate frame $\{T\}$ to the segment:
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Origin}: the segment center point $C(\theta,\phi,\omega)$.
+  \item \textbf{$\hat{\mathbf{x}}_T$}: along the segment, bottom to top.
+    This is $\Rcom\,\mathbf{e}_z$ --- the body $z$-axis after both rotations.
+  \item \textbf{$\hat{\mathbf{y}}_T$}: the image of $\uva$ after the second rotation.
+    Since the first $\phi$-rotation carries the body and the second $\omega$-rotation
+    tilts it about $\uvb$, the $\hat{\mathbf{y}}_T$ axis is
+    $\Rtwo\,\uva = \Rtwo(\omega)\,\uva$.
+  \item \textbf{$\hat{\mathbf{z}}_T$}: $\hat{\mathbf{x}}_T \cross \hat{\mathbf{y}}_T$
+    (completing the right-handed system).
+\end{itemize}
+
+\subsection{Axes in world coordinates}
+
+\begin{align}
+  \hat{\mathbf{x}}_T &=
+  \begin{pmatrix}
+      \sin\theta\sin\phi + \cos\theta\cos\phi\sin\omega \\
+      -\cos\theta\sin\phi + \sin\theta\cos\phi\sin\omega \\
+      \cos\phi\cos\omega
+  \end{pmatrix}
+  \label{eq:xt} \\[12pt]
+  \hat{\mathbf{y}}_T &=
+  \Rtwo(\omega)\,\uva
+  = \begin{pmatrix}
+      \cos\theta\cos\omega \\
+      \sin\theta\cos\omega \\
+      -\sin\omega
+  \end{pmatrix}
+  \label{eq:yt} \\[12pt]
+  \hat{\mathbf{z}}_T &= \hat{\mathbf{x}}_T \cross \hat{\mathbf{y}}_T
+  = \begin{pmatrix}
+      -\cos\theta\sin\phi\sin\omega - \sin\theta\cos\phi\cos^2\omega
+        - \sin\theta\cos\phi\sin^2\omega \\[2pt]
+      \cos\theta\cos\phi\cos^2\omega + \cos\theta\cos\phi\sin^2\omega
+        - \sin\theta\sin\phi\sin\omega \\[2pt]
+      \cos\theta\sin\theta\sin\phi\cos\omega
+        - \sin\theta\cos\theta\sin\phi\cos\omega + \sin\phi\cos\omega
+  \end{pmatrix}.
+  \label{eq:zt}
+\end{align}
+
+Simplifications: $\cos^2\omega+\sin^2\omega=1$, and
+$\cos\theta\sin\theta\sin\phi\cos\omega - \sin\theta\cos\theta\sin\phi\cos\omega = 0$.
+Hence
+
+\begin{equation}
+  \boxed{
+  \hat{\mathbf{z}}_T
+  = \begin{pmatrix}
+      -\cos\theta\sin\phi\sin\omega - \sin\theta\cos\phi \\[2pt]
+      \cos\theta\cos\phi - \sin\theta\sin\phi\sin\omega \\[2pt]
+      \sin\phi\cos\omega
+  \end{pmatrix}}.
+  \label{eq:zt-simple}
+\end{equation}
+
+\noindent\textit{Verification.}
+$\|\hat{\mathbf{y}}_T\| = \cos^2\theta\cos^2\omega + \sin^2\theta\cos^2\omega
++ \sin^2\omega = \cos^2\omega + \sin^2\omega = 1$. 
+$\hat{\mathbf{x}}_T \cdot \hat{\mathbf{y}}_T = 0$: the cross terms cancel,
+leaving $c_\phi s_\omega c_\omega - c_\phi s_\omega c_\omega = 0$. 
+
+\subsection{Rotation matrix}
+
+Assemble these axes as columns (maps target $\to$ world):
+\begin{equation}\label{eq:RT}
+  \boxed{
+  \RT
+  = \begin{bmatrix}
+      \hat{\mathbf{x}}_T & \hat{\mathbf{y}}_T & \hat{\mathbf{z}}_T
+    \end{bmatrix}.
+  }
+\end{equation}
+
+For a world-frame vector $\mathbf{w}$, its target-frame representation is
+$\mathbf{w}_T = \RT^\mathsf{T}\,\mathbf{w}$, since $\RT$ is orthogonal.
+
+%=====================================================================
+\section{Homogeneous Transformation Matrix}
+%=====================================================================
+
+\subsection{Translation component}
+
+A point $\mathbf{p}$ in world coordinates maps to target coordinates as:
+\[
+  \mathbf{p}_T = \RT^\mathsf{T}\bigl(\mathbf{p} - C(\theta,\phi,\omega)\bigr).
+\]
+
+Compute $\RT^\mathsf{T}\,C$ using the closed-form axes and $C$:
+
+\begin{align}
+  \RT^\mathsf{T}\,C &=
+  \begin{bmatrix}
+    \hat{\mathbf{x}}_T^\mathsf{T} \\[2pt]
+    \hat{\mathbf{y}}_T^\mathsf{T} \\[2pt]
+    \hat{\mathbf{z}}_T^\mathsf{T}
+  \end{bmatrix}
+  \begin{pmatrix}
+      r\cos\theta - L\sin\theta s_\phi - L\cos\theta c_\phi s_\omega \\
+      r\sin\theta + L\cos\theta s_\phi - L\sin\theta c_\phi s_\omega \\
+      h + L(1 - c_\phi c_\omega)
+  \end{pmatrix}
+  \nonumber \\[8pt]
+  &= \begin{pmatrix}
+      -h\,c_\phi c_\omega + L\,(1 - c_\phi c_\omega) \\
+      r \\
+      h\,s_\phi c_\omega - L\,c_\phi s_\omega
+  \end{pmatrix}. \label{eq:RtC}
+\end{align}
+
+The $\theta$-dependence cancels entirely in the translation component (as
+expected: the top-endpoint pivot is blind to the rectangle's global rotation).
+
+\subsection{Full $4 \times 4$ matrix}
+
+The homogeneous transformation ${}^{\text{world}}\mathbf{T}_{\text{target}}$
+maps world to target coordinates:
+
+\begin{equation}\label{eq:Tmat}
+\boxed{
+{}^{\text{world}}\mathbf{T}_{\text{target}}
+= \begin{bmatrix}
+    \RT^\mathsf{T} & -\RT^\mathsf{T}C \\[4pt]
+    \mathbf{0}_{1\times 3} & 1
+  \end{bmatrix}.
+}
+\end{equation}
+
+For a world point $\mathbf{p}_{\text{world}}$:
+\[
+  \begin{pmatrix} \mathbf{p}_{\text{target}} \\ 1 \end{pmatrix}
+  = {}^{\text{world}}\mathbf{T}_{\text{target}}
+    \begin{pmatrix} \mathbf{p}_{\text{world}} \\ 1 \end{pmatrix}.
+\]
+
+\subsection{Verification}
+
+\begin{itemize}[leftmargin=*]
+  \item The origin $C$ maps to $(0,0,0)$:
+    $\RT^\mathsf{T}(C-C)=\mathbf{0}$. 
+  \item Bottom endpoint $B = C - L\,\hat{\mathbf{x}}_T$ maps to $(-L,0,0)$. 
+  \item Top endpoint $T = C + L\,\hat{\mathbf{x}}_T$ maps to $(L,0,0)$. 
+  \item Point $C + \hat{\mathbf{y}}_T$ maps to $(0,1,0)$. 
+  \item At $\phi=\omega=0$: $\RT = \bigl[\,\mathbf{e}_z \;\; \uva \;\; \mathbf{e}_z\cross\uva\,\bigr]$
+    with origin at $P(\theta)$; the $z$-axis is aligned with the segment. 
+  \item At $\omega=0$, the results reduce to the single-axis case of the companion
+    document. 
+\end{itemize}
+
+%=====================================================================
+\section{Summary}
+%=====================================================================
+
+The segment center trajectory $C(\theta,\phi,\omega)$ is given by (\ref{eq:result}).
+The homogeneous transformation ${}^{\text{world}}\mathbf{T}_{\text{target}}$ is built
+from axes (\ref{eq:xt})--(\ref{eq:zt-simple}) and the translation (\ref{eq:RtC}).
+
+For implementation:
+
+\begin{enumerate}[leftmargin=*]
+  \item Compute $T$ from (\ref{eq:top}).
+  \item Build $\Rone$ and $\Rtwo$ from (\ref{eq:R1}) and (\ref{eq:R2}).
+  \item Numerically compose $\Rcom = \Rtwo\Rone$.
+  \item The centre position is $T - L\,\Rcom\mathbf{e}_z$; use the closed-form
+    (\ref{eq:result}) to avoid round-off.
+  \item Build $\RT$ from axes (\ref{eq:xt})--(\ref{eq:zt-simple});
+    the translation column is $-\RT^\mathsf{T}C$ from (\ref{eq:RtC}).
+  \item Compose the $4\times4$ homogeneous matrix (\ref{eq:Tmat}).
+\end{enumerate}
+
+%=====================================================================
+\section{Sequential Motion Example}
+\label{sec:sequential}
+%=====================================================================
+
+\subsection{Motion model}
+
+Consider a sequential task where the three degrees of freedom are actuated one
+at a time, from rest to the final pose.  With parameters $r=2$, $L=1.5$, $h=0$,
+the motion proceeds through three stages:
+
+\begin{center}
+\begin{tabular}{@{}ccccc@{}}
+  \toprule
+  Stage & $\theta$ & $\phi$ & $\omega$ & Description \\
+  \midrule
+  1 & $0$                 & $0\to\pi/4$  & $0$       & First gimbal opens \\
+  2 & $0$                 & $\pi/4$      & $0\to\pi/2$ & Second gimbal opens \\
+  3 & $0\to 2\pi/3$       & $\pi/4$      & $\pi/2$   & Rectangle drives to final pose \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+The constraint $\theta\in(0,2\pi/3)$ and $\omega\in(0,\pi/2)$ are respected at all times.
+
+\subsection{Visual overview}
+
+Figure~\ref{fig:sequence} shows the four key poses: start, end of each stage.
+The target frame $\{\hat{\mathbf{x}}_T,\hat{\mathbf{y}}_T,\hat{\mathbf{z}}_T\}$
+is drawn at the segment center.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{fig_sequence.png}
+  \caption{Four key poses during the sequential motion.
+    Top-left: initial configuration $(\theta{=}0,\phi{=}0,\omega{=}0)$.
+    Top-right: after Stage~1 $(\phi{=}\pi/4)$.
+    Bottom-left: after Stage~2 $(\omega{=}\pi/2)$.
+    Bottom-right: final pose $(\theta{=}2\pi/3,\phi{=}\pi/4,\omega{=}\pi/2)$.}
+  \label{fig:sequence}
+\end{figure}
+
+\subsection{Center point trajectory}
+
+Figure~\ref{fig:trajectory} tracks the center point $C$ through the full motion.
+The three stages are color-coded; the blue curve (Stage~3) dominates the
+lateral displacement as the rectangle sweeps through $\theta$.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{fig_trajectory.png}
+  \caption{Center point trajectory.  Left: 3D view.  Right: component-wise
+    evolution across stages and $XY$ projection.}
+  \label{fig:trajectory}
+\end{figure}
+
+The stage-end coordinates are:
+
+\[
+\begin{aligned}
+\text{Stage~1 end }(\theta{=}0,\phi{=}\tfrac{\pi}{4},\omega{=}0):
+  &\quad C = \bigl(r,\; r + L\tfrac{\sqrt{2}}{2},\; h + L(1-\tfrac{\sqrt{2}}{2})\bigr) \\[4pt]
+\text{Stage~2 end }(\theta{=}0,\phi{=}\tfrac{\pi}{4},\omega{=}\tfrac{\pi}{2}):
+  &\quad C = \bigl(r - L\tfrac{\sqrt{2}}{2},\; r + L\tfrac{\sqrt{2}}{2},\; h + L\bigr) \\[4pt]
+\text{Stage~3 end }(\theta{=}\tfrac{2\pi}{3},\phi{=}\tfrac{\pi}{4},\omega{=}\tfrac{\pi}{2}):
+  &\quad C_f = \begin{pmatrix}
+                -\dfrac{r}{2} + L\dfrac{\sqrt{2}-\sqrt{6}}{4} \\[8pt]
+                \phantom{-}\dfrac{r\sqrt{3}}{2} - L\dfrac{\sqrt{2}+\sqrt{6}}{4} \\[8pt]
+                h + L
+              \end{pmatrix}
+\end{aligned}
+\]
+
+\subsection{Time-varying rigid-body transform}
+
+The homogeneous transformation from world to target coordinates is
+${}^{\text{world}}\mathbf{T}_{\text{target}} = \bigl[\begin{smallmatrix}
+\RT^\mathsf{T} & -\RT^\mathsf{T}C \\ \mathbf{0} & 1 \end{smallmatrix}\bigr]$
+with $\RT^\mathsf{T}$ from (\ref{eq:xt})--(\ref{eq:zt-simple}) and
+$-\RT^\mathsf{T}C$ from (\ref{eq:RtC}).
+
+Substituting the stage-specific parameter trajectories yields $T(t)$ for each stage.
+Let $S_t = \sin t$, $C_t = \cos t$, and $\alpha = \sqrt{2}/2$.
+
+\subsubsection{Stage 1 --- $\theta{=}0,\;\phi{=}t,\;\omega{=}0$}
+
+The first gimbal opens while the rectangle and second hinge are static.
+The transform reduces to the single-axis case:
+
+\begin{equation}\label{eq:stage1-T}
+\boxed{
+T_1(t) =
+\left[\begin{array}{@{}ccc|c@{}}
+  0     & -S_t  &  C_t  & L(1-C_t) - h\,C_t \\[2pt]
+  1     &  0    &  0    & -r \\[2pt]
+  0     &  C_t  &  S_t  & -(L+h)S_t \\[2pt]
+  \hline
+  0     & 0     & 0     & 1
+\end{array}\right],
+\qquad t \in [0,\;\tfrac{\pi}{4}].
+}
+\end{equation}
+
+\subsubsection{Stage 2 --- $\theta{=}0,\;\phi{=}\pi/4,\;\omega{=}t$}
+
+The second gimbal opens; the first is held at $\pi/4$:
+
+\begin{equation}\label{eq:stage2-T}
+\boxed{
+T_2(t) =
+\left[\begin{array}{@{}ccc|c@{}}
+  \alpha S_t & -\alpha   &  \alpha C_t  & L(1-\alpha C_t) - h\,\alpha C_t \\[2pt]
+  C_t        & 0         & -S_t          & -r \\[2pt]
+  -\alpha S_t & \alpha   &  \alpha C_t   & h\,\alpha S_t \\[2pt]
+  \hline
+  0          & 0         & 0             & 1
+\end{array}\right],
+\qquad t \in [0,\;\tfrac{\pi}{2}].
+}
+\end{equation}
+
+\subsubsection{Stage 3 --- $\theta{=}t,\;\phi{=}\pi/4,\;\omega{=}\pi/2$}
+
+The rectangle drives to its final position; both gimbals are at their limit:
+
+\begin{equation}\label{eq:stage3-T}
+\boxed{
+T_3(t) =
+\left[\begin{array}{@{}ccc|c@{}}
+  \alpha(S_t{+}C_t) & \alpha(S_t{-}C_t)  &  0    & L - h\,\alpha C_t \\[2pt]
+  0                 & 0                  & -1    & -r \\[2pt]
+  \alpha(C_t{-}S_t) & \alpha(S_t{+}C_t)  &  0    & h\,\alpha S_t \\[2pt]
+  \hline
+  0 & 0 & 0 & 1
+\end{array}\right],
+\qquad t \in [0,\;\tfrac{2\pi}{3}].
+}
+\end{equation}
+
+Figure~\ref{fig:transform-evolution} visualizes the twelve non-trivial entries of
+$T(t)$ as functions of the motion progress parameter.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{fig_transform_evolution.png}
+  \caption{Evolution of ${}^{\text{world}}\mathbf{T}_{\text{target}}(t)$ entries
+    through the three-stage sequential motion.  Top row: rotation block entries
+    $R_{ij}^{\mathsf{T}}$.  Bottom row: translation entries $t_x,t_y,t_z$.
+    Vertical dashed lines mark stage boundaries.
+    Parameters: $r{=}2$, $L{=}1.5$, $h{=}0$.}
+  \label{fig:transform-evolution}
+\end{figure}
+
+\end{document}

@@ -36,33 +36,23 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Build workspace
+      - name: Build and test
         run: |
           docker run --rm \
-            -v ${{ github.workspace }}/src:/ws/src \
+            --user root \
+            -v ${{ github.workspace }}:/ws \
             realman:develop \
             bash -c "
               set -euo pipefail
               set +u; source /opt/ros/humble/setup.bash; set -u
               colcon build --symlink-install
-            "
-
-      - name: Run tests
-        run: |
-          docker run --rm \
-            -v ${{ github.workspace }}/src:/ws/src \
-            realman:develop \
-            bash -c "
-              set -euo pipefail
-              set +u; source /opt/ros/humble/setup.bash; set -u
               colcon build --cmake-args -DBUILD_TESTING=ON
               colcon test --return-code-on-test-failure
             "
 
   lint:
-    name: Lint (non-blocking)
+    name: Lint
     runs-on: ubuntu-22.04
-    continue-on-error: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4

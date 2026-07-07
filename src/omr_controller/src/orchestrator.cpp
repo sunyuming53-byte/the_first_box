@@ -59,7 +59,7 @@ void TaskOrchestrator::load_bt_xml() {
     buffer << file.rdbuf();
     std::string xml_content = buffer.str();
 
-    bt_tree_ = build_tree(xml_content, *arm_, *gripper_, *vision_);
+    bt_tree_ = build_tree(xml_content, *arm_, *gripper_, *vision_, shared_from_this());
     RCLCPP_INFO(get_logger(), "Loaded BT XML: %s", full_path.c_str());
 }
 
