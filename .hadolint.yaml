@@ -1,0 +1,6 @@
+# hadolint rules to ignore — see https://github.com/hadolint/hadolint#rules
+ignored:
+  - DL3008  # pin apt versions: ROS2 packages versioned by distro, not by apt
+  - SC1071  # zsh shell: hadolint cannot check zsh scripts, known false positive
+  - SC2016  # single-quote expansion: intentional for zshrc template literals
+  - SC2086  # double-quote: trigger is oh-my-zsh upstream install script, not our code
