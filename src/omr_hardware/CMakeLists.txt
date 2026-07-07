@@ -10,7 +10,7 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/clang_tidy.cmake OPTIONAL)
 set(REALMAN_ARM_AS_SUBMODULE ON CACHE BOOL "" FORCE)
 add_subdirectory(third_party/realman_arm EXCLUDE_FROM_ALL)
 add_subdirectory(third_party/dais_motor EXCLUDE_FROM_ALL)
-add_subdirectory(third_party/m65_chassis EXCLUDE_FROM_ALL)
+add_subdirectory(third_party/m65_chassis)
 
 find_package(ament_cmake REQUIRED)
 find_package(hardware_interface REQUIRED)
