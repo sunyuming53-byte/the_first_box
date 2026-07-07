@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+
 #include <memory>
 #include <string>
 #include <vector>
@@ -34,17 +35,17 @@ private:
     std::string left_wheel_name_;
     std::string right_wheel_name_;
 
-    double hw_left_position_state_  = 0.0;
-    double hw_left_velocity_state_  = 0.0;
+    double hw_left_position_state_ = 0.0;
+    double hw_left_velocity_state_ = 0.0;
     double hw_right_position_state_ = 0.0;
     double hw_right_velocity_state_ = 0.0;
 
-    double hw_left_velocity_cmd_  = 0.0;
+    double hw_left_velocity_cmd_ = 0.0;
     double hw_right_velocity_cmd_ = 0.0;
 
-    int32_t prev_left_encoder_  = 0;
+    int32_t prev_left_encoder_ = 0;
     int32_t prev_right_encoder_ = 0;
-    bool first_read_            = true;
+    bool first_read_ = true;
 };
 
 }  // namespace omr_hardware

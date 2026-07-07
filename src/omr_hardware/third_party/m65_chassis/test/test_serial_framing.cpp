@@ -10,13 +10,13 @@ namespace {
 
 using m65::internal::build_frame;
 using m65::internal::compute_checksum;
-using m65::internal::verify_checksum;
-using m65::internal::kFrameLen;
+using m65::internal::kChksOffset;
 using m65::internal::kFrameHead0;
 using m65::internal::kFrameHead1;
+using m65::internal::kFrameLen;
 using m65::internal::kFrameTail0;
 using m65::internal::kFrameTail1;
-using m65::internal::kChksOffset;
+using m65::internal::verify_checksum;
 
 TEST(SerialFramingTest, BuildFrameProducesValid40ByteOutput) {
     // Build a frame with known command and data payload.

@@ -15,10 +15,10 @@ public:
     ~Chassis();
 
     // Non-copyable, non-movable (owns serial resources)
-    Chassis(const Chassis&)            = delete;
+    Chassis(const Chassis&) = delete;
     Chassis& operator=(const Chassis&) = delete;
-    Chassis(Chassis&&)                 = delete;
-    Chassis& operator=(Chassis&&)      = delete;
+    Chassis(Chassis&&) = delete;
+    Chassis& operator=(Chassis&&) = delete;
 
     // ── Connection ──
     bool connect();

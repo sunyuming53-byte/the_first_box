@@ -1,6 +1,7 @@
 #include "omr_controller/clients/base_client.hpp"
 
 #include <gtest/gtest.h>
+
 #include <rclcpp/rclcpp.hpp>
 
 using namespace omr_controller;

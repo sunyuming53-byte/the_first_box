@@ -21,15 +21,15 @@ CallbackReturn M65BaseHardware::on_init(const hardware_interface::HardwareInfo& 
                      info.joints.size());
         return CallbackReturn::ERROR;
     }
-    left_wheel_name_  = info.joints[0].name;
+    left_wheel_name_ = info.joints[0].name;
     right_wheel_name_ = info.joints[1].name;
 
     // Parse chassis config from ros2_control <param> tags in URDF
-    chassis_config_.serial_port      = info.hardware_parameters.at("serial_port");
-    chassis_config_.baud_rate        = std::stoi(info.hardware_parameters.at("baud_rate"));
+    chassis_config_.serial_port = info.hardware_parameters.at("serial_port");
+    chassis_config_.baud_rate = std::stoi(info.hardware_parameters.at("baud_rate"));
     chassis_config_.wheel_separation = std::stod(info.hardware_parameters.at("wheel_separation"));
-    chassis_config_.wheel_radius     = std::stod(info.hardware_parameters.at("wheel_radius"));
-    chassis_config_.encoder_cpr      = std::stoi(info.hardware_parameters.at("encoder_cpr"));
+    chassis_config_.wheel_radius = std::stod(info.hardware_parameters.at("wheel_radius"));
+    chassis_config_.encoder_cpr = std::stoi(info.hardware_parameters.at("encoder_cpr"));
 
     RCLCPP_INFO(rclcpp::get_logger("M65BaseHardware"),
                 "M65BaseHardware on_init: port=%s baud=%d separation=%.4f radius=%.4f cpr=%d "
@@ -102,7 +102,7 @@ std::vector<hardware_interface::CommandInterface> M65BaseHardware::export_comman
 }
 
 hardware_interface::return_type M65BaseHardware::read(const rclcpp::Time& /*time*/,
-                                                       const rclcpp::Duration& period) {
+                                                      const rclcpp::Duration& period) {
     if (!chassis_ || !chassis_->is_connected()) {
         return hardware_interface::return_type::OK;
     }
@@ -111,11 +111,11 @@ hardware_interface::return_type M65BaseHardware::read(const rclcpp::Time& /*time
 
     // First read: seed previous encoder values, output zero velocity
     if (first_read_) {
-        prev_left_encoder_  = s.left_encoder;
+        prev_left_encoder_ = s.left_encoder;
         prev_right_encoder_ = s.right_encoder;
-        hw_left_velocity_state_  = 0.0;
+        hw_left_velocity_state_ = 0.0;
         hw_right_velocity_state_ = 0.0;
-        first_read_               = false;
+        first_read_ = false;
         return hardware_interface::return_type::OK;
     }
 
@@ -128,13 +128,13 @@ hardware_interface::return_type M65BaseHardware::read(const rclcpp::Time& /*time
     hw_left_position_state_ += left_delta;
     hw_right_position_state_ += right_delta;
 
-    prev_left_encoder_  = s.left_encoder;
+    prev_left_encoder_ = s.left_encoder;
     prev_right_encoder_ = s.right_encoder;
 
     // Velocity from encoder delta / period
     double dt = period.seconds();
     if (dt > 0.0) {
-        hw_left_velocity_state_  = left_delta / dt;
+        hw_left_velocity_state_ = left_delta / dt;
         hw_right_velocity_state_ = right_delta / dt;
     }
 
@@ -142,7 +142,7 @@ hardware_interface::return_type M65BaseHardware::read(const rclcpp::Time& /*time
 }
 
 hardware_interface::return_type M65BaseHardware::write(const rclcpp::Time& /*time*/,
-                                                        const rclcpp::Duration& /*period*/) {
+                                                       const rclcpp::Duration& /*period*/) {
     if (!chassis_ || !chassis_->is_connected()) {
         return hardware_interface::return_type::OK;
     }
@@ -152,7 +152,7 @@ hardware_interface::return_type M65BaseHardware::write(const rclcpp::Time& /*tim
     double vl = hw_left_velocity_cmd_;
     double vr = hw_right_velocity_cmd_;
 
-    double linear  = (vl + vr) * chassis_config_.wheel_radius / 2.0;
+    double linear = (vl + vr) * chassis_config_.wheel_radius / 2.0;
     double angular = 0.0;
     if (chassis_config_.wheel_separation > 0.0) {
         angular = (vr - vl) * chassis_config_.wheel_radius / chassis_config_.wheel_separation;
