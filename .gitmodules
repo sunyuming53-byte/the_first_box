@@ -1,6 +1,9 @@
 [submodule "src/omr_hardware/third_party/dais_motor"]
 	path = src/omr_hardware/third_party/dais_motor
 	url = git@github.com:ChiefTechLabs/dais_motor.git
+[submodule "src/omr_hardware/third_party/m65_chassis"]
+	path = src/omr_hardware/third_party/m65_chassis
+	url = git@github.com:ChiefTechLabs/m65_chassis.git
 [submodule "src/omr_hardware/third_party/realman_arm"]
 	path = src/omr_hardware/third_party/realman_arm
 	url = git@github.com:ChiefTechLabs/realman_arm.git

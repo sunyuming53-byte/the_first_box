@@ -9,4 +9,9 @@
          base_class_type="hardware_interface::SystemInterface">
     <description>ros2_control hardware plugin for D-AIS motor via Modbus RTU (RS-485)</description>
   </class>
+  <class name="omr_hardware/M65BaseHardware"
+         type="omr_hardware::M65BaseHardware"
+         base_class_type="hardware_interface::SystemInterface">
+    <description>ros2_control hardware plugin for M65 chassis via serial (differential drive)</description>
+  </class>
 </library>

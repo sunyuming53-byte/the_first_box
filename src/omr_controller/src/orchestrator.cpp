@@ -19,7 +19,7 @@ TaskOrchestrator::TaskOrchestrator(const rclcpp::NodeOptions& options)
     vision_ = std::make_unique<VisionClient>(
         std::make_unique<CameraStreamAdapter>(omr_vision::camera::CameraConfig{}));
     motor_ = std::make_unique<MotorClientStub>();
-    base_ = std::make_unique<BaseClientStub>();
+    base_ = std::make_unique<BaseClientImpl>(self);
 
     // State publisher
     state_pub_ = create_publisher<std_msgs::msg::String>("/task_state", 10);

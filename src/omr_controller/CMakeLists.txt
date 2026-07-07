@@ -15,6 +15,7 @@ find_package(moveit_msgs REQUIRED)
 find_package(moveit_core REQUIRED)
 find_package(moveit_ros_planning REQUIRED)
 find_package(moveit_ros_planning_interface REQUIRED)
+find_package(nav_msgs REQUIRED)
 find_package(omr_vision REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_action REQUIRED)
@@ -41,6 +42,7 @@ ament_target_dependencies(${PROJECT_NAME} PUBLIC
     geometry_msgs
     moveit_msgs
     moveit_ros_planning_interface
+    nav_msgs
     omr_vision
     rclcpp
     rclcpp_action
@@ -109,7 +111,7 @@ if(BUILD_TESTING)
     ament_add_gtest(motor_client_test test/test_main.cpp test/motor_client_test.cpp)
     target_link_libraries(motor_client_test ${PROJECT_NAME} ${OpenCV_LIBS} realsense2::realsense2)
 
-    ament_add_gtest(base_client_test test/test_main.cpp test/base_client_test.cpp)
+    ament_add_gtest(base_client_test test/test_main_ros.cpp test/base_client_test.cpp)
     target_link_libraries(base_client_test ${PROJECT_NAME} ${OpenCV_LIBS} realsense2::realsense2)
 
     ament_add_gtest(arm_client_test test/test_main_ros.cpp test/arm_client_test.cpp)
