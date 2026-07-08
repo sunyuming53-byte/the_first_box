@@ -52,13 +52,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends gnupg2 && \
 
 # System libraries (dev variants — headers + .so)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libopencv-dev \
-    librealsense2-dev \
+    libeigen3-dev \
     libmodbus-dev \
+    libomp-dev \
+    libopencv-dev \
+    libpcl-dev \
+    librealsense2-dev \
     zsh curl git \
     ros-humble-rmw-cyclonedds-cpp \
     ros-humble-rclcpp \
     ros-humble-std-srvs \
+    ros-humble-tf-transformations \
     ros-humble-tf2-ros \
     ros-humble-geometry-msgs \
     ros-humble-hardware-interface \
@@ -66,6 +70,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-humble-controller-manager \
     ros-humble-joint-state-broadcaster \
     ros-humble-joint-trajectory-controller \
+    ros-humble-livox-ros-driver2 \
     ros-humble-robot-state-publisher \
     ros-humble-xacro \
     ros-humble-sensor-msgs \
@@ -82,6 +87,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-humble-moveit-ros-visualization \
     ros-humble-moveit-setup-assistant \
     ros-humble-moveit-ros-planning-interface \
+    ros-humble-nav2-bringup \
+    ros-humble-nav2-common \
+    ros-humble-navigation2 \
+    ros-humble-pcl-conversions \
+    ros-humble-pcl-ros \
     && rm -rf /var/lib/apt/lists/*
 
 # RealMan SDK — copy from submodule to /opt/realman-sdk
@@ -135,6 +145,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-humble-ament-index-cpp \
     ros-humble-behaviortree-cpp \
     ros-humble-control-msgs \
+    ros-humble-livox-ros-driver2 \
     ros-humble-moveit-ros-planning \
     ros-humble-moveit-planners-ompl \
     ros-humble-moveit-ros-move-group \
@@ -142,6 +153,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-humble-moveit-ros-visualization \
     ros-humble-moveit-setup-assistant \
     ros-humble-moveit-ros-planning-interface \
+    ros-humble-nav2-bringup \
+    ros-humble-nav2-common \
+    ros-humble-navigation2 \
+    ros-humble-pcl-conversions \
+    ros-humble-pcl-ros \
+    ros-humble-tf-transformations \
     && rm -rf /var/lib/apt/lists/*
 
 # SDK runtime — libapi_c.so for arm control at runtime
