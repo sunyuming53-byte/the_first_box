@@ -202,8 +202,9 @@ functions/methods, `UPPER_CASE` constants/enums, `lower_case` namespaces).
 
 `clang-tidy` checks are disabled by default — pass `-DCLANG_TIDY=ON` to enable.
 
-CI runs `clang-format --dry-run --Werror` (blocking, diff-only) and clang-tidy (non-blocking,
-workspace-only via `run-clang-tidy`). No pre-commit hooks configured.
+CI runs `clang-format --dry-run --Werror` (blocking, diff-only) and clang-tidy
+(blocking, diff-only — checks only changed files against compile_commands.json).
+No pre-commit hooks configured.
 
 **IMPORTANT — Always run clang-format inside Docker.** The Docker image uses
 clang-format 19; local host versions (14 on Ubuntu 22.04) apply different

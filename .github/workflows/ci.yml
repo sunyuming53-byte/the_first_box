@@ -88,7 +88,7 @@ jobs:
               xargs -r clang-format --dry-run --Werror
             '
 
-      - name: clang-tidy (non-blocking, workspace-only)
+      - name: clang-tidy (blocking, diff-only)
         run: |
           docker run --rm \
             -v ${{ github.workspace }}:/ws \
@@ -97,5 +97,5 @@ jobs:
               set -euo pipefail
               set +u; source /opt/ros/humble/setup.bash; set -u
               colcon build --symlink-install --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON 2>&1 | tail -3
-              python3 /ws/.github/scripts/run-clang-tidy-workspace.py || true
+              GIT_BASE_REF="${{ github.event.pull_request.base.sha }}" python3 /ws/.github/scripts/run-clang-tidy-diff.py
             '
