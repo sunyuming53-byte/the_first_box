@@ -34,21 +34,20 @@ def main() -> int:
         changed = subprocess.check_output(
             ["git", "diff", "--name-only", f"{base}...HEAD",
              "--", "**.cpp", "**.hpp", "**.h"],
-            text=True, stderr=subprocess.DEVNULL,
+            text=True, stderr=subprocess.PIPE,
         ).strip()
-    except subprocess.CalledProcessError:
-        # Fallback: check all workspace source files
-        changed = subprocess.check_output(
-            ["git", "ls-files", "--", "src/**.cpp", "src/**.hpp", "src/**.h"],
-            text=True,
-        ).strip()
+    except subprocess.CalledProcessError as e:
+        print(f"git diff failed: {e.stderr.decode().strip()}")
+        return 1
 
     if not changed:
         print("No C++ files changed")
         return 0
 
-    # Filter to workspace src/
-    src_files = [f for f in changed.splitlines() if f.startswith("src/") and "third_party/" not in f]
+    # Filter to workspace src/, skip deleted files and third_party
+    src_files = [f for f in changed.splitlines()
+                 if f.startswith("src/") and "third_party/" not in f
+                 and os.path.exists(f"/ws/{f}")]
     if not src_files:
         print("No workspace C++ files changed")
         return 0

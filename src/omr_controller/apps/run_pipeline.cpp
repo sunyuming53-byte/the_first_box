@@ -34,6 +34,7 @@ int main(int argc, char* argv[]) {  // NOLINT(bugprone-exception-escape)
             mode_str = argv[i + 1];
         }
     }
+    // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 
     if (mode_str.empty()) {
         std::cerr << "Error: --mode <in_hand|to_hand> is required\n";
