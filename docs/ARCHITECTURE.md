@@ -368,8 +368,8 @@ graph TD
     arm["rm::Arm<br/><i>moveJ waypoints</i>"]
     cam["CameraStream<br/><i>RealSense D435</i>"]
     collect["CalibDataCollector<br/><i>paired (pose, image) data</i>"]
-    pproc["PoseProcessor<br/><i>A_i = T_{i+1}·inv(T_i)</i>"]
-    solve["HandEyeSolver<br/><i>AX=XB → 4 methods, auto-select</i>"]
+    pproc["PoseProcessor<br/><i>A_i = T(i+1) * inv(T(i))</i>"]
+    solve["HandEyeSolver<br/><i>AX=XB, 4 methods, auto-select</i>"]
     xform["TransformPublisher<br/><i>TF broadcast</i>"]
 
     arm --> collect

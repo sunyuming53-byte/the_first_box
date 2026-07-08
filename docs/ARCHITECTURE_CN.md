@@ -346,8 +346,8 @@ graph TD
     arm["rm::Arm<br/><i>moveJ 路径点</i>"]
     cam["CameraStream<br/><i>RealSense D435</i>"]
     collect["CalibDataCollector<br/><i>配对的 (位姿, 图像) 数据</i>"]
-    pproc["PoseProcessor<br/><i>A_i = T_{i+1}·inv(T_i)</i>"]
-    solve["HandEyeSolver<br/><i>AX=XB → 4 种方法, 自动择优</i>"]
+    pproc["PoseProcessor<br/><i>A_i = T(i+1) * inv(T(i))</i>"]
+    solve["HandEyeSolver<br/><i>AX=XB, 4 种方法, 自动择优</i>"]
     xform["TransformPublisher<br/><i>TF 广播</i>"]
 
     arm --> collect

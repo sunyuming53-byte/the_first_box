@@ -255,16 +255,16 @@ flowchart TD
     %% Hand-Eye Calibration Pipeline
     subgraph Calib["Hand-Eye Calibration (omr_controller::calib)"]
         COLLECT["CalibDataCollector<br/><i>arm waypoints + camera capture</i>"]
-        PPROC["PoseProcessor<br/><i>A_i = T_{i+1}·inv(T_i)</i>"]
+        PPROC["PoseProcessor<br/><i>A_i = T(i+1) * inv(T(i))</i>"]
         HESOLVE["HandEyeSolver<br/><i>AX=XB (Tsai/Park/Horaud/Daniilidis)</i>"]
-        XFORM["TransformPublisher<br/><i>TF: camera→end-effector</i>"]
+        XFORM["TransformPublisher<br/><i>TF: camera to end-effector</i>"]
     end
 
     Arm -->|moveJ waypoints| COLLECT
     CamStream -->|RGB frames| COLLECT
     COLLECT -->|arm poses + images| PPROC
     PPROC -->|R_tool, t_tool| HESOLVE
-    HESOLVE -->|R, t (X matrix)| XFORM
+    HESOLVE -->|R, t = X| XFORM
     XFORM -->|TF broadcast| RSP
 
     %% MoveIt2 Planning
@@ -325,7 +325,7 @@ application-side — `move_group` itself is task-agnostic.
 **Calibration data flow:** `CalibDataCollector` runs the arm through waypoints via
 `rm::Arm::moveJ()`, captures chessboard images from `CameraStream`, and saves paired
 (arm pose, image) data. `PoseProcessor` computes relative arm motions
-A_i = T_{i+1} · inv(T_i) from the collected poses. `HandEyeSolver` solves the AX=XB
+A_i = T(i+1) * inv(T(i)) from the collected poses. `HandEyeSolver` solves the AX=XB
 hand-eye calibration using four methods (Tsai, Park, Horaud, Daniilidis) and picks the
 one with lowest reprojection error. `TransformPublisher` broadcasts the resulting
 camera→end-effector transform as a TF frame. The pipeline supports both EyeInHand and
