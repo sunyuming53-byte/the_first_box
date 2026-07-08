@@ -69,6 +69,6 @@ install(DIRECTORY config/ DESTINATION share/${PROJECT_NAME}/config)
 
 # ── Python waypoint scripts ──
 install(PROGRAMS scripts/record_waypoints.py DESTINATION lib/${PROJECT_NAME} RENAME record_waypoints)
-install(PROGRAMS scripts/waypoint_follower.py DESTINATION lib/${PROJECT_NAME} RENAME waypoint_follower)
-
+install(PROGRAMS scripts/inspection_sequencer.py DESTINATION lib/${PROJECT_NAME} RENAME inspection_sequencer)
+install(PROGRAMS scripts/csv_to_yaml.py DESTINATION lib/${PROJECT_NAME} RENAME csv_to_yaml)
 ament_package()

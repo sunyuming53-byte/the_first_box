@@ -19,6 +19,7 @@ from datetime import datetime
 import rclpy
 from rclpy.node import Node
 from nav_msgs.msg import Odometry
+from std_msgs.msg import Float32, String
 from tf_transformations import euler_from_quaternion
 
 
@@ -36,6 +37,8 @@ class WaypointRecorder(Node):
 
         # ---------- Parameters ----------
         self.declare_parameter('odom_topic', '/lio/odom')
+        self.declare_parameter('task_topic', '/waypoint_task')
+        self.declare_parameter('stop_seconds_topic', '/waypoint_stop_seconds')
         self.declare_parameter('min_distance', 0.30)
         self.declare_parameter('default_task', 'none')
         self.declare_parameter('default_tol', 0.30)
@@ -43,6 +46,8 @@ class WaypointRecorder(Node):
         self.declare_parameter('file_name', '')
 
         self.odom_topic = self.get_parameter('odom_topic').value
+        self.task_topic = self.get_parameter('task_topic').value
+        self.stop_seconds_topic = self.get_parameter('stop_seconds_topic').value
         self.min_distance = self.get_parameter('min_distance').value
         self.default_task = self.get_parameter('default_task').value
         self.default_tol = self.get_parameter('default_tol').value
@@ -94,9 +99,17 @@ class WaypointRecorder(Node):
         self.odom_sub = self.create_subscription(
             Odometry, self.odom_topic, self.odom_callback, 100)
 
+        self.task_sub = self.create_subscription(
+            String, self.task_topic, self.task_callback, 10)  # /waypoint_task
+
+        self.stop_sub = self.create_subscription(
+            Float32, self.stop_seconds_topic, self.stop_seconds_callback, 10)  # /waypoint_stop_seconds
+
         self.get_logger().info('=' * 50)
         self.get_logger().info('Waypoint recorder started.')
         self.get_logger().info(f'  Odom topic : {self.odom_topic}')
+        self.get_logger().info(f'  Task topic : {self.task_topic}')
+        self.get_logger().info(f'  Stop topic : {self.stop_seconds_topic}')
         self.get_logger().info(f'  Output csv : {self.csv_path}')
         self.get_logger().info(f'  Min dist   : {self.min_distance:.3f} m')
         self.get_logger().info('=' * 50)
@@ -148,6 +161,27 @@ class WaypointRecorder(Node):
         if should_save:
             self.save_waypoint(task=self.default_task, tol=self.default_tol,
                                reason=reason)
+
+    def task_callback(self, msg: String):
+        if self.current_msg is None:
+            self.get_logger().warn('No odometry received yet, cannot mark task waypoint.')
+            return
+
+        task_name = msg.data.strip()
+        if task_name == '':
+            self.get_logger().warn('Received empty task mark, ignored.')
+            return
+
+        self.save_waypoint(task=task_name, tol=self.default_tol,
+                           reason=f'manual_task={task_name}')
+
+    def stop_seconds_callback(self, msg: Float32):
+        if self.current_msg is None:
+            self.get_logger().warn('No odometry received yet, cannot mark stop waypoint.')
+            return
+
+        self.save_waypoint(task=f'stop_{msg.data}s', tol=self.default_tol,
+                           reason=f'manual_stop={msg.data}s')
 
     def save_waypoint(self, task, tol, reason=''):
         if self.current_msg is None:

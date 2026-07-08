@@ -70,17 +70,19 @@ def generate_launch_description():
         parameters=[nav2_params],
     )
 
-    waypoint_follower_nav2 = Node(
-        package='nav2_waypoint_follower', executable='waypoint_follower',
-        name='waypoint_follower', output='screen',
-        parameters=[nav2_params],
-    )
-
     velocity_smoother = Node(
         package='nav2_velocity_smoother', executable='velocity_smoother',
         name='velocity_smoother', output='screen',
         parameters=[nav2_params],
         remappings=[('/cmd_vel', '/m65_controller_manager/diff_drive_controller/cmd_vel')],
+    )
+
+    inspection_sequencer = Node(
+        package='omr_lio',
+        executable='inspection_sequencer',
+        name='inspection_sequencer',
+        output='screen',
+        parameters=[{'waypoints_file': ''}],
     )
 
     lifecycle_mgr = Node(
@@ -93,7 +95,6 @@ def generate_launch_description():
                 'controller_server',
                 'planner_server',
                 'bt_navigator',
-                'waypoint_follower',
                 'velocity_smoother',
             ],
         }],
@@ -108,7 +109,7 @@ def generate_launch_description():
         controller_server,
         planner_server,
         bt_navigator,
-        waypoint_follower_nav2,
         velocity_smoother,
+        inspection_sequencer,
         lifecycle_mgr,
     ])
