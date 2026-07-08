@@ -2,9 +2,13 @@
 
 ## Pre-push gate
 
-**Code MUST pass the full Docker-based build + test cycle before it is pushed.**
+**Code MUST pass the full Docker-based build + test + lint cycle before it is pushed.**
 
-CI uses `docker run --rm` (see `.github/workflows/ci.yml`). Verify locally with:
+CI uses `docker run --rm` (see `.github/workflows/ci.yml`). The Docker image
+contains the **exact** toolchain versions (clang-format, OpenCV, PCL, GCC) that
+CI uses. Local tool versions differ — local-only checks are NOT valid.
+
+Verify locally with:
 
 ```bash
 # 1. Rebuild image if dependencies changed
@@ -18,16 +22,29 @@ docker run --rm --user root -v $(pwd):/ws realman:develop bash -c '
   colcon build --cmake-args -DBUILD_TESTING=ON
   colcon test --return-code-on-test-failure
 '
+
+# 3. clang-format (blocking — MUST use Docker, NOT local clang-format)
+docker run --rm -v $(pwd)/src:/ws/src realman:develop bash -c '
+  find /ws/src \( -name "*.cpp" -o -name "*.hpp" -o -name "*.h" \) \
+    ! -path "*/third_party/*" \
+    ! -path "*/build/*" \
+    | xargs clang-format --dry-run --Werror
+'
 ```
 
 > In Docker, tests need `RMW_IMPLEMENTATION=rmw_cyclonedds_cpp` (the default
 > `rmw_fastrtps_cpp` requires shared memory not available in containers).
 > The Dockerfile pre-sets this.
 
-No commit may be pushed if the Docker build or any test fails. If a test
+No commit may be pushed if the Docker build, test, or clang-format check fails. If a test
 genuinely cannot run in Docker (e.g., requires live robot hardware), it
 must be skipped explicitly with a documented reason — never simply
 commented out or disabled without explanation.
+
+**NEVER run build, test, or format checks on the host machine.** The Docker
+image is the single source of truth for toolchain versions. Host GCC,
+clang-format, OpenCV, and PCL versions differ and will produce false
+positives or false negatives. If you cannot run Docker, do not push.
 
 ## Build
 
@@ -185,6 +202,11 @@ functions/methods, `UPPER_CASE` constants/enums, `lower_case` namespaces).
 
 CI runs `clang-format --dry-run --Werror` (blocking) and clang-tidy (non-blocking,
 info-only). No pre-commit hooks configured.
+
+**IMPORTANT — Always run clang-format inside Docker.** The Docker image uses
+clang-format 19; local host versions (14 on Ubuntu 22.04) apply different
+formatting rules. A file that passes local `clang-format --dry-run` may fail
+in CI. See Pre-push gate above for the exact command.
 
 ## Submodules
 
