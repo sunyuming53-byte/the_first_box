@@ -198,7 +198,7 @@ flowchart TD
     subgraph Orchestrator["Task Orchestrator (omr_controller)"]
         ORCH["TaskOrchestrator<br/><i>rclcpp::Node + BT.CPP tick loop (20 Hz)</i>"]
         BT["BehaviorTree.CPP v4<br/><i>BT XML → blackboard</i>"]
-        BB["Blackboard<br/><i>arm_client ✓ | gripper_client ✓<br/>vision_client ✓ | ros_node ✓<br/>base_client ✗ | motor_client ✗</i>"]
+        BB["Blackboard<br/><i>arm_client | gripper_client<br/>vision_client | ros_node<br/>base_client [not wired] | motor_client [not wired]</i>"]
         DTA["DoorTrajectoryAction<br/><i>BT::StatefulActionNode<br/>(creates own MoveGroupInterface)</i>"]
     end
 
@@ -209,8 +209,8 @@ flowchart TD
     BB -->|subscribes| JSB
     BB -->|action goal / stub| DJTC
     BB -->|subscribes / stub| DJSB
-    BB -->|cmd_vel Twist ✗| M65DDC
-    M65DDC -->|odom ✗| BB
+    BB -->|cmd_vel Twist [not wired]| M65DDC
+    M65DDC -->|odom [not wired]| BB
     DTA -->|setPoseTarget / plan / execute| MG
     DTA -->|add / update collision objects| SCENE
     DTA -->|subscribes| JSB
