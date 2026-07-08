@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include(${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/clang_tidy.cmake OPTIONAL)
 
 find_package(ament_cmake REQUIRED)
-find_package(OpenCV REQUIRED COMPONENTS core imgproc imgcodecs highgui)
+find_package(OpenCV REQUIRED COMPONENTS core imgproc imgcodecs highgui calib3d aruco objdetect)
 find_package(realsense2 REQUIRED)
 
 # ── Library ──
@@ -15,6 +15,7 @@ add_library(omr_vision SHARED
     src/camera/stream.cpp
     src/camera/types.cpp
     src/capture.cpp
+    src/calibration/camera_calib.cpp
 )
 target_include_directories(omr_vision PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -25,19 +26,31 @@ target_link_libraries(omr_vision PUBLIC
     realsense2::realsense2
 )
 
+# ── Executable: calibrate_camera ──
+add_executable(calibrate_camera apps/calibrate_camera.cpp)
+target_link_libraries(calibrate_camera omr_vision)
+
 # ── Install ──
 install(TARGETS omr_vision
     EXPORT omr_vision_targets
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
 )
+install(TARGETS calibrate_camera
+    RUNTIME DESTINATION lib/${PROJECT_NAME}
+)
 install(EXPORT omr_vision_targets
     FILE omr_visionTargets.cmake
     DESTINATION share/omr_vision/cmake
 )
 install(DIRECTORY include/ DESTINATION include)
+install(DIRECTORY config/ DESTINATION share/${PROJECT_NAME}/config)
 
 ament_export_targets(omr_vision_targets HAS_LIBRARY_TARGET)
 ament_export_include_directories(include)
+
+if(BUILD_TESTING)
+    add_subdirectory(test)
+endif()
 
 ament_package()
