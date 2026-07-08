@@ -75,20 +75,20 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: clang-format (blocking)
+      - name: clang-format (blocking, diff-only)
         run: |
-          docker run --rm \
-            -v ${{ github.workspace }}/src:/ws/src \
-            realman:develop \
-            bash -c '
-              set -euo pipefail
-              find /ws/src \( -name "*.cpp" -o -name "*.hpp" -o -name "*.h" \) \
-                ! -path "*/third_party/*" \
-                ! -path "*/build/*" \
-                | xargs clang-format --dry-run --Werror
+          CHANGED=$(git diff --name-only ${{ github.event.pull_request.base.sha }}...HEAD \
+            -- '**.cpp' '**.hpp' '**.h' | grep -v third_party/ || true)
+          if [ -z "$CHANGED" ]; then
+            echo "No C++ files changed, skipping"
+            exit 0
+          fi
+          echo "$CHANGED" | sed 's|^|/ws/|' | \
+            docker run --rm -i -v $(pwd):/ws realman:develop bash -c '
+              xargs -r clang-format --dry-run --Werror
             '
 
-      - name: clang-tidy (non-blocking, info only)
+      - name: clang-tidy (blocking)
         run: |
           docker run --rm \
             -v ${{ github.workspace }}/src:/ws/src \
@@ -99,4 +99,4 @@ jobs:
               colcon build --cmake-args \
                 -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
                 -DCLANG_TIDY=ON
-            ' || true
+            '

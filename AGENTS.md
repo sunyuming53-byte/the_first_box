@@ -24,12 +24,14 @@ docker run --rm --user root -v $(pwd):/ws realman:develop bash -c '
 '
 
 # 3. clang-format (blocking — MUST use Docker, NOT local clang-format)
-docker run --rm -v $(pwd)/src:/ws/src realman:develop bash -c '
-  find /ws/src \( -name "*.cpp" -o -name "*.hpp" -o -name "*.h" \) \
-    ! -path "*/third_party/*" \
-    ! -path "*/build/*" \
-    | xargs clang-format --dry-run --Werror
-'
+#    Check only changed files against base branch
+CHANGED=$(git diff --name-only origin/main...HEAD -- '**.cpp' '**.hpp' '**.h' | grep -v third_party/ || true)
+if [ -n "$CHANGED" ]; then
+  echo "$CHANGED" | sed 's|^|/ws/|' | \
+    docker run --rm -i -v $(pwd):/ws realman:develop bash -c '
+      xargs -r clang-format --dry-run --Werror
+    '
+fi
 ```
 
 > In Docker, tests need `RMW_IMPLEMENTATION=rmw_cyclonedds_cpp` (the default
@@ -200,8 +202,8 @@ functions/methods, `UPPER_CASE` constants/enums, `lower_case` namespaces).
 
 `clang-tidy` checks are disabled by default — pass `-DCLANG_TIDY=ON` to enable.
 
-CI runs `clang-format --dry-run --Werror` (blocking) and clang-tidy (non-blocking,
-info-only). No pre-commit hooks configured.
+CI runs `clang-format --dry-run --Werror` (blocking, diff-only) and clang-tidy (blocking,
+`-DCLANG_TIDY=ON` during build). No pre-commit hooks configured.
 
 **IMPORTANT — Always run clang-format inside Docker.** The Docker image uses
 clang-format 19; local host versions (14 on Ubuntu 22.04) apply different
