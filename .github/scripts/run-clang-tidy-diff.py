@@ -23,6 +23,12 @@ def main() -> int:
 
     # Get changed C++ files via git diff.  In CI, the base ref is available;
     # locally, diff against HEAD~1 or just check all workspace files.
+    # Docker mounts can trigger "dubious ownership" — fix if needed
+    subprocess.run(
+        ["git", "config", "--global", "--add", "safe.directory", "/ws"],
+        check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    )
+
     base = os.environ.get("GIT_BASE_REF", "HEAD~1")
     try:
         changed = subprocess.check_output(
