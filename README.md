@@ -46,6 +46,23 @@ pipeline/                            # ROS2 workspace root
 │   │   ├── src/
 │   │   ├── CMakeLists.txt
 │   │   └── package.xml
+│   ├── omr_hardware/                 # ament_cmake — ros2_control plugins
+│   │   ├── third_party/
+│   │   │   ├── realman_arm/          #   Git submodule — pure C++ arm control (zero ROS deps)
+│   │   │   │   └── third_party/RM_API2/  # Nested submodule — RealMan C SDK
+│   │   │   ├── dais_motor/           #   Git submodule — pure C++ Modbus RTU driver (zero ROS deps)
+│   │   │   └── m65_chassis/          #   Git submodule — pure C++ serial chassis driver (zero ROS deps)
+│   │   ├── include/omr_hardware/
+│   │   │   ├── arm_system.hpp        #   ArmSystem plugin (wraps rm::Arm)
+│   │   │   ├── dais_hardware.hpp     #   DaisHardware plugin (wraps dais::Motor)
+│   │   │   └── m65_hardware.hpp      #   M65Hardware plugin (wraps m65::Chassis)
+│   │   ├── src/
+│   │   │   ├── arm_system.cpp
+│   │   │   ├── dais_hardware.cpp
+│   │   │   └── m65_hardware.cpp
+│   │   ├── plugins.xml               #   ArmSystem + DaisHardware + M65Hardware registration
+│   │   ├── CMakeLists.txt
+│   │   └── package.xml
 │   ├── realman_calibration/          # ament_cmake — hand-eye calibration
 │   │   ├── include/realman_calibration/
 │   │   ├── src/
@@ -53,20 +70,6 @@ pipeline/                            # ROS2 workspace root
 │   │   ├── config/                   # Board config YAML
 │   │   ├── launch/
 │   │   ├── test/                     # Comprehensive test suite
-│   │   ├── CMakeLists.txt
-│   │   └── package.xml
-│   ├── omr_hardware/                 # ament_cmake — ros2_control plugins
-│   │   ├── third_party/
-│   │   │   ├── realman_arm/          #   Git submodule — pure C++ arm control (zero ROS deps)
-│   │   │   │   └── third_party/RM_API2/  # Nested submodule — RealMan C SDK
-│   │   │   └── dais_motor/           #   Git submodule — pure C++ Modbus RTU driver (zero ROS deps)
-│   │   ├── include/omr_hardware/
-│   │   │   ├── arm_system.hpp        #   ArmSystem plugin (wraps rm::Arm)
-│   │   │   └── dais_hardware.hpp     #   DaisHardware plugin (wraps dais::Motor)
-│   │   ├── src/
-│   │   │   ├── arm_system.cpp
-│   │   │   └── dais_hardware.cpp
-│   │   ├── plugins.xml               #   ArmSystem + DaisHardware registration
 │   │   ├── CMakeLists.txt
 │   │   └── package.xml
 │   ├── omr_controller/               # ament_cmake — behavior tree-based task orchestrator
@@ -81,7 +84,7 @@ pipeline/                            # ROS2 workspace root
 │   │   │   ├── state_machine/
 │   │   │   │   ├── bt_factory.hpp                #  BT.CPP custom nodes registration
 │   │   │   │   └── door_trajectory_action.hpp    #  DoorTrajectoryAction (BT::StatefulActionNode)
-│   │   │   ├── door_math.hpp          #     Door trajectory math model C(θ,φ) + R_T(θ,φ)
+│   │   │   ├── door_math.hpp          #     Door trajectory math model C(θ,φ,ω) + R_T(θ,φ,ω)
 │   │   │   ├── geometry_utils.hpp     #     homogeneous_to_pose() conversion utility
 │   │   │   └── types.hpp             #     Core data types
 │   │   ├── src/                      #   Implementation files
@@ -93,7 +96,7 @@ pipeline/                            # ROS2 workspace root
 │   │   │   └── pick_and_place.xml
 │   │   ├── launch/                   #   controller.launch.py
 │   │   ├── config/                   #   controller.yaml
-│   │   ├── test/                     #   11 test binaries (100% pass)
+│   │   ├── test/                     #   22 test files covering door math, collision, BT, clients, etc.
 │   │   ├── CMakeLists.txt
 │   │   └── package.xml
 │   ├── rm65_moveit_config/           # ament_cmake — MoveIt2 config for RM65 (no compiled code)
@@ -107,10 +110,12 @@ pipeline/                            # ROS2 workspace root
 │       │   ├── bringup.launch.py      #   ros2_control pipeline (RSP + CM + JSB + JTC + camera + calib)
 │       │   └── calibration.launch.py
 │       ├── config/
-│       │   └── realman_controllers.yaml  # JSB + JTC config (100Hz, open-loop)
+│       │   ├── realman_controllers.yaml  # JSB + JTC config (100Hz, open-loop)
+│       │   └── m65_controllers.yaml     # M65 chassis controller config
 │       ├── urdf/
 │       │   ├── realman.urdf.xacro     #   Main entry (kinematics + ros2_control)
 │       │   ├── realman.ros2_control.xacro  # <ros2_control> wrapper for ArmSystem
+│       │   ├── m65.ros2_control.xacro  #   <ros2_control> wrapper for M65Hardware
 │       │   ├── rm_65.urdf.xacro       #   Vendored upstream RM65 kinematics
 │       │   └── meshes/rm_65_arm/      #   STL meshes
 │       ├── CMakeLists.txt
@@ -175,6 +180,19 @@ flowchart TD
     DHW --> Motor["dais::Motor<br/><i>pure C++ Modbus RTU driver</i>"]
     Motor -->|Modbus RTU| PHW["D-AIS Motor"]
 
+    %% M65 Chassis subsystem
+    subgraph M65ROS2["M65 ROS2 Control Loop"]
+        M65CM["m65_controller_manager<br/><i>ros2_control_node</i>"]
+        M65JSB["m65_joint_state_broadcaster<br/><i>→ /m65/joint_states</i>"]
+        M65JTC["m65_joint_trajectory_controller<br/><i>/m65/follow_joint_trajectory</i>"]
+        M65HW["M65Hardware<br/><i>hardware_interface plugin</i>"]
+    end
+
+    M65JSB -->|reads state| M65HW
+    M65JTC -->|writes command| M65HW
+    M65HW --> Chassis["m65::Chassis<br/><i>pure C++ serial driver</i>"]
+    Chassis -->|Serial| CHW["M65 Mobile Base"]
+
     %% Task Orchestrator
     subgraph Orchestrator["Task Orchestrator (omr_controller)"]
         ORCH["TaskOrchestrator<br/><i>rclcpp::Node + BT.CPP tick loop (20 Hz)</i>"]
@@ -215,6 +233,10 @@ flowchart TD
 The `joint_trajectory_controller` (velocity-mode, PID closed-loop) receives goals →
 `DaisHardware.write()` → `dais::Motor::setVelocity()` → Modbus RTU → motor.
 
+**M65 chassis data flow:** `M65Hardware.read()` → `joint_state_broadcaster` → `/m65/joint_states`.
+The `joint_trajectory_controller` receives goals → `M65Hardware.write()` → `m65::Chassis::setVelocity()`
+→ serial → mobile base.
+
 **Orchestrator data flow:** `TaskOrchestrator` runs a BT.CPP v4 behavior tree at 20 Hz. Each BT
 action node delegates to a non-blocking Client (ArmClient → arm JTC, GripperClient → gripper
 action, VisionClient → RealSense + OpenCV). The full task flow (pick-and-place, inspection,
@@ -231,8 +253,8 @@ It lives in the `realman_arm` git submodule under `omr_hardware/third_party/`.
 It can be used in any context — embedded in your own ROS2 node, linked into a
 `ros2_control` hardware interface, or used standalone outside ROS2.
 
-`dais::Motor` follows the same pattern — a pure C++ Modbus RTU driver (zero ROS deps)
-in the `dais_motor` submodule, wrapped by the `DaisHardware` plugin in `omr_hardware`.
+`dais::Motor` and `m65::Chassis` follow the same pattern — pure C++ drivers (zero ROS deps)
+in their respective submodules, wrapped by `DaisHardware` and `M65Hardware` plugins in `omr_hardware`.
 
 ### Bringup
 
@@ -256,6 +278,15 @@ ros2 launch omr_bringup bringup.launch.py \
     baud_rate:=57600 \
     slave_id:=1 \
     gear_ratio:=1000
+
+# Start with M65 chassis driver
+ros2 launch omr_bringup bringup.launch.py launch_m65:=true
+
+# Configure M65 chassis hardware params
+ros2 launch omr_bringup bringup.launch.py \
+    launch_m65:=true \
+    m65_serial_port:=/dev/ttyBase \
+    m65_baud_rate:=115200
 ```
 
 The bringup loads the RM65 URDF (kinematics + meshes), starts ros2_control_node with
@@ -263,6 +294,9 @@ The bringup loads the RM65 URDF (kinematics + meshes), starts ros2_control_node 
 `robot_state_publisher`. All arm nodes are conditioned on `launch_arm:=true`.
 
 The bringup now supports `launch_dais:=true` to start a second `controller_manager` for the D-AIS motor at 50Hz (velocity-mode JTC with PID). Dais hw params are configurable via launch args.
+
+Similarly, `launch_m65:=true` starts a third `controller_manager` for the M65 mobile
+base with `joint_state_broadcaster` and `joint_trajectory_controller`.
 
 ### MoveIt2 collision-aware planning
 
@@ -282,7 +316,7 @@ ros2 launch omr_bringup bringup.launch.py launch_moveit:=true
 **Example: door trajectory**
 
 `DoorTrajectoryAction` (`BT::StatefulActionNode`) demonstrates MoveIt2 usage for a
-specific task. It computes target poses from a parametric `(θ, φ)` math model,
+specific task. It computes target poses from a parametric `(θ, φ, ω)` math model,
 registers task-specific collision objects (door panel + frame) in the planning scene,
 and delegates planning and execution to `move_group`. All business logic — the math
 model, collision object geometry, trajectory schedule — lives in the controller package,
@@ -295,6 +329,7 @@ not in MoveIt2 config.
   hinge_transform="0,0,0,0,0,0"
   theta_max_deg="90" theta_step_deg="5"
   phi_values="0,15,30,45,60,75,90"
+  omega_values="0,10,20"
   home_joints="0,0,0,0,0,0"/>
 ```
 
@@ -322,15 +357,21 @@ graph TD
     hw["omr_hardware<br/><i>ament_cmake</i>"]
     arm["realman_arm<br/><i>submodule (plain CMake)</i>"]
     motor["dais_motor<br/><i>submodule (plain CMake)</i>"]
+    m65["m65_chassis<br/><i>submodule (plain CMake)</i>"]
     calib["realman_calibration<br/><i>ament_cmake</i>"]
+    ctrl["omr_controller<br/><i>ament_cmake</i>"]
     bringup["omr_bringup<br/><i>launch only</i>"]
 
     vision --> calib
     hw -.->|embeds| arm
     hw -.->|embeds| motor
+    hw -.->|embeds| m65
     hw --> calib
+    hw --> ctrl
+    vision --> ctrl
     hw --> bringup
     calib --> bringup
+    ctrl --> bringup
     bringup --> moveit["rm65_moveit_config<br/><i>ament_cmake (config only)</i>"]
 ```
 
@@ -361,7 +402,7 @@ TaskOrchestrator (20 Hz BT tick loop)
   ├── ArmClient       → /arm_cm/follow_joint_trajectory
   ├── GripperClient   → /gripper/follow_joint_trajectory
   ├── MotorClient     → /dais_cm/follow_joint_trajectory (stub)
-  ├── BaseClient      → (stub — future base hardware)
+  ├── BaseClient      → /base/follow_joint_trajectory
   └── VisionClient    → RealSense D435 + OpenCV detection
 ```
 

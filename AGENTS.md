@@ -4,21 +4,25 @@
 
 **Code MUST pass the full Docker-based build + test cycle before it is pushed.**
 
-Always verify changes inside the develop container (the same environment CI uses):
+CI uses `docker run --rm` (see `.github/workflows/ci.yml`). Verify locally with:
 
 ```bash
 # 1. Rebuild image if dependencies changed
 docker compose build develop
 
-# 2. Build and test inside the container
-docker compose exec develop bash -c '
-  source /opt/ros/humble/setup.bash
+# 2. Build and test (match CI exactly)
+docker run --rm --user root -v $(pwd):/ws realman:develop bash -c '
+  set -euo pipefail
+  set +u; source /opt/ros/humble/setup.bash; set -u
   colcon build --symlink-install
   colcon build --cmake-args -DBUILD_TESTING=ON
-  source install/setup.bash
-  colcon test --packages-select omr_controller --event-handlers console_direct+
+  colcon test --return-code-on-test-failure
 '
 ```
+
+> In Docker, tests need `RMW_IMPLEMENTATION=rmw_cyclonedds_cpp` (the default
+> `rmw_fastrtps_cpp` requires shared memory not available in containers).
+> The Dockerfile pre-sets this.
 
 No commit may be pushed if the Docker build or any test fails. If a test
 genuinely cannot run in Docker (e.g., requires live robot hardware), it
@@ -39,14 +43,16 @@ colcon build --cmake-args -DREALMAN_SDK=/opt/realman-sdk
 
 The SDK is expected at `/opt/realman-sdk` (or `$REALMAN_SDK` env var),
 with `include/` and `lib/libapi_c.so` underneath. Discovery happens via
-`find_package(RealManSDK REQUIRED)` backed by `src/realman_arm/cmake/RealManSDKConfig.cmake`.
+`find_package(RealManSDK REQUIRED)` backed by `src/omr_hardware/third_party/realman_arm/cmake/RealManSDKConfig.cmake`.
 The Dockerfile copies the SDK from the submodule to `/opt/realman-sdk/` at
 build time.
 
 **Build order matters**: `omr_vision` (ament_cmake, no ROS deps) →
-`omr_hardware` (ament_cmake, embeds `realman_arm` as submodule) →
-`realman_calibration` (depends on both vision + arm) → `omr_bringup`
-(launch/config only). `colcon build` handles this automatically.
+`omr_hardware` (ament_cmake, embeds submodules) →
+`realman_calibration` (depends on both vision + arm) →
+`omr_controller` (depends on omr_hardware + omr_vision) →
+`omr_bringup` (launch/config only, depends on all).
+`colcon build` handles this automatically.
 
 ### clangd IntelliSense
 
@@ -65,13 +71,27 @@ system includes). `UnusedIncludes` is disabled.
 | Package | Build system | Purpose |
 |---|---|---|
 | `omr_vision` | ament_cmake | RealSense D435 capture (OpenCV + librealsense2). No ROS deps. |
+| `omr_hardware` | ament_cmake | ros2_control hardware interface plugins (ArmSystem, DaisHardware, M65Hardware). Embeds realman_arm, dais_motor, m65_chassis as submodules. |
 | `realman_calibration` | ament_cmake | Hand-eye calibration pipeline. Depends on vision + arm. |
-| `omr_hardware` | ament_cmake | ros2_control hardware interface plugins. Embeds `realman_arm` as submodule. |
-| `omr_bringup` | ament_cmake | Launch files + config only. No compiled code. |
+| `omr_controller` | ament_cmake | Behavior tree-based task orchestrator (BT.CPP v4). Clients: Arm, Gripper, Motor, Base, Vision. Door trajectory math model with MoveIt2 collision-aware planning. |
+| `rm65_moveit_config` | ament_cmake | MoveIt2 config for RM65 (SRDF, KDL kinematics, OMPL, geometric collision primitives). No compiled code. |
+| `omr_bringup` | ament_cmake | Launch files + config + URDF only. No compiled code. |
 
-**Note**: `realman_arm` is a **plain CMake project** (NOT `ament_cmake`) with
-no ROS dependencies. It is embedded as a submodule under `omr_hardware`.
-Do NOT add `ament_cmake`, `rclcpp`, or any ROS dependency to it.
+**Hardware interface plugins** (all in `omr_hardware/plugins.xml`):
+- `ArmSystem` — wraps `rm::Arm` (RealMan arm via TCP)
+- `DaisHardware` — wraps `dais::Motor` (D-AIS motor via Modbus RTU)
+- `M65Hardware` — wraps `m65::Chassis` (M65 mobile base via serial)
+
+**Submodules** (`src/omr_hardware/third_party/`):
+
+| Path | Repo | Purpose |
+|---|---|---|
+| `realman_arm/` | ssh://git@github.com/ChiefTechLabs/realman_arm.git | `rm::Arm` — pure C++ arm control (zero ROS deps) |
+| `dais_motor/` | ssh://git@github.com/ChiefTechLabs/dais_motor.git | `dais::Motor` — pure C++ Modbus RTU driver (zero ROS deps) |
+| `m65_chassis/` | ssh://git@github.com/ChiefTechLabs/m65_chassis.git | `m65::Chassis` — pure C++ serial chassis driver (zero ROS deps) |
+
+**All submodules are plain CMake projects (NOT `ament_cmake`) with zero ROS
+dependencies.** Do NOT add `ament_cmake`, `rclcpp`, or any ROS dependency to them.
 
 ## Architecture
 
@@ -90,11 +110,13 @@ rm::Arm   (PIMPL facade, non-ROS, non-copyable, movable)
   constructing `Arm` without hardware present.
 - There is NO `ArmNode` class and NO `arm_node` executable. The runtime supervisor
   starts `ros2_control_node` (via `controller_manager`) and `calib_node`.
+- `dais::Motor` and `m65::Chassis` follow the same pattern: pure C++, zero ROS,
+  wrapped by their respective hardware interface plugins in `omr_hardware`.
 
 ### Source layout (realman_arm)
 
 ```
-src/realman_arm/
+src/omr_hardware/third_party/realman_arm/
 ├── include/realman/
 │   ├── core/          # Arm (PIMPL), ArmConfig, ArmState, ArmError
 │   ├── motion/        # JointPosition, CartesianPose, SpeedRatio typedefs
@@ -136,14 +158,6 @@ These throw `rm::ArmError("not implemented in V1")`:
 
 If a user asks about these, they need implementation — don't assume they work.
 
-## Example executables
-
-Built: `movej_test` (hello_arm.cpp), `gripper_test`, `joint_test`, `movel_test`.
-`external_trigger.cpp` is commented out in CMakeLists.txt — uncomment to build it.
-Do NOT modify `package.xml` to declare these as dependencies.
-
-Run examples via ros2_control pipeline (see `omr_bringup`). Standalone `ros2 run realman_arm` executables have been removed.
-
 ## C++ standard
 
 All packages use **C++23**. The ROS2 Humble base image ships GCC 11.4 which
@@ -171,20 +185,24 @@ functions/methods, `UPPER_CASE` constants/enums, `lower_case` namespaces).
 
 `clang-tidy` checks are disabled by default — pass `-DCLANG_TIDY=ON` to enable.
 
-There is no CI pipeline and no pre-commit hooks.
+CI runs `clang-format --dry-run --Werror` (blocking) and clang-tidy (non-blocking,
+info-only). No pre-commit hooks configured.
 
-## SDK submodule
+## Submodules
 
 ```bash
 git submodule update --init --recursive   # after clone
 ```
 
-The submodule URL is `git@github.com:RealManRobot/RM_API2.git` (SSH). If a user
-lacks SSH keys, switch to HTTPS in `.gitmodules`.
+All submodules use SSH URLs. If SSH keys are unavailable, temporarily switch
+to HTTPS in `.gitmodules`.
 
-The C SDK `.so` is versioned at `third_party/RM_API2/C/linux/linux_x86_c_vv1.1.5/libapi_c.so`.
-The cmake config discovers it via glob on `linux/linux_x86_c_vv*/libapi_c.so`.
-When updating the submodule, check if the versioned path changed.
+**RealMan C SDK** is nested: `realman_arm/third_party/RM_API2/` (SSH:
+`git@github.com:RealManRobot/RM_API2.git`). The `.so` is versioned at
+`third_party/RM_API2/C/linux/linux_x86_c_vv1.1.5/libapi_c.so`. The cmake
+config discovers it via glob on `linux/linux_x86_c_vv*/libapi_c.so`.
+When updating the submodule, check if the versioned path changed and update
+`COPY` commands in the Dockerfile.
 
 ## Testing
 
@@ -194,11 +212,29 @@ colcon build --cmake-args -DBUILD_TESTING=ON
 colcon test
 ```
 
+To run tests for a single package:
+```bash
+colcon test --packages-select omr_controller --event-handlers console_direct+
+```
+
 Test binaries need `LD_LIBRARY_PATH` pointing to the SDK lib — CMake config
 handles this via `APPEND_ENV`.
 
-`realman_calibration` has the most comprehensive test suite (camera calibration,
-pose processing, hand-eye, TF integration, synthetic data generators).
+`omr_controller` has 22 test files (~20 test binaries) covering door math,
+collision, BT factory, clients, geometry utils, orchestrator, and
+MoveIt2 integration. `realman_calibration` has the most comprehensive
+suite (camera calibration, pose processing, hand-eye, TF integration,
+synthetic data generators).
+
+### Docker test gotcha
+
+The default `rmw_fastrtps_cpp` middleware requires shared memory (not available
+in Docker). Tests in Docker fail with obscure errors unless you set:
+```bash
+export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+```
+The Dockerfile pre-configures this, but if you see `RMW` errors during local
+Docker testing, check this first.
 
 ## Docker & deployment
 
@@ -215,18 +251,10 @@ deploy-remote <robot-ip>    # sync + supervisor restart
 ssh-remote <robot-ip>       # SSH into runtime
 ```
 
-The runtime container expects built artifacts at `/ws/install`. Supervisor
-config at `scripts/supervisord.conf` sources both `/opt/ros/humble/setup.bash`
-and `/ws/install/setup.bash` before launching nodes.
-
 Proxy config for apt/pip behind a local proxy: copy `.env.example` to `.env` and
 customize. `docker compose` reads proxy vars from `.env`.
 
 ## Dependencies not in workspace
-
-`realman_calibration` depends on `omr_vision` and the arm SDK (via `omr_hardware`'s submodule).
-`omr_vision` is a workspace package at `src/omr_vision/`. `realman_arm` is
-embedded as a submodule under `omr_hardware`. They must be built before the calibration package.
 
 **When adding a new ROS2 `<depend>` in any `package.xml`**: also add the
 corresponding `ros-humble-*` apt package to the `RUN apt-get install` blocks in
@@ -240,3 +268,16 @@ Dockerfile uses explicit `apt-get install` instead of `rosdep` because
 This workspace is indexed with CodeGraph (`.codegraph/`). Use `codegraph_*`
 tools for structural queries — symbol lookup, callers/callees, impact analysis.
 The index lags file writes by ~500ms; don't query immediately after editing.
+
+## Git worktrees
+
+This repo uses git worktrees for parallel feature branches:
+```
+main workspace:   /home/ubuntu/.ws/pipeline             (main)
+gimbal feature:   /home/ubuntu/.ws/pipeline-gimbal      (feat/gimbal-kinematics)
+m65 feature:      /home/ubuntu/.ws/pipeline-m65-chassis  (feat/m65-chassis)
+```
+
+**When working in a worktree, ensure file operations target the correct
+workspace path.** A session in `pipeline-gimbal` accidentally writing to
+`pipeline` is a known failure mode — check `pwd` before editing.
