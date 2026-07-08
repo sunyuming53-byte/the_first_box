@@ -210,6 +210,25 @@ flowchart TD
     M65HW --> Chassis["m65::Chassis<br/><i>pure C++ serial driver</i>"]
     Chassis -->|Serial| CHW["M65 Mobile Base"]
 
+    %% LiDAR SLAM & Navigation
+    subgraph LIO["LiDAR SLAM & Navigation (omr_lio)"]
+        LIONode["LioNode<br/><i>S-FAST_LIO (ESKF + ikd-Tree)</i>"]
+        ESTOP["EstopperNode<br/><i>reactive stop (0.3m)</i>"]
+        NAV2["Nav2<br/><i>SmacHybrid2D planner<br/>RegulatedPurePursuit controller</i>"]
+        SEQ["InspectionSequencer<br/><i>YAML waypoints → NavigateToPose</i>"]
+    end
+
+    LIDAR["Livox Mid-360"] -->|livox/lidar| LIONode
+    IMU["IMU (built-in)"] -->|livox/imu| LIONode
+    LIONode -->|lio/odom + TF map→odom| M65DDC
+    M65DDC -->|odom (wheel)| LIONode
+    LIONode -->|cloud_registered| ESTOP
+    LIONode -->|cloud_registered| NAV2
+    LIONode -->|lio/odom| NAV2
+    NAV2 -->|cmd_vel| M65DDC
+    ESTOP -->|lio/emergency_stop| M65DDC
+    SEQ -->|navigate_to_pose| NAV2
+
     %% Task Orchestrator
     subgraph Orchestrator["Task Orchestrator (omr_controller)"]
         ORCH["TaskOrchestrator<br/><i>rclcpp::Node + BT.CPP tick loop (20 Hz)</i>"]
@@ -257,6 +276,20 @@ Note: `MotorClient` in the orchestrator is a stub and not registered in the BT b
 per-wheel velocities → `M65BaseHardware.write()` → `m65::Chassis::set_velocity()` → serial → base.
 Note: `BaseClientImpl` is created in the orchestrator but not registered in the BT blackboard;
 no BT action node can currently command the M65 chassis.
+
+**omr_lio data flow:** `LioNode` fuses Livox Mid-360 point cloud + built-in IMU via
+S-FAST_LIO (ESKF + ikd-Tree), publishing `/lio/odom` and TF `map→odom` for global
+localization. The M65 `diff_drive_controller` provides wheel odometry as `odom→base_link`,
+forming a continuous TF chain: `map → odom → base_footprint → base_link`. Nav2
+(SmacHybrid2D planner + RegulatedPurePursuit controller) uses costmaps from `/cloud_registered`
+and `/lio/odom` to plan collision-free paths. `EstopperNode` monitors `/cloud_registered`
+and publishes `/lio/emergency_stop` when obstacles are detected within 0.3m.
+
+**Inspection flow:** `InspectionSequencer` loads YAML-defined waypoints. On receiving a
+waypoint name via `/inspection_sequencer/go_to_waypoint`, it sends a `NavigateToPose` action
+to Nav2. Upon arrival, if the waypoint has a `task` field, it publishes
+`start:<task>:<name>` on `/chassis/task_event`, waits for `/chassis/task_done` from the
+external scheduler (e.g., arm controller), then publishes `done:<task>:<name>`.
 
 **Orchestrator data flow:** `TaskOrchestrator` runs a BT.CPP v4 behavior tree at 20 Hz.
 Client instances (`arm_`, `gripper_`, `vision_`, `motor_`, `base_`) are created in the
