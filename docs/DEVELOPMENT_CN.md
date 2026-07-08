@@ -99,7 +99,7 @@ rm -rf build/ install/ log/
 colcon build
 
 # 构建指定包及其上游依赖
-colcon build --packages-up-to realman_calibration
+colcon build --packages-up-to omr_controller
 
 # 仅构建指定包（不包含其下游依赖）
 colcon build --packages-select omr_vision
@@ -122,12 +122,8 @@ colcon build --cmake-args -DREALMAN_SDK=/custom/path
 graph TD
     vision["omr_vision"]
     hw["omr_hardware<br/>内嵌 realman_arm"]
-    calib["realman_calibration"]
     bringup["omr_bringup"]
-    controller["omr_controller<br/>独立构建"]
-    vision --> calib
-    hw --> calib
-    calib --> bringup
+    controller["omr_controller<br/>手眼标定 + 任务编排"]
 ```
 
 `omr_bringup` 不含编译代码，但 `colcon build` 仍会处理其 `CMakeLists.txt` 以安装
@@ -169,7 +165,7 @@ colcon build --cmake-args -DBUILD_TESTING=ON
 colcon test
 
 # 运行指定包的测试
-colcon test --packages-select realman_calibration
+colcon test --packages-select omr_controller
 
 # 显示测试输出（包括通过的测试）
 colcon test-result --all --verbose
@@ -182,9 +178,8 @@ colcon test --return-code-on-test-failure
 
 | 包 | 测试可执行文件数 | 覆盖范围 |
 |---|---|---|
-| `realman_calibration` | 15 | 相机标定、手眼标定、位姿处理、TF 集成、端到端流水线、合成数据 |
-| `omr_controller` | 14 | arm_client、gripper_client、vision_client、motor_client、base_client、bt_factory、bt_xml、orchestrator、types、client_integration、orchestrator_integration |
-| `omr_vision` | 0 | 尚无测试 |
+| `omr_controller` | ~20 | arm_client、gripper_client、vision_client、motor_client、base_client、bt_factory、bt_xml、orchestrator、types、client_integration、orchestrator_integration、手眼标定求解器、TF 集成、端到端流水线、合成数据 |
+| `omr_vision` | 待定 | 相机标定测试（原属于 realman_calibration） |
 | `omr_hardware` | 0 | 尚无测试 |
 | `omr_bringup` | 0 | 仅 launch/config |
 
@@ -200,8 +195,8 @@ if(BUILD_TESTING)
 endif()
 ```
 
-测试文件放在各包的 `test/` 目录下。参考 `realman_calibration/test/` 中的合成数据
-生成器和集成测试示例。
+测试文件放在各包的 `test/` 目录下。参考 `src/omr_vision/test/` 和
+`src/omr_controller/test/` 中的合成数据生成器和集成测试示例。
 
 ### Docker 测试环境
 
@@ -284,9 +279,9 @@ ros2 control list_controllers
 开发镜像已包含 GDB。调试特定可执行文件：
 
 ```bash
-gdb --args ros2 run realman_calibration calib_node
+gdb --args ros2 run omr_controller calib_node
 # 或调试测试：
-gdb --args ./build/realman_calibration/test_camera_calib
+gdb --args ./build/omr_controller/test_some_test
 ```
 
 ### Supervisor 日志（运行时）
@@ -329,7 +324,7 @@ ssh-remote 192.168.1.100
 
 执行过程：
 1. `sync-remote` 通过 SSH 端口 2022 将 `/ws/install/` rsync 到 `root@<ip>:/ws/install/`
-2. `deploy-remote` 完成相同操作后，再对 arm_node 和 calib_node 执行 `supervisorctl restart`
+2. `deploy-remote` 完成相同操作后，再对 controller_manager 和 calib_node 执行 `supervisorctl restart`
 3. Supervisor 在启动进程前先 source `/opt/ros/humble/setup.bash` 和 `/ws/install/setup.bash`
 
 ### 机器人首次部署设置

@@ -21,8 +21,11 @@ find_package(rclcpp REQUIRED)
 find_package(rclcpp_action REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(std_srvs REQUIRED)
 find_package(tf2 REQUIRED)
+find_package(tf2_ros REQUIRED)
 find_package(trajectory_msgs REQUIRED)
+find_package(visualization_msgs REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(realsense2 REQUIRED)
 
@@ -35,6 +38,18 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
 )
+
+# realman_arm linkage from omr_hardware (needed for calibration collector)
+find_package(omr_hardware REQUIRED)
+get_filename_component(_omr_hw_prefix "${omr_hardware_DIR}/../../.." ABSOLUTE)
+target_include_directories(${PROJECT_NAME} PUBLIC
+    $<BUILD_INTERFACE:${_omr_hw_prefix}/include/realman_arm>
+)
+find_library(_realman_arm_lib realman_arm
+    PATHS "${_omr_hw_prefix}/lib" NO_DEFAULT_PATH
+)
+target_link_libraries(${PROJECT_NAME} PUBLIC ${_realman_arm_lib})
+
 ament_target_dependencies(${PROJECT_NAME} PUBLIC
     ament_index_cpp
     behaviortree_cpp
@@ -65,6 +80,26 @@ install(DIRECTORY bt_xml/ DESTINATION share/${PROJECT_NAME}/bt_xml)
 add_executable(task_orchestrator src/main.cpp)
 target_link_libraries(task_orchestrator ${PROJECT_NAME})
 install(TARGETS task_orchestrator DESTINATION lib/${PROJECT_NAME})
+
+# ── Calibration executables ──
+add_executable(calib_node apps/calib_node.cpp)
+target_link_libraries(calib_node ${PROJECT_NAME} ${_realman_arm_lib})
+ament_target_dependencies(calib_node rclcpp sensor_msgs std_msgs std_srvs tf2_ros geometry_msgs visualization_msgs)
+
+add_executable(collect_data apps/collect.cpp)
+target_link_libraries(collect_data ${PROJECT_NAME})
+
+add_executable(compute_hand_eye apps/compute_hand_eye.cpp)
+target_link_libraries(compute_hand_eye ${PROJECT_NAME})
+
+add_executable(process_poses apps/process_poses.cpp)
+target_link_libraries(process_poses ${PROJECT_NAME})
+
+add_executable(run_pipeline apps/run_pipeline.cpp)
+target_link_libraries(run_pipeline ${PROJECT_NAME})
+
+install(TARGETS calib_node collect_data compute_hand_eye process_poses run_pipeline
+    RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 ament_export_libraries(${PROJECT_NAME})
 ament_export_include_directories(include)
@@ -159,6 +194,28 @@ if(BUILD_TESTING)
     ament_add_gtest(collision_avoidance_test test/test_main_ros.cpp test/collision_avoidance_test.cpp)
     target_include_directories(collision_avoidance_test PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
     target_link_libraries(collision_avoidance_test ${PROJECT_NAME} ${OpenCV_LIBS})
+
+    # ── Calibration tests ──
+    # synthetic_poses (minimal copy for hand_eye/tf_integration tests)
+    add_library(calib_synthetic_poses STATIC test/calib/synthetic_poses.cpp)
+    target_include_directories(calib_synthetic_poses PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/test/calib)
+    target_link_libraries(calib_synthetic_poses PUBLIC ${OpenCV_LIBS})
+
+    ament_add_gtest(pose_proc_test test/test_main.cpp test/calib/pose_proc_test.cpp)
+    target_include_directories(pose_proc_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    target_link_libraries(pose_proc_test ${PROJECT_NAME} ${OpenCV_LIBS})
+
+    ament_add_gtest(hand_eye_test test/test_main.cpp test/calib/hand_eye_test.cpp)
+    target_include_directories(hand_eye_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    target_link_libraries(hand_eye_test ${PROJECT_NAME} calib_synthetic_poses ${OpenCV_LIBS})
+
+    ament_add_gtest(tf_integration_test test/test_main.cpp test/calib/tf_integration_test.cpp)
+    target_include_directories(tf_integration_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    target_link_libraries(tf_integration_test ${PROJECT_NAME} calib_synthetic_poses ${OpenCV_LIBS})
+
+    # e2e_pipeline_test: SKIPPED — requires synthetic_board (233-line image
+    # renderer in omr_vision/test/) which is too large to copy. Re-enable when
+    # a shared test library solution is implemented across packages.
 endif()
 
 ament_package()

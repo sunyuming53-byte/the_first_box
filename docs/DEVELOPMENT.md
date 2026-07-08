@@ -102,7 +102,7 @@ rm -rf build/ install/ log/
 colcon build
 
 # Build specific package + dependents
-colcon build --packages-up-to realman_calibration
+colcon build --packages-up-to omr_controller
 
 # Build specific package only (no dependents)
 colcon build --packages-select omr_vision
@@ -125,12 +125,8 @@ colcon build --cmake-args -DREALMAN_SDK=/custom/path
 graph TD
     vision["omr_vision"]
     hw["omr_hardware<br/>embeds realman_arm"]
-    calib["realman_calibration"]
     bringup["omr_bringup"]
-    controller["omr_controller<br/>independent"]
-    vision --> calib
-    hw --> calib
-    calib --> bringup
+    controller["omr_controller<br/>hand-eye + orchestration"]
 ```
 
 `omr_bringup` has no compiled code, but `colcon build` still processes its
@@ -173,7 +169,7 @@ colcon build --cmake-args -DBUILD_TESTING=ON
 colcon test
 
 # Run specific package
-colcon test --packages-select realman_calibration
+colcon test --packages-select omr_controller
 
 # Show test output (even for passing tests)
 colcon test-result --all --verbose
@@ -186,9 +182,8 @@ colcon test --return-code-on-test-failure
 
 | Package | Test binaries | Coverage |
 |---|---|---|
-| `realman_calibration` | 15 | camera_calib, hand_eye, pose_proc, TF integration, e2e pipeline, synthetic data |
-| `omr_controller` | 14 | arm_client, gripper_client, vision_client, motor_client, base_client, bt_factory, bt_xml, orchestrator, types, client_integration, orchestrator_integration |
-| `omr_vision` | 0 | No tests yet |
+| `omr_controller` | ~20 | arm_client, gripper_client, vision_client, motor_client, base_client, bt_factory, bt_xml, orchestrator, types, client_integration, orchestrator_integration, hand-eye solvers, TF integration, e2e pipeline, synthetic data |
+| `omr_vision` | TBD | Camera calibration tests (formerly in realman_calibration) |
 | `omr_hardware` | 0 | No tests yet |
 | `omr_bringup` | 0 | Launch/config only |
 
@@ -204,8 +199,9 @@ if(BUILD_TESTING)
 endif()
 ```
 
-Test files go in `test/` within each package. See `realman_calibration/test/` for
-examples of synthetic data generators and integration tests.
+Test files go in `test/` within each package. See `src/omr_vision/test/` and
+`src/omr_controller/test/` for examples of synthetic data generators and
+integration tests.
 
 ### Docker test environment
 
@@ -288,9 +284,9 @@ ros2 control list_controllers
 The develop image includes GDB. To debug a specific executable:
 
 ```bash
-gdb --args ros2 run realman_calibration calib_node
+gdb --args ros2 run omr_controller calib_node
 # or for tests:
-gdb --args ./build/realman_calibration/test_camera_calib
+gdb --args ./build/omr_controller/test_some_test
 ```
 
 ### Supervisor logs (runtime)
@@ -333,7 +329,7 @@ ssh-remote 192.168.1.100
 
 What happens:
 1. `sync-remote` rsyncs `/ws/install/` → `root@<ip>:/ws/install/` via SSH port 2022
-2. `deploy-remote` does the same + runs `supervisorctl restart` on arm_node and calib_node
+2. `deploy-remote` does the same + runs `supervisorctl restart` on controller_manager and calib_node
 3. Supervisor sources `/opt/ros/humble/setup.bash` and `/ws/install/setup.bash` before launching
 
 ### First-time robot setup

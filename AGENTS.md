@@ -2,9 +2,13 @@
 
 ## Pre-push gate
 
-**Code MUST pass the full Docker-based build + test cycle before it is pushed.**
+**Code MUST pass the full Docker-based build + test + lint cycle before it is pushed.**
 
-CI uses `docker run --rm` (see `.github/workflows/ci.yml`). Verify locally with:
+CI uses `docker run --rm` (see `.github/workflows/ci.yml`). The Docker image
+contains the **exact** toolchain versions (clang-format, OpenCV, PCL, GCC) that
+CI uses. Local tool versions differ — local-only checks are NOT valid.
+
+Verify locally with:
 
 ```bash
 # 1. Rebuild image if dependencies changed
@@ -18,16 +22,31 @@ docker run --rm --user root -v $(pwd):/ws realman:develop bash -c '
   colcon build --cmake-args -DBUILD_TESTING=ON
   colcon test --return-code-on-test-failure
 '
+
+# 3. clang-format (blocking — MUST use Docker, NOT local clang-format)
+#    Check only changed files against base branch
+CHANGED=$(git diff --name-only --diff-filter=ACMRT origin/main...HEAD -- '**.cpp' '**.hpp' '**.h' | grep -v third_party/ || true)
+if [ -n "$CHANGED" ]; then
+  echo "$CHANGED" | sed 's|^|/ws/|' | \
+    docker run --rm -i -v $(pwd):/ws realman:develop bash -c '
+      xargs -r clang-format --dry-run --Werror
+    '
+fi
 ```
 
 > In Docker, tests need `RMW_IMPLEMENTATION=rmw_cyclonedds_cpp` (the default
 > `rmw_fastrtps_cpp` requires shared memory not available in containers).
 > The Dockerfile pre-sets this.
 
-No commit may be pushed if the Docker build or any test fails. If a test
+No commit may be pushed if the Docker build, test, or clang-format check fails. If a test
 genuinely cannot run in Docker (e.g., requires live robot hardware), it
 must be skipped explicitly with a documented reason — never simply
 commented out or disabled without explanation.
+
+**NEVER run build, test, or format checks on the host machine.** The Docker
+image is the single source of truth for toolchain versions. Host GCC,
+clang-format, OpenCV, and PCL versions differ and will produce false
+positives or false negatives. If you cannot run Docker, do not push.
 
 ## Build
 
@@ -49,7 +68,6 @@ build time.
 
 **Build order matters**: `omr_vision` (ament_cmake, no ROS deps) →
 `omr_hardware` (ament_cmake, embeds submodules) →
-`realman_calibration` (depends on both vision + arm) →
 `omr_controller` (depends on omr_hardware + omr_vision) →
 `omr_bringup` (launch/config only, depends on all).
 `colcon build` handles this automatically.
@@ -72,8 +90,7 @@ system includes). `UnusedIncludes` is disabled.
 |---|---|---|
 | `omr_vision` | ament_cmake | RealSense D435 capture (OpenCV + librealsense2). No ROS deps. |
 | `omr_hardware` | ament_cmake | ros2_control hardware interface plugins (ArmSystem, DaisHardware, M65Hardware). Embeds realman_arm, dais_motor, m65_chassis as submodules. |
-| `realman_calibration` | ament_cmake | Hand-eye calibration pipeline. Depends on vision + arm. |
-| `omr_controller` | ament_cmake | Behavior tree-based task orchestrator (BT.CPP v4). Clients: Arm, Gripper, Motor, Base, Vision. Door trajectory math model with MoveIt2 collision-aware planning. |
+| `omr_controller` | ament_cmake | Behavior tree-based task orchestrator (BT.CPP v4). Clients: Arm, Gripper, Motor, Base, Vision. Door trajectory math model with MoveIt2 collision-aware planning. Hand-eye calibration pipeline. |
 | `rm65_moveit_config` | ament_cmake | MoveIt2 config for RM65 (SRDF, KDL kinematics, OMPL, geometric collision primitives). No compiled code. |
 | `omr_bringup` | ament_cmake | Launch files + config + URDF only. No compiled code. |
 
@@ -109,7 +126,7 @@ rm::Arm   (PIMPL facade, non-ROS, non-copyable, movable)
   the arm is deferred to the first command via `ensureConnected()`. This allows
   constructing `Arm` without hardware present.
 - There is NO `ArmNode` class and NO `arm_node` executable. The runtime supervisor
-  starts `ros2_control_node` (via `controller_manager`) and `calib_node`.
+  starts `ros2_control_node` (via `controller_manager`).
 - `dais::Motor` and `m65::Chassis` follow the same pattern: pure C++, zero ROS,
   wrapped by their respective hardware interface plugins in `omr_hardware`.
 
@@ -164,8 +181,8 @@ All packages use **C++23**. The ROS2 Humble base image ships GCC 11.4 which
 has partial C++23 support — avoid features that require GCC 12+ (e.g.,
 `std::expected`, `std::ranges::to`).
 
-The calibration package includes polyfills (`expected_polyfill.hpp`,
-`format_polyfill.hpp`) for this reason.
+The former `realman_calibration` package included polyfills (`expected_polyfill.hpp`,
+`format_polyfill.hpp`) for this reason; these remain in the migrated packages.
 
 ## cmake/ directory (workspace root)
 
@@ -185,8 +202,14 @@ functions/methods, `UPPER_CASE` constants/enums, `lower_case` namespaces).
 
 `clang-tidy` checks are disabled by default — pass `-DCLANG_TIDY=ON` to enable.
 
-CI runs `clang-format --dry-run --Werror` (blocking) and clang-tidy (non-blocking,
-info-only). No pre-commit hooks configured.
+CI runs `clang-format --dry-run --Werror` (blocking, diff-only) and clang-tidy
+(blocking, diff-only — checks only changed files against compile_commands.json).
+No pre-commit hooks configured.
+
+**IMPORTANT — Always run clang-format inside Docker.** The Docker image uses
+clang-format 19; local host versions (14 on Ubuntu 22.04) apply different
+formatting rules. A file that passes local `clang-format --dry-run` may fail
+in CI. See Pre-push gate above for the exact command.
 
 ## Submodules
 
@@ -220,11 +243,11 @@ colcon test --packages-select omr_controller --event-handlers console_direct+
 Test binaries need `LD_LIBRARY_PATH` pointing to the SDK lib — CMake config
 handles this via `APPEND_ENV`.
 
-`omr_controller` has 22 test files (~20 test binaries) covering door math,
-collision, BT factory, clients, geometry utils, orchestrator, and
-MoveIt2 integration. `realman_calibration` has the most comprehensive
-suite (camera calibration, pose processing, hand-eye, TF integration,
-synthetic data generators).
+`omr_controller` and `omr_vision` share what was formerly `realman_calibration`'s
+comprehensive test suite (camera calibration, pose processing, hand-eye, TF
+integration, synthetic data generators), alongside `omr_controller`'s own 22
+test files (~20 test binaries) covering door math, collision, BT factory,
+clients, geometry utils, and orchestrator.
 
 ### Docker test gotcha
 

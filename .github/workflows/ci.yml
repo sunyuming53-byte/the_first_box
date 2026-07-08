@@ -20,6 +20,7 @@ jobs:
         with:
           submodules: recursive
           token: ${{ secrets.GH_PAT }}
+          fetch-depth: 0
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -59,6 +60,7 @@ jobs:
         with:
           submodules: recursive
           token: ${{ secrets.GH_PAT }}
+          fetch-depth: 0
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -75,28 +77,29 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: clang-format (blocking)
+      - name: clang-format (blocking, diff-only)
         run: |
-          docker run --rm \
-            -v ${{ github.workspace }}/src:/ws/src \
-            realman:develop \
-            bash -c '
-              set -euo pipefail
-              find /ws/src \( -name "*.cpp" -o -name "*.hpp" -o -name "*.h" \) \
-                ! -path "*/third_party/*" \
-                ! -path "*/build/*" \
-                | xargs clang-format --dry-run --Werror
+          CHANGED=$(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }}...HEAD \
+            -- '**.cpp' '**.hpp' '**.h' | grep -v third_party/ || true)
+          if [ -z "$CHANGED" ]; then
+            echo "No C++ files changed, skipping"
+            exit 0
+          fi
+          echo "$CHANGED" | sed 's|^|/ws/|' | \
+            docker run --rm -i -v $(pwd):/ws realman:develop bash -c '
+              xargs -r clang-format --dry-run --Werror
             '
 
-      - name: clang-tidy (non-blocking, info only)
+      - name: clang-tidy (blocking, diff-only)
         run: |
-          docker run --rm \
-            -v ${{ github.workspace }}/src:/ws/src \
+          docker run --rm --user root \
+            -v ${{ github.workspace }}:/ws \
             realman:develop \
             bash -c '
               set -euo pipefail
+              rm -rf /ws/log /ws/build /ws/install && mkdir -p /ws/log
+              git config --global --add safe.directory /ws 2>/dev/null || true
               set +u; source /opt/ros/humble/setup.bash; set -u
-              colcon build --cmake-args \
-                -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-                -DCLANG_TIDY=ON
-            ' || true
+              colcon build --symlink-install --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON 2>&1 | tail -3
+              GIT_BASE_REF="${{ github.event.pull_request.base.sha }}" python3 /ws/.github/scripts/run-clang-tidy-diff.py
+            '

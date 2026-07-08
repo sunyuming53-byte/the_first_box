@@ -152,15 +152,14 @@ graph TD
 ### `src/` 下的包
 
 | 包 | 构建系统 | 依赖 | 功能 |
-|---|---|---|---|
-| `omr_vision` | ament_cmake | OpenCV, librealsense2 | RealSense D435 相机采集，无 ROS 依赖 |
+|---|---|---|---|---|
+| `omr_vision` | ament_cmake | OpenCV, librealsense2 | RealSense D435 相机采集 + 标定，无 ROS 依赖 |
 | `omr_hardware` | ament_cmake | realman_arm, dais_motor（子模块） | ros2_control 硬件接口插件：ArmSystem、DaisHardware |
-| `realman_calibration` | ament_cmake | omr_vision, omr_hardware | 手眼标定流程 + calib_node |
-| `omr_controller` | ament_cmake | omr_hardware, BehaviorTree.CPP | 任务编排器：基于行为树的抓取放置 |
+| `omr_controller` | ament_cmake | omr_hardware, omr_vision, BehaviorTree.CPP | 任务编排器：基于行为树的抓取放置 + 手眼标定流程 |
 | `omr_bringup` | ament_cmake | （仅启动文件与配置） | 启动文件、URDF、控制器配置 |
 
-构建顺序：`omr_vision` → `omr_hardware` → `realman_calibration` → `omr_bringup`。
-`omr_controller` 与 `realman_calibration` 独立。`colcon build` 会自动处理依赖顺序。
+构建顺序：`omr_vision` → `omr_hardware` → `omr_controller` → `omr_bringup`。
+`colcon build` 会自动处理依赖顺序。
 
 ### 重要文件一览
 
@@ -185,8 +184,8 @@ graph TD
         bt["BT.CPP v4 — pick_and_place.xml"]
         clients["ArmClient / GripperClient / VisionClient"]
     end
-    subgraph L2["标定 realman_calibration"]
-        calib["calib_node, camera_calib, hand_eye"]
+    subgraph L2["标定 omr_controller"]
+        calib["calib_node, hand_eye 求解器, camera_calib"]
     end
     subgraph L3["ros2_control omr_hardware"]
         plugins["ArmSystem + DaisHardware 插件"]
@@ -215,7 +214,7 @@ graph TD
 
 **公开 API 用弧度，内部用度。** 公开 API 使用弧度（ROS2 惯例），但 C SDK 使用度。转换发生在 `Arm::Impl` 内部 — `motion.cpp` 在送入时转换，`state.cpp` 在输出时转换。在你的代码中请始终使用弧度。
 
-**C++23 + GCC 11.4。** 目标标准为 C++23，但避免需要 GCC 12+ 的特性（`std::expected`、`std::ranges::to`）。补丁（polyfill）位于 `realman_calibration`（`expected_polyfill.hpp`、`format_polyfill.hpp`）。
+**C++23 + GCC 11.4。** 目标标准为 C++23，但避免需要 GCC 12+ 的特性（`std::expected`、`std::ranges::to`）。补丁（polyfill）原位于 `realman_calibration`（`expected_polyfill.hpp`、`format_polyfill.hpp`），迁移后仍保留在各包中。
 
 ### 数据流
 
@@ -269,7 +268,7 @@ colcon build --cmake-args -DBUILD_TESTING=ON
 colcon test
 
 # 运行指定包的测试
-colcon test --packages-select realman_calibration
+colcon test --packages-select omr_controller
 
 # 查看测试输出
 colcon test-result --all --verbose
@@ -299,7 +298,7 @@ ssh-remote <robot-ip>      # SSH 进入机器人进行调试
 
 运行时容器运行在机器人 MiniPC 上，包含：
 - `controller_manager`（ros2_control_node）— 读取 ArmSystem 插件，管理 JSB+JTC
-- `calib_node` — 标定服务
+- `calib_node`（来自 omr_controller）— 标定服务
 - SSH 服务器监听 2022 端口 — 接收来自开发容器的构建产物
 - Supervisor 自动重启崩溃的进程
 
@@ -317,7 +316,7 @@ ssh-remote <robot-ip>      # SSH 进入机器人进行调试
    - `src/omr_bringup/launch/bringup.launch.py` — 了解启动了什么
    - `src/omr_hardware/src/arm_system.cpp` — 硬件接口 ↔ 机械臂的桥梁
    - `src/realman_arm/include/realman/core/arm_facade.hpp` — `rm::Arm` 公开 API
-   - `src/realman_calibration/apps/calib_node.cpp` — 标定 ROS 节点
+   - `src/omr_controller/apps/calib_node.cpp` — 标定 ROS 节点
 
 4. **在真实硬件上运行示例**：
    ```bash

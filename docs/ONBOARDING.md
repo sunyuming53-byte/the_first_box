@@ -163,16 +163,14 @@ graph TD
 ### Packages under `src/`
 
 | Package | Build system | Dependencies | What it does |
-|---|---|---|---|
-| `omr_vision` | ament_cmake | OpenCV, librealsense2 | RealSense D435 camera capture. No ROS deps. |
+|---|---|---|---|---|
+| `omr_vision` | ament_cmake | OpenCV, librealsense2 | RealSense D435 camera capture + calibration. No ROS deps. |
 | `omr_hardware` | ament_cmake | realman_arm, dais_motor (submodules) | ros2_control hardware interface plugins: ArmSystem, DaisHardware |
-| `realman_calibration` | ament_cmake | omr_vision, omr_hardware | Hand-eye calibration pipeline + calib_node |
-| `omr_controller` | ament_cmake | omr_hardware, BehaviorTree.CPP | Task orchestrator: BT-based pick-and-place |
+| `omr_controller` | ament_cmake | omr_hardware, omr_vision, BehaviorTree.CPP | Task orchestrator: BT-based pick-and-place. Hand-eye calibration pipeline. |
 | `omr_bringup` | ament_cmake | (launch/config only) | Launch files, URDF, controller configs |
 
-Build order: `omr_vision` → `omr_hardware` → `realman_calibration` → `omr_bringup`.
-`omr_controller` is independent of `realman_calibration`. `colcon build` resolves
-this automatically.
+Build order: `omr_vision` → `omr_hardware` → `omr_controller` → `omr_bringup`.
+`colcon build` resolves this automatically.
 
 ### Key files to know
 
@@ -197,8 +195,8 @@ graph TD
         bt["BT.CPP v4 - pick_and_place.xml"]
         clients["ArmClient / GripperClient / VisionClient"]
     end
-    subgraph L2["Calibration realman_calibration"]
-        calib["calib_node, camera_calib, hand_eye"]
+    subgraph L2["Calibration omr_controller"]
+        calib["calib_node, hand_eye solver, camera_calib"]
     end
     subgraph L3["ros2_control omr_hardware"]
         plugins["ArmSystem + DaisHardware plugins"]
@@ -238,8 +236,8 @@ C SDK uses degrees. Conversion happens inside `Arm::Impl` — `motion.cpp` conve
 on the way in, `state.cpp` converts on the way out. Always use radians in your code.
 
 **C++23 with GCC 11.4.** We target C++23 but avoid features that require GCC 12+
-(`std::expected`, `std::ranges::to`). Polyfills live in `realman_calibration`
-(`expected_polyfill.hpp`, `format_polyfill.hpp`).
+(`std::expected`, `std::ranges::to`). Polyfills from the former `realman_calibration`
+package (`expected_polyfill.hpp`, `format_polyfill.hpp`) remain in the migrated packages.
 
 ### Data flow
 
@@ -294,7 +292,7 @@ colcon build --cmake-args -DBUILD_TESTING=ON
 colcon test
 
 # Run a specific package's tests
-colcon test --packages-select realman_calibration
+colcon test --packages-select omr_controller
 
 # See test output
 colcon test-result --all --verbose
@@ -328,7 +326,7 @@ ssh-remote <robot-ip>      # SSH into the robot for debugging
 
 The runtime container runs on the robot MiniPC with:
 - `controller_manager` (ros2_control_node) — reads ArmSystem plugin, manages JSB+JTC
-- `calib_node` — calibration service
+- `calib_node` (from omr_controller) — calibration service
 - SSH server on port 2022 — receives artifacts from develop container
 - Supervisor auto-restarts crashed processes
 
@@ -351,7 +349,7 @@ After you have the workspace building and tests passing:
    - `src/omr_bringup/launch/bringup.launch.py` — see what launches
    - `src/omr_hardware/src/arm_system.cpp` — hardware interface ↔ arm bridge
    - `src/realman_arm/include/realman/core/arm_facade.hpp` — `rm::Arm` public API
-   - `src/realman_calibration/apps/calib_node.cpp` — calibration ROS node
+   - `src/omr_controller/apps/calib_node.cpp` — calibration ROS node
 
 4. **Run an example on real hardware**:
    ```bash

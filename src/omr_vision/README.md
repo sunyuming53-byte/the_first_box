@@ -21,7 +21,7 @@ auto frame = capture->grab();  // blocks until next frame
 
 ## Build
 
-This package is a dependency of `realman_calibration`. Build the full workspace:
+Build the full workspace:
 
 ```bash
 source /opt/ros/humble/setup.bash
