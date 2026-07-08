@@ -148,11 +148,11 @@ pipeline/                            # ROS2 workspace root
 
 ```mermaid
 flowchart TD
-    subgraph ROS2["ROS2 Control Loop"]
+    subgraph ROS2["ROS2 Control Loop — Arm"]
         RSP["robot_state_publisher<br/><i>TF + /robot_description</i>"]
-        CM["controller_manager<br/><i>ros2_control_node</i>"]
+        CM["controller_manager<br/><i>ros2_control_node @ /controller_manager</i>"]
         JSB["joint_state_broadcaster<br/><i>→ /joint_states</i>"]
-        JTC["joint_trajectory_controller<br/><i>/follow_joint_trajectory</i>"]
+        JTC["joint_trajectory_controller<br/><i>action: .../follow_joint_trajectory</i>"]
         HW["ArmSystem<br/><i>hardware_interface plugin</i>"]
     end
 
@@ -166,13 +166,14 @@ flowchart TD
     SDK -->|TCP| HW2["RealMan Robot Arm"]
 
     Arm -.->|Lazy connect| Impl
+    Arm -.->|setGripperRoute (RS-485)| GripHw["Gripper<br/><i>CTAG2F90D / EG2-4C2</i>"]
 
     %% D-AIS Motor subsystem
-    subgraph DaisROS2["D-AIS ROS2 Control Loop"]
-        DCM["dais_controller_manager<br/><i>ros2_control_node</i>"]
+    subgraph DaisROS2["ROS2 Control Loop — D-AIS Motor"]
+        DCM["dais_controller_manager<br/><i>ros2_control_node @ /dais_controller_manager</i>"]
         DJSB["dais_joint_state_broadcaster<br/><i>→ /dais/joint_states</i>"]
-        DJTC["dais_joint_trajectory_controller<br/><i>/dais/follow_joint_trajectory</i>"]
-        DHW["DaisHardware<br/><i>hardware_interface plugin</i>"]
+        DJTC["dais_joint_trajectory_controller<br/><i>action: .../follow_joint_trajectory</i>"]
+        DHW["DaisHardware<br/><i>hardware_interface plugin (velocity cmd)</i>"]
     end
 
     DJSB -->|reads state| DHW
@@ -181,35 +182,37 @@ flowchart TD
     Motor -->|Modbus RTU| PHW["D-AIS Motor"]
 
     %% M65 Chassis subsystem
-    subgraph M65ROS2["M65 ROS2 Control Loop"]
-        M65CM["m65_controller_manager<br/><i>ros2_control_node</i>"]
+    subgraph M65ROS2["ROS2 Control Loop — M65 Chassis"]
+        M65CM["m65_controller_manager<br/><i>ros2_control_node @ /m65_controller_manager</i>"]
         M65JSB["m65_joint_state_broadcaster<br/><i>→ /m65/joint_states</i>"]
-        M65JTC["m65_joint_trajectory_controller<br/><i>/m65/follow_joint_trajectory</i>"]
-        M65HW["M65Hardware<br/><i>hardware_interface plugin</i>"]
+        M65DDC["diff_drive_controller<br/><i>← cmd_vel (Twist)  → odom</i>"]
+        M65HW["M65BaseHardware<br/><i>hardware_interface plugin (velocity cmd)</i>"]
     end
 
     M65JSB -->|reads state| M65HW
-    M65JTC -->|writes command| M65HW
+    M65DDC -->|writes command| M65HW
     M65HW --> Chassis["m65::Chassis<br/><i>pure C++ serial driver</i>"]
     Chassis -->|Serial| CHW["M65 Mobile Base"]
 
     %% Task Orchestrator
     subgraph Orchestrator["Task Orchestrator (omr_controller)"]
         ORCH["TaskOrchestrator<br/><i>rclcpp::Node + BT.CPP tick loop (20 Hz)</i>"]
-        BT["BehaviorTree.CPP v4<br/><i>pick_and_place.xml</i>"]
-        CLIENTS["Client Layer<br/><i>Arm | Gripper | Motor | Base | Vision</i>"]
-        DTA["DoorTrajectoryAction<br/><i>BT::StatefulActionNode</i>"]
+        BT["BehaviorTree.CPP v4<br/><i>BT XML → blackboard</i>"]
+        BB["Blackboard<br/><i>arm_client ✓ | gripper_client ✓<br/>vision_client ✓ | ros_node ✓<br/>base_client ✗ | motor_client ✗</i>"]
+        DTA["DoorTrajectoryAction<br/><i>BT::StatefulActionNode<br/>(creates own MoveGroupInterface)</i>"]
     end
 
     ORCH --> BT
-    BT --> CLIENTS
+    BT --> BB
     BT --> DTA
-    CLIENTS -->|action goal| JTC
-    CLIENTS -->|subscribes| JSB
-    CLIENTS -->|action goal| DJTC
-    CLIENTS -->|subscribes| DJSB
+    BB -->|action goal| JTC
+    BB -->|subscribes| JSB
+    BB -->|action goal (stub)| DJTC
+    BB -->|subscribes (stub)| DJSB
+    BB -->|cmd_vel (Twist) ✗| M65DDC
+    M65DDC -->|odom ✗| BB
     DTA -->|setPoseTarget / plan / execute| MG
-    DTA -->|add / update| DOOR
+    DTA -->|add / update collision objects| SCENE
     DTA -->|subscribes| JSB
 
     %% MoveIt2 Planning
@@ -221,32 +224,36 @@ flowchart TD
     MG -->|action goal| JTC
     MG -->|subscribes| JSB
     MG -->|robot_description| RSP
-    DT -->|setPoseTarget / plan / execute| MG
-    DT -->|add / update| SCENE
 ```
 
-**Arm data flow:** `ArmSystem.read()` → `joint_state_broadcaster` → `/joint_states` topic. The
+**Arm data flow:** `ArmSystem.read()` → `rm::Arm::jointPosition()` → `/joint_states`. The
 `joint_trajectory_controller` receives `FollowJointTrajectory` action goals → `ArmSystem.write()`
-→ `rm::Arm::moveJ()` → arm.
+→ `rm::Arm::moveJ()` → TCP → arm. Gripper is controlled via `rm::Arm::setGripperRoute()`
+(RS-485 through arm end-effector), not through ros2_control.
 
-**D-AIS motor data flow:** `DaisHardware.read()` → `joint_state_broadcaster` → `/joint_states`.
-The `joint_trajectory_controller` (velocity-mode, PID closed-loop) receives goals →
-`DaisHardware.write()` → `dais::Motor::setVelocity()` → Modbus RTU → motor.
+**D-AIS motor data flow:** `DaisHardware.read()` → `dais::Motor::read_state()` → `/dais/joint_states`.
+The `joint_trajectory_controller` (velocity-mode, PID closed-loop) receives action goals →
+`DaisHardware.write()` → `dais::Motor::set_velocity_command()` → Modbus RTU → motor.
+Note: `MotorClient` in the orchestrator is a stub and not registered in the BT blackboard.
 
-**M65 chassis data flow:** `M65Hardware.read()` → `joint_state_broadcaster` → `/m65/joint_states`.
-The `joint_trajectory_controller` receives goals → `M65Hardware.write()` → `m65::Chassis::setVelocity()`
-→ serial → mobile base.
+**M65 chassis data flow:** `M65BaseHardware.read()` → `m65::Chassis::read_state()` (encoder→rad)
+→ `/m65/joint_states`. The `diff_drive_controller` receives `cmd_vel` (Twist) → computes
+per-wheel velocities → `M65BaseHardware.write()` → `m65::Chassis::set_velocity()` → serial → base.
+Note: `BaseClientImpl` is created in the orchestrator but not registered in the BT blackboard;
+no BT action node can currently command the M65 chassis.
 
-**Orchestrator data flow:** `TaskOrchestrator` runs a BT.CPP v4 behavior tree at 20 Hz. Each BT
-action node delegates to a non-blocking Client (ArmClient → arm JTC, GripperClient → gripper
-action, VisionClient → RealSense + OpenCV). The full task flow (pick-and-place, inspection,
-etc.) is defined in XML files under `bt_xml/`, editable without recompilation.
+**Orchestrator data flow:** `TaskOrchestrator` runs a BT.CPP v4 behavior tree at 20 Hz.
+Client instances (`arm_`, `gripper_`, `vision_`, `motor_`, `base_`) are created in the
+constructor, but only `arm_client`, `gripper_client`, `vision_client`, and `ros_node` are
+registered on the BT blackboard (via `build_tree()` in `bt_factory.cpp`).
+`motor_client` and `base_client` are created but not wired into the BT — no BT action
+nodes exist for Motor or Base. Task flows are defined in XML under `bt_xml/`.
 
-**MoveIt2 data flow:** \`move_group\` provides collision-aware planning via OMPL, sending
-trajectories to the existing `/arm_cm/follow_joint_trajectory` action. The planning scene
-and collision objects are managed by application-level BT nodes — \`move_group\` itself
-is task-agnostic. Configuration lives in \`rm65_moveit_config\` (URDF with convex
-collision primitives, SRDF, KDL kinematics, OMPL config).
+**MoveIt2 data flow:** `DoorTrajectoryAction` creates its own `MoveGroupInterface` and
+`PlanningSceneInterface` from the blackboard's `ros_node` in `onStart()`. It subscribes to
+`/joint_states` independently. MoveGroup sends `FollowJointTrajectory` action goals to the
+arm's JTC and reads `/joint_states`. Planning scene collision objects are managed
+application-side — `move_group` itself is task-agnostic.
 
 `rm::Arm` is a plain C++ class (not an `rclcpp::Node`) with **zero ROS dependency**.
 It lives in the `realman_arm` git submodule under `omr_hardware/third_party/`.
@@ -296,7 +303,8 @@ The bringup loads the RM65 URDF (kinematics + meshes), starts ros2_control_node 
 The bringup now supports `launch_dais:=true` to start a second `controller_manager` for the D-AIS motor at 50Hz (velocity-mode JTC with PID). Dais hw params are configurable via launch args.
 
 Similarly, `launch_m65:=true` starts a third `controller_manager` for the M65 mobile
-base with `joint_state_broadcaster` and `joint_trajectory_controller`.
+base with `joint_state_broadcaster` and `diff_drive_controller`. The orchestrator's
+`BaseClientImpl` communicates with it via Twist `cmd_vel` + odometry.
 
 ### MoveIt2 collision-aware planning
 
@@ -402,7 +410,7 @@ TaskOrchestrator (20 Hz BT tick loop)
   ├── ArmClient       → /arm_cm/follow_joint_trajectory
   ├── GripperClient   → /gripper/follow_joint_trajectory
   ├── MotorClient     → /dais_cm/follow_joint_trajectory (stub)
-  ├── BaseClient      → /base/follow_joint_trajectory
+  ├── BaseClientImpl  → /m65_controller_manager/diff_drive_controller/cmd_vel + /odom
   └── VisionClient    → RealSense D435 + OpenCV detection
 ```
 
