@@ -111,7 +111,7 @@ pipeline/                            # ROS2 workspace root
 │   │   ├── third_party/               #   Sophus (Lie algebra), ikd-Tree (incremental kd-tree)
 │   │   ├── config/                    #   lio.yaml, nav2_params.yaml, estopper.yaml
 │   │   ├── launch/                    #   lio_mapping.launch.py, m65_lio_nav.launch.py
-│   │   ├── scripts/                   #   record_waypoints.py, waypoint_follower.py
+│   │   ├── scripts/                   #   record_waypoints.py, inspection_sequencer.py, csv_to_yaml.py
 │   │   ├── CMakeLists.txt
 │   │   └── package.xml
 │   └── omr_bringup/                  # ament_cmake — launch + config + URDF (no compiled code)
@@ -372,13 +372,16 @@ Nav2 (SmacHybrid + RPP) → /cmd_vel → M65 chassis
 **Key components:**
 - **LioNode** — S-FAST_LIO LiDAR-inertial odometry (ESKF + ikd-Tree), publishes `/lio/odom`, `/cloud_registered`, `/laser_map`
 - **EstopperNode** — Reactive emergency stop from point cloud (0.3m threshold)
-- **Waypoint tools** — CSV recording from `/lio/odom` + Nav2 FollowWaypoints with task event protocol
+- **Inspection Sequencer** — YAML-defined waypoints, NavigateToPose per point by name, task event handshake (`/chassis/task_event`/`/chassis/task_done`)
+- **Waypoint recording** — CSV recording from `/lio/odom` with auto (distance) and remote (`/waypoint_task`) triggers
 - **Nav2** — SmacHybrid2D planner + RegulatedPurePursuit controller, costmaps from `/cloud_registered`
 
 Launch with M65 chassis:
 ```bash
 ros2 launch omr_bringup bringup.launch.py launch_m65:=true launch_m65_lio:=true
 ```
+
+For detailed usage instructions, see **[docs/omr_lio_usage.md](docs/omr_lio_usage.md)**.
 
 ## Building
 
