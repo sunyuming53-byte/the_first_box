@@ -55,10 +55,23 @@ def generate_launch_description():
         ])],
     )
 
+    # ── Estopper (optional) ──
+    estopper_node = Node(
+        package='omr_lio',
+        executable='estopper_node',
+        name='estopper_node',
+        output='screen',
+        condition=IfCondition(LaunchConfiguration('launch_estopper')),
+        parameters=[PathJoinSubstitution([
+            FindPackageShare('omr_lio'), 'config', 'estopper.yaml'
+        ])],
+    )
+
     return LaunchDescription([
         config_file_arg,
         launch_livox_driver_arg,
         launch_estopper_arg,
         lio_node,
         livox_node,
+        estopper_node,
     ])

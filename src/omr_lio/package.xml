@@ -17,7 +17,6 @@
   <depend>tf2</depend>
   <depend>pcl_conversions</depend>
   <depend>nav2_msgs</depend>
-  <depend>livox_ros_driver2</depend>
   <depend>rclpy</depend>
 
   <export>

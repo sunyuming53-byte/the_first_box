@@ -1,5 +1,9 @@
 #pragma once
 
+#include <ikd-Tree/ikd_Tree.h>
+#include <pcl/filters/voxel_grid.h>
+#include <tf2_ros/transform_broadcaster.h>
+
 #include <atomic>
 #include <condition_variable>
 #include <deque>
@@ -9,20 +13,16 @@
 #include <thread>
 #include <vector>
 
-#include <Eigen/Core>
-#include <nav_msgs/msg/odometry.hpp>
-#include <nav_msgs/msg/path.hpp>
-#include <pcl/filters/voxel_grid.h>
-#include <rclcpp/rclcpp.hpp>
-#include <sensor_msgs/msg/imu.hpp>
-#include <sensor_msgs/msg/point_cloud2.hpp>
-#include <tf2_ros/transform_broadcaster.h>
-
 #include "omr_lio/IMU_Processing.hpp"
 #include "omr_lio/common_lib.h"
 #include "omr_lio/esekfom.hpp"
 #include "omr_lio/preprocess.h"
-#include <ikd-Tree/ikd_Tree.h>
+#include <Eigen/Core>
+#include <nav_msgs/msg/odometry.hpp>
+#include <nav_msgs/msg/path.hpp>
+#include <rclcpp/rclcpp.hpp>
+#include <sensor_msgs/msg/imu.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
 
 namespace omr_lio {
 
@@ -35,8 +35,8 @@ public:
 
 private:
     // ── Callbacks ──
-    void lidar_callback(const sensor_msgs::msg::PointCloud2::SharedPtr& msg);
-    void imu_callback(const sensor_msgs::msg::Imu::SharedPtr& msg);
+    void lidar_callback(const sensor_msgs::msg::PointCloud2::SharedPtr msg);
+    void imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg);
 
     // ── Main processing ──
     void process_loop();
@@ -98,7 +98,7 @@ private:
     double filter_size_surf_min_{0.5};
     double filter_size_map_min_{0.5};
     double cube_len_{200.0};
-    float det_range_{300.0f};
+    double det_range_{300.0};
     double fov_deg_{180.0};
     double gyr_cov_{0.1};
     double acc_cov_{0.1};

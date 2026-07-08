@@ -23,10 +23,18 @@ find_package(Eigen3 REQUIRED)
 find_package(PCL REQUIRED)
 find_package(OpenMP REQUIRED)
 
+# Livox SDK2 is optional (only needed for AVIA LiDAR support)
+find_package(livox_ros_driver2 QUIET)
+if(livox_ros_driver2_FOUND)
+  add_definitions(-DHAS_LIVOX)
+  message(STATUS "Livox SDK2 found — AVIA LiDAR support enabled")
+else()
+  message(STATUS "Livox SDK2 not found — building without AVIA LiDAR support")
+endif()
+
 # GLOB all implementation .cpp files, then exclude main entry points
 file(GLOB_RECURSE OMR_LIO_SRCS CONFIGURE_DEPENDS src/*.cpp)
 list(FILTER OMR_LIO_SRCS EXCLUDE REGEX "src/lio_mapping\\.cpp")
-list(FILTER OMR_LIO_SRCS EXCLUDE REGEX "src/estopper_node\\.cpp")
 list(FILTER OMR_LIO_SRCS EXCLUDE REGEX "src/estopper_main\\.cpp")
 
 # ── Executables ──

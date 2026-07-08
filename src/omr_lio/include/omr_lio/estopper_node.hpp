@@ -11,7 +11,7 @@ public:
     explicit EstopperNode(const rclcpp::NodeOptions& options = rclcpp::NodeOptions());
 
 private:
-    void cloud_callback(const sensor_msgs::msg::PointCloud2::SharedPtr& msg);
+    void cloud_callback(const sensor_msgs::msg::PointCloud2::SharedPtr msg);
 
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr sub_cloud_;
     rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr pub_estop_;

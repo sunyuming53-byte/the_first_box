@@ -1,29 +1,31 @@
 #include "omr_lio/lio_node.hpp"
 
-#include <omp.h>
-
 #include <cmath>
 #include <csignal>
+#include <omp.h>
+#include <pcl/io/pcd_io.h>
+#include <pcl_conversions/pcl_conversions.h>
+#include <tf2/LinearMath/Quaternion.h>
+#include <unistd.h>
+
 #include <fstream>
 #include <iostream>
 #include <thread>
-#include <unistd.h>
 
 #include <Eigen/Core>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <geometry_msgs/msg/vector3.hpp>
-#include <pcl/io/pcd_io.h>
-#include <pcl_conversions/pcl_conversions.h>
-#include <tf2/LinearMath/Quaternion.h>
 
 #define INIT_TIME (0.1)
 #define LASER_POINT_COV (0.001)
 #define PUBFRAME_PERIOD (20)
+#ifndef ROOT_DIR
+#define ROOT_DIR "./"
+#endif
 
 namespace omr_lio {
 
-LioNode::LioNode(const rclcpp::NodeOptions& options)
-    : rclcpp::Node("lio_node", options) {
+LioNode::LioNode(const rclcpp::NodeOptions& options) : rclcpp::Node("lio_node", options) {
     declare_params();
     load_params();
 
@@ -31,24 +33,22 @@ LioNode::LioNode(const rclcpp::NodeOptions& options)
     rclcpp::QoS qos_reliable(100);
     rclcpp::QoS qos_sensor = rclcpp::SensorDataQoS();
 
-    pub_odom_ = this->create_publisher<nav_msgs::msg::Odometry>(
-        "/lio/odom", qos_reliable);
-    pub_cloud_registered_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
-        "/cloud_registered", qos_reliable);
+    pub_odom_ = this->create_publisher<nav_msgs::msg::Odometry>("/lio/odom", qos_reliable);
+    pub_cloud_registered_ =
+        this->create_publisher<sensor_msgs::msg::PointCloud2>("/cloud_registered", qos_reliable);
     pub_cloud_registered_body_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
         "/cloud_registered_body", qos_reliable);
     pub_laser_map_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
         "/laser_map", rclcpp::QoS(10).transient_local());
-    pub_path_ = this->create_publisher<nav_msgs::msg::Path>(
-        "/lio_path", qos_reliable);
+    pub_path_ = this->create_publisher<nav_msgs::msg::Path>("/lio_path", qos_reliable);
 
     // ── Subscribers ──
     sub_lidar_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
         lid_topic_, qos_sensor,
-        std::bind(&LioNode::lidar_callback, this, std::placeholders::_1));
+        [this](sensor_msgs::msg::PointCloud2::SharedPtr msg) { lidar_callback(msg); });
     sub_imu_ = this->create_subscription<sensor_msgs::msg::Imu>(
         imu_topic_, qos_sensor,
-        std::bind(&LioNode::imu_callback, this, std::placeholders::_1));
+        [this](sensor_msgs::msg::Imu::SharedPtr msg) { imu_callback(msg); });
 
     // ── TF broadcaster ──
     tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(*this);
@@ -62,20 +62,17 @@ LioNode::LioNode(const rclcpp::NodeOptions& options)
     // ── IMU processor setup ──
     Lidar_T_wrt_IMU_ << VEC_FROM_ARRAY(extrinT_);
     Lidar_R_wrt_IMU_ << MAT_FROM_ARRAY(extrinR_);
-    p_imu_->set_param(Lidar_T_wrt_IMU_, Lidar_R_wrt_IMU_,
-                      V3D(gyr_cov_, gyr_cov_, gyr_cov_),
-                      V3D(acc_cov_, acc_cov_, acc_cov_),
-                      V3D(b_gyr_cov_, b_gyr_cov_, b_gyr_cov_),
+    p_imu_->set_param(Lidar_T_wrt_IMU_, Lidar_R_wrt_IMU_, V3D(gyr_cov_, gyr_cov_, gyr_cov_),
+                      V3D(acc_cov_, acc_cov_, acc_cov_), V3D(b_gyr_cov_, b_gyr_cov_, b_gyr_cov_),
                       V3D(b_acc_cov_, b_acc_cov_, b_acc_cov_));
 
     // ── Path header ──
     path_.header.stamp = this->now();
     path_.header.frame_id = "map";
 
-    RCLCPP_INFO(this->get_logger(), "LioNode initialized. LiDAR type: %d",
-                p_pre_->lidar_type);
-    RCLCPP_INFO(this->get_logger(), "Topics: lidar=%s, imu=%s",
-                lid_topic_.c_str(), imu_topic_.c_str());
+    RCLCPP_INFO(this->get_logger(), "LioNode initialized. LiDAR type: %d", p_pre_->lidar_type);
+    RCLCPP_INFO(this->get_logger(), "Topics: lidar=%s, imu=%s", lid_topic_.c_str(),
+                imu_topic_.c_str());
 }
 
 LioNode::~LioNode() {
@@ -113,9 +110,9 @@ void LioNode::declare_params() {
     this->declare_parameter<double>("mapping.b_acc_cov", 0.0001);
     this->declare_parameter<bool>("mapping.extrinsic_est_en", true);
     this->declare_parameter<std::vector<double>>("mapping.extrinsic_T",
-        std::vector<double>{0.0, 0.0, 0.0});
-    this->declare_parameter<std::vector<double>>("mapping.extrinsic_R",
-        std::vector<double>{1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0});
+                                                 std::vector<double>{0.0, 0.0, 0.0});
+    this->declare_parameter<std::vector<double>>(
+        "mapping.extrinsic_R", std::vector<double>{1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0});
     // preprocess
     this->declare_parameter<double>("preprocess.blind", 0.01);
     this->declare_parameter<int>("preprocess.lidar_type", AVIA);
@@ -165,7 +162,7 @@ void LioNode::load_params() {
 
 // ── Callbacks ──
 
-void LioNode::lidar_callback(const sensor_msgs::msg::PointCloud2::SharedPtr& msg) {
+void LioNode::lidar_callback(const sensor_msgs::msg::PointCloud2::SharedPtr msg) {
     std::lock_guard<std::mutex> lock(mtx_buffer_);
     scan_count_++;
     double msg_sec = rclcpp::Time(msg->header.stamp).seconds();
@@ -182,7 +179,7 @@ void LioNode::lidar_callback(const sensor_msgs::msg::PointCloud2::SharedPtr& msg
     sig_buffer_.notify_all();
 }
 
-void LioNode::imu_callback(const sensor_msgs::msg::Imu::SharedPtr& msg_in) {
+void LioNode::imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg_in) {
     publish_count_++;
     sensor_msgs::msg::Imu::SharedPtr msg(new sensor_msgs::msg::Imu(*msg_in));
 
@@ -236,12 +233,10 @@ void LioNode::run() {
             }
 
             if (time_sync_en_ && !timediff_set_flg_ &&
-                std::abs(last_timestamp_lidar_ - last_timestamp_imu_) > 1 &&
-                !imu_buffer_.empty()) {
+                std::abs(last_timestamp_lidar_ - last_timestamp_imu_) > 1 && !imu_buffer_.empty()) {
                 timediff_set_flg_ = true;
                 timediff_lidar_wrt_imu_ = last_timestamp_lidar_ + 0.1 - last_timestamp_imu_;
-                printf("Self sync IMU and LiDAR, time diff is %.10lf \n",
-                       timediff_lidar_wrt_imu_);
+                printf("Self sync IMU and LiDAR, time diff is %.10lf \n", timediff_lidar_wrt_imu_);
             }
 
             p_imu_->Process(Measures_, kf_, feats_undistort_);
@@ -252,8 +247,7 @@ void LioNode::run() {
             }
 
             state_point_ = kf_.get_x();
-            pos_lid_ = state_point_.pos +
-                       state_point_.rot.matrix() * state_point_.offset_T_L_I;
+            pos_lid_ = state_point_.pos + state_point_.rot.matrix() * state_point_.offset_T_L_I;
 
             flg_EKF_inited_ =
                 (Measures_.lidar_beg_time - first_lidar_time_) < INIT_TIME ? false : true;
@@ -289,13 +283,12 @@ void LioNode::run() {
 
             /*** iterated state estimation ***/
             Nearest_Points_.resize(feats_down_size_);
-            kf_.update_iterated_dyn_share_modified(
-                LASER_POINT_COV, feats_down_body_, ikdtree_, Nearest_Points_,
-                num_max_iterations_, extrinsic_est_en_);
+            kf_.update_iterated_dyn_share_modified(LASER_POINT_COV, feats_down_body_, ikdtree_,
+                                                   Nearest_Points_, num_max_iterations_,
+                                                   extrinsic_est_en_);
 
             state_point_ = kf_.get_x();
-            pos_lid_ = state_point_.pos +
-                       state_point_.rot.matrix() * state_point_.offset_T_L_I;
+            pos_lid_ = state_point_.pos + state_point_.rot.matrix() * state_point_.offset_T_L_I;
 
             /******* Publish odometry *******/
             publish_odometry();
@@ -311,8 +304,7 @@ void LioNode::run() {
             if (scan_pub_en_ && scan_body_pub_en_) publish_frame_body();
 
             double t11 = omp_get_wtime();
-            RCLCPP_DEBUG(this->get_logger(),
-                         "feats_down_size: %d  mapping time: %.2f ms",
+            RCLCPP_DEBUG(this->get_logger(), "feats_down_size: %d  mapping time: %.2f ms",
                          feats_down_size_, (t11 - t00) * 1000);
         }
 
@@ -342,11 +334,9 @@ bool LioNode::sync_packages(MeasureGroup& meas) {
         } else {
             scan_num_++;
             lidar_end_time_ =
-                meas.lidar_beg_time +
-                meas.lidar->points.back().curvature / double(1000);
+                meas.lidar_beg_time + meas.lidar->points.back().curvature / double(1000);
             lidar_mean_scantime_ +=
-                (meas.lidar->points.back().curvature / double(1000) -
-                 lidar_mean_scantime_) /
+                (meas.lidar->points.back().curvature / double(1000) - lidar_mean_scantime_) /
                 scan_num_;
         }
 
@@ -359,12 +349,10 @@ bool LioNode::sync_packages(MeasureGroup& meas) {
     }
 
     /*** push imu data, and pop from imu buffer ***/
-    double imu_time =
-        rclcpp::Time(imu_buffer_.front()->header.stamp).seconds();
+    double imu_time = rclcpp::Time(imu_buffer_.front()->header.stamp).seconds();
     meas.imu.clear();
     while ((!imu_buffer_.empty()) && (imu_time < lidar_end_time_)) {
-        imu_time =
-            rclcpp::Time(imu_buffer_.front()->header.stamp).seconds();
+        imu_time = rclcpp::Time(imu_buffer_.front()->header.stamp).seconds();
         if (imu_time > lidar_end_time_) break;
         meas.imu.push_back(imu_buffer_.front());
         imu_buffer_.pop_front();
@@ -381,8 +369,7 @@ bool LioNode::sync_packages(MeasureGroup& meas) {
 void LioNode::pointBodyToWorld(PointType const* pi, PointType* po) {
     V3D p_body(pi->x, pi->y, pi->z);
     V3D p_global(state_point_.rot.matrix() *
-                     (state_point_.offset_R_L_I.matrix() * p_body +
-                      state_point_.offset_T_L_I) +
+                     (state_point_.offset_R_L_I.matrix() * p_body + state_point_.offset_T_L_I) +
                  state_point_.pos);
 
     po->x = p_global(0);
@@ -393,8 +380,7 @@ void LioNode::pointBodyToWorld(PointType const* pi, PointType* po) {
 
 void LioNode::RGBpointBodyLidarToIMU(PointType const* pi, PointType* po) {
     V3D p_body_lidar(pi->x, pi->y, pi->z);
-    V3D p_body_imu(state_point_.offset_R_L_I.matrix() * p_body_lidar +
-                   state_point_.offset_T_L_I);
+    V3D p_body_imu(state_point_.offset_R_L_I.matrix() * p_body_lidar + state_point_.offset_T_L_I);
 
     po->x = p_body_imu(0);
     po->y = p_body_imu(1);
@@ -421,10 +407,8 @@ void LioNode::lasermap_fov_segment() {
     float dist_to_map_edge[3][2];
     bool need_move = false;
     for (int i = 0; i < 3; i++) {
-        dist_to_map_edge[i][0] =
-            fabs(pos_LiD(i) - LocalMap_Points_.vertex_min[i]);
-        dist_to_map_edge[i][1] =
-            fabs(pos_LiD(i) - LocalMap_Points_.vertex_max[i]);
+        dist_to_map_edge[i][0] = fabs(pos_LiD(i) - LocalMap_Points_.vertex_min[i]);
+        dist_to_map_edge[i][1] = fabs(pos_LiD(i) - LocalMap_Points_.vertex_max[i]);
         if (dist_to_map_edge[i][0] <= 1.5f * det_range_ ||
             dist_to_map_edge[i][1] <= 1.5f * det_range_)
             need_move = true;
@@ -433,9 +417,8 @@ void LioNode::lasermap_fov_segment() {
 
     BoxPointType New_LocalMap_Points, tmp_boxpoints;
     New_LocalMap_Points = LocalMap_Points_;
-    float mov_dist =
-        std::max((cube_len_ - 2.0 * 1.5f * det_range_) * 0.5 * 0.9,
-                  double(det_range_ * (1.5f - 1)));
+    float mov_dist = std::max((cube_len_ - 2.0 * 1.5f * det_range_) * 0.5 * 0.9,
+                              double(det_range_ * (1.5f - 1)));
     for (int i = 0; i < 3; i++) {
         tmp_boxpoints = LocalMap_Points_;
         if (dist_to_map_edge[i][0] <= 1.5f * det_range_) {
@@ -455,8 +438,7 @@ void LioNode::lasermap_fov_segment() {
     PointVector points_history;
     ikdtree_.acquire_removed_points(points_history);
 
-    if (cub_needrm_.size() > 0)
-        kdtree_delete_counter_ = ikdtree_.Delete_Point_Boxes(cub_needrm_);
+    if (cub_needrm_.size() > 0) kdtree_delete_counter_ = ikdtree_.Delete_Point_Boxes(cub_needrm_);
 }
 
 // ── Map update ──
@@ -467,32 +449,25 @@ void LioNode::map_incremental() {
     PointToAdd.reserve(feats_down_size_);
     PointNoNeedDownsample.reserve(feats_down_size_);
     for (int i = 0; i < feats_down_size_; i++) {
-        pointBodyToWorld(&(feats_down_body_->points[i]),
-                         &(feats_down_world_->points[i]));
+        pointBodyToWorld(&(feats_down_body_->points[i]), &(feats_down_world_->points[i]));
 
         if (!Nearest_Points_[i].empty() && flg_EKF_inited_) {
             const PointVector& points_near = Nearest_Points_[i];
             bool need_add = true;
             PointType mid_point;
-            mid_point.x =
-                floor(feats_down_world_->points[i].x / filter_size_map_min_) *
-                    filter_size_map_min_ +
-                0.5 * filter_size_map_min_;
-            mid_point.y =
-                floor(feats_down_world_->points[i].y / filter_size_map_min_) *
-                    filter_size_map_min_ +
-                0.5 * filter_size_map_min_;
-            mid_point.z =
-                floor(feats_down_world_->points[i].z / filter_size_map_min_) *
-                    filter_size_map_min_ +
-                0.5 * filter_size_map_min_;
+            mid_point.x = floor(feats_down_world_->points[i].x / filter_size_map_min_) *
+                              filter_size_map_min_ +
+                          0.5 * filter_size_map_min_;
+            mid_point.y = floor(feats_down_world_->points[i].y / filter_size_map_min_) *
+                              filter_size_map_min_ +
+                          0.5 * filter_size_map_min_;
+            mid_point.z = floor(feats_down_world_->points[i].z / filter_size_map_min_) *
+                              filter_size_map_min_ +
+                          0.5 * filter_size_map_min_;
             float dist = calc_dist(feats_down_world_->points[i], mid_point);
-            if (fabs(points_near[0].x - mid_point.x) >
-                    0.5 * filter_size_map_min_ &&
-                fabs(points_near[0].y - mid_point.y) >
-                    0.5 * filter_size_map_min_ &&
-                fabs(points_near[0].z - mid_point.z) >
-                    0.5 * filter_size_map_min_) {
+            if (fabs(points_near[0].x - mid_point.x) > 0.5 * filter_size_map_min_ &&
+                fabs(points_near[0].y - mid_point.y) > 0.5 * filter_size_map_min_ &&
+                fabs(points_near[0].z - mid_point.z) > 0.5 * filter_size_map_min_) {
                 PointNoNeedDownsample.push_back(feats_down_world_->points[i]);
                 continue;
             }
@@ -553,34 +528,24 @@ void LioNode::publish_tf() {
     transform_stamped.header.stamp = odomAftMapped_.header.stamp;
     transform_stamped.header.frame_id = "map";
     transform_stamped.child_frame_id = "odom";
-    transform_stamped.transform.translation.x =
-        odomAftMapped_.pose.pose.position.x;
-    transform_stamped.transform.translation.y =
-        odomAftMapped_.pose.pose.position.y;
-    transform_stamped.transform.translation.z =
-        odomAftMapped_.pose.pose.position.z;
-    transform_stamped.transform.rotation.x =
-        odomAftMapped_.pose.pose.orientation.x;
-    transform_stamped.transform.rotation.y =
-        odomAftMapped_.pose.pose.orientation.y;
-    transform_stamped.transform.rotation.z =
-        odomAftMapped_.pose.pose.orientation.z;
-    transform_stamped.transform.rotation.w =
-        odomAftMapped_.pose.pose.orientation.w;
+    transform_stamped.transform.translation.x = odomAftMapped_.pose.pose.position.x;
+    transform_stamped.transform.translation.y = odomAftMapped_.pose.pose.position.y;
+    transform_stamped.transform.translation.z = odomAftMapped_.pose.pose.position.z;
+    transform_stamped.transform.rotation.x = odomAftMapped_.pose.pose.orientation.x;
+    transform_stamped.transform.rotation.y = odomAftMapped_.pose.pose.orientation.y;
+    transform_stamped.transform.rotation.z = odomAftMapped_.pose.pose.orientation.z;
+    transform_stamped.transform.rotation.w = odomAftMapped_.pose.pose.orientation.w;
     tf_broadcaster_->sendTransform(transform_stamped);
 }
 
 void LioNode::publish_cloud() {
     if (scan_pub_en_) {
-        PointCloudXYZI::Ptr laserCloudFullRes(
-            dense_pub_en_ ? feats_undistort_ : feats_down_body_);
+        PointCloudXYZI::Ptr laserCloudFullRes(dense_pub_en_ ? feats_undistort_ : feats_down_body_);
         int size = laserCloudFullRes->points.size();
-        PointCloudXYZI::Ptr laserCloudWorld(
-            new PointCloudXYZI(size, 1));
+        PointCloudXYZI::Ptr laserCloudWorld(new PointCloudXYZI(size, 1));
 
         for (int i = 0; i < size; i++) {
-            pointBodyToWorld(&laserCloudFullRes->points[i],
-                             &laserCloudWorld->points[i]);
+            pointBodyToWorld(&laserCloudFullRes->points[i], &laserCloudWorld->points[i]);
         }
 
         sensor_msgs::msg::PointCloud2 laserCloudmsg;
@@ -594,12 +559,10 @@ void LioNode::publish_cloud() {
     /**************** save map ****************/
     if (pcd_save_en_) {
         int size = feats_undistort_->points.size();
-        PointCloudXYZI::Ptr laserCloudWorld(
-            new PointCloudXYZI(size, 1));
+        PointCloudXYZI::Ptr laserCloudWorld(new PointCloudXYZI(size, 1));
 
         for (int i = 0; i < size; i++) {
-            pointBodyToWorld(&feats_undistort_->points[i],
-                             &laserCloudWorld->points[i]);
+            pointBodyToWorld(&feats_undistort_->points[i], &laserCloudWorld->points[i]);
         }
 
         static int scan_wait_num = 0;
@@ -609,9 +572,8 @@ void LioNode::publish_cloud() {
         if (pcl_wait_save_->size() > 0 && pcd_save_interval_ > 0 &&
             scan_wait_num >= pcd_save_interval_) {
             pcd_index_++;
-            std::string all_points_dir(
-                std::string(ROOT_DIR) + "PCD/scans_" +
-                std::to_string(pcd_index_) + ".pcd");
+            std::string all_points_dir(std::string(ROOT_DIR) + "PCD/scans_" +
+                                       std::to_string(pcd_index_) + ".pcd");
             pcl::PCDWriter pcd_writer;
             std::cout << "current scan saved to /PCD/" << all_points_dir << std::endl;
             pcd_writer.writeBinary(all_points_dir, *pcl_wait_save_);
@@ -626,8 +588,7 @@ void LioNode::publish_frame_body() {
     PointCloudXYZI::Ptr laserCloudIMUBody(new PointCloudXYZI(size, 1));
 
     for (int i = 0; i < size; i++) {
-        RGBpointBodyLidarToIMU(&feats_undistort_->points[i],
-                               &laserCloudIMUBody->points[i]);
+        RGBpointBodyLidarToIMU(&feats_undistort_->points[i], &laserCloudIMUBody->points[i]);
     }
 
     sensor_msgs::msg::PointCloud2 laserCloudmsg;

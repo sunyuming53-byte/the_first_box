@@ -70,7 +70,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-humble-controller-manager \
     ros-humble-joint-state-broadcaster \
     ros-humble-joint-trajectory-controller \
-    ros-humble-livox-ros-driver2 \
     ros-humble-robot-state-publisher \
     ros-humble-xacro \
     ros-humble-sensor-msgs \
@@ -145,7 +144,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-humble-ament-index-cpp \
     ros-humble-behaviortree-cpp \
     ros-humble-control-msgs \
-    ros-humble-livox-ros-driver2 \
     ros-humble-moveit-ros-planning \
     ros-humble-moveit-planners-ompl \
     ros-humble-moveit-ros-move-group \

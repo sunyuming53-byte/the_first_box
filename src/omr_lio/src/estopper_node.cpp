@@ -1,11 +1,10 @@
 #include "omr_lio/estopper_node.hpp"
 
-#include <sensor_msgs/point_cloud2_iterator.h>
+#include <sensor_msgs/point_cloud2_iterator.hpp>
 
 namespace omr_lio {
 
-EstopperNode::EstopperNode(const rclcpp::NodeOptions& options)
-    : Node("estopper_node", options) {
+EstopperNode::EstopperNode(const rclcpp::NodeOptions& options) : Node("estopper_node", options) {
     // ── Parameters ──
     stop_distance_ = this->declare_parameter<double>("stop_distance", 0.3);
     min_points_in_zone_ = this->declare_parameter<int>("min_points_in_zone", 5);
@@ -14,7 +13,7 @@ EstopperNode::EstopperNode(const rclcpp::NodeOptions& options)
     // ── Subscriber ──
     sub_cloud_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
         "/cloud_registered", rclcpp::QoS(5),
-        std::bind(&EstopperNode::cloud_callback, this, std::placeholders::_1));
+        [this](const sensor_msgs::msg::PointCloud2::SharedPtr msg) { cloud_callback(msg); });
 
     // ── Publisher ──
     pub_estop_ = this->create_publisher<std_msgs::msg::Bool>("/lio/emergency_stop", 1);
@@ -24,7 +23,7 @@ EstopperNode::EstopperNode(const rclcpp::NodeOptions& options)
                 stop_distance_, min_points_in_zone_, front_only_ ? "true" : "false");
 }
 
-void EstopperNode::cloud_callback(const sensor_msgs::msg::PointCloud2::SharedPtr& msg) {
+void EstopperNode::cloud_callback(const sensor_msgs::msg::PointCloud2::SharedPtr msg) {
     // Count points inside the danger zone
     int dangerous_points = 0;
 
