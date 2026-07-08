@@ -168,6 +168,13 @@ flowchart TD
     Arm -.->|Lazy connect| Impl
     Arm -.->|setGripperRoute / RS-485| GripHw["Gripper<br/><i>CTAG2F90D / EG2-4C2</i>"]
 
+    %% Camera
+    subgraph Vision["omr_vision — Camera Capture"]
+        CamStream["CameraStream<br/><i>librealsense2 pipeline</i>"]
+        CamCfg["CameraConfig<br/><i>width/height/fps/depth</i>"]
+    end
+    CamStream -->|RGB-D frames| BB
+
     %% D-AIS Motor subsystem
     subgraph DaisROS2["ROS2 Control Loop — D-AIS Motor"]
         DCM["dais_controller_manager<br/><i>ros2_control_node @ /dais_controller_manager</i>"]
@@ -244,10 +251,11 @@ no BT action node can currently command the M65 chassis.
 
 **Orchestrator data flow:** `TaskOrchestrator` runs a BT.CPP v4 behavior tree at 20 Hz.
 Client instances (`arm_`, `gripper_`, `vision_`, `motor_`, `base_`) are created in the
-constructor, but only `arm_client`, `gripper_client`, `vision_client`, and `ros_node` are
-registered on the BT blackboard (via `build_tree()` in `bt_factory.cpp`).
-`motor_client` and `base_client` are created but not wired into the BT — no BT action
-nodes exist for Motor or Base. Task flows are defined in XML under `bt_xml/`.
+constructor. `vision_` wraps `omr_vision::camera::CameraStream` (RealSense D435 RGB-D
+capture) via `CameraStreamAdapter`. Only `arm_client`, `gripper_client`, `vision_client`,
+and `ros_node` are registered on the BT blackboard (via `build_tree()`). `motor_client`
+and `base_client` are created but not wired into the BT. Task flows are defined in XML
+under `bt_xml/`.
 
 **MoveIt2 data flow:** `DoorTrajectoryAction` creates its own `MoveGroupInterface` and
 `PlanningSceneInterface` from the blackboard's `ros_node` in `onStart()`. It subscribes to
