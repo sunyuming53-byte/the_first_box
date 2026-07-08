@@ -221,7 +221,7 @@ flowchart TD
     LIDAR["Livox Mid-360"] -->|livox/lidar| LIONode
     IMU["IMU (built-in)"] -->|livox/imu| LIONode
     LIONode -->|lio/odom + TF map→odom| M65DDC
-    M65DDC -->|odom (wheel)| LIONode
+    M65DDC -->|wheel odom| LIONode
     LIONode -->|cloud_registered| ESTOP
     LIONode -->|cloud_registered| NAV2
     LIONode -->|lio/odom| NAV2
