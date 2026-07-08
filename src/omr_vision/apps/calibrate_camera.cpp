@@ -4,9 +4,9 @@
 #include <iostream>
 #include <string_view>
 
+#include <omr_vision/calibration/camera_calib.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
-#include <omr_vision/calibration/camera_calib.hpp>
 
 int main(int argc, char* argv[]) {
     std::filesystem::path input_dir;

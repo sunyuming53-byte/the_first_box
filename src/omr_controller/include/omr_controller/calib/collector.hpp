@@ -1,5 +1,6 @@
 #pragma once
 
+#include "omr_vision/calibration/expected_polyfill.hpp"
 #include "omr_vision/camera/types.hpp"
 #include "realman/motion/types.hpp"
 
@@ -9,7 +10,6 @@
 #include <string>
 #include <vector>
 
-#include "omr_vision/calibration/expected_polyfill.hpp"
 #include <opencv2/core/types.hpp>
 
 namespace omr_controller::calib {

@@ -18,8 +18,8 @@ int main() {
     cv::Mat K = (cv::Mat_<double>(3, 3) << 500.0, 0.0, 320.0, 0.0, 500.0, 240.0, 0.0, 0.0, 1.0);
     cv::Mat dist = cv::Mat::zeros(5, 1, CV_64F);
 
-    auto images = omr_vision::test::generate_chessboard_images(kCount, kBoardSize, kSquareM, K, dist,
-                                                               kImageSize);
+    auto images = omr_vision::test::generate_chessboard_images(kCount, kBoardSize, kSquareM, K,
+                                                               dist, kImageSize);
 
     if (static_cast<int>(images.size()) != kCount) {
         std::fprintf(stderr, "FAIL: expected %d images, got %zu\n", kCount, images.size());

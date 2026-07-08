@@ -9,10 +9,10 @@
 #include <string_view>
 #include <vector>
 
-#include <opencv2/core.hpp>
-#include <opencv2/core/persistence.hpp>
 #include <omr_controller/calib/hand_eye.hpp>
 #include <omr_controller/calib/pose_proc.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/core/persistence.hpp>
 
 namespace {
 

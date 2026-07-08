@@ -4,11 +4,11 @@
 #include <iostream>
 #include <string_view>
 
-#include <opencv2/imgcodecs.hpp>
-#include <omr_vision/calibration/camera_calib.hpp>
 #include <omr_controller/calib/collector.hpp>
 #include <omr_controller/calib/hand_eye.hpp>
 #include <omr_controller/calib/pose_proc.hpp>
+#include <omr_vision/calibration/camera_calib.hpp>
+#include <opencv2/imgcodecs.hpp>
 
 int main(int argc, char* argv[]) {  // NOLINT(bugprone-exception-escape)
     omr_controller::calib::CalibDataConfig cfg;

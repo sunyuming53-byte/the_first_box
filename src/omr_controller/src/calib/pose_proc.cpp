@@ -1,9 +1,10 @@
 #include "omr_vision/calibration/format_polyfill.hpp"
-#include "omr_controller/calib/pose_proc.hpp"
 
 #include <cmath>
 
 #include <span>
+
+#include "omr_controller/calib/pose_proc.hpp"
 
 namespace omr_controller::calib {
 

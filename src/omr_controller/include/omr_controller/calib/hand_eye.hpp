@@ -1,5 +1,7 @@
 #pragma once
 
+#include "omr_vision/calibration/expected_polyfill.hpp"
+
 #include <cstdint>
 
 #include <filesystem>
@@ -7,7 +9,6 @@
 #include <string>
 #include <vector>
 
-#include "omr_vision/calibration/expected_polyfill.hpp"
 #include "omr_controller/calib/pose_proc.hpp"
 #include <opencv2/core/mat.hpp>
 

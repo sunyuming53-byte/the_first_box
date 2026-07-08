@@ -1,11 +1,12 @@
 #pragma once
 
+#include "omr_vision/calibration/expected_polyfill.hpp"
+
 #include <cstdint>
 
 #include <string>
 #include <vector>
 
-#include "omr_vision/calibration/expected_polyfill.hpp"
 #include <opencv2/aruco/dictionary.hpp>
 #include <opencv2/core/mat.hpp>
 #include <opencv2/core/types.hpp>

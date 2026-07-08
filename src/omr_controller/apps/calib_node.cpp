@@ -20,6 +20,11 @@
 #include <string>
 
 #include <geometry_msgs/msg/transform_stamped.hpp>
+#include <omr_controller/calib/collector.hpp>
+#include <omr_controller/calib/hand_eye.hpp>
+#include <omr_controller/calib/pose_proc.hpp>
+#include <omr_controller/calib/transform.hpp>
+#include <omr_vision/calibration/camera_calib.hpp>
 #include <opencv2/calib3d.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgcodecs.hpp>
@@ -27,11 +32,6 @@
 #include <rclcpp/rclcpp.hpp>
 #include <realman/core/arm.hpp>
 #include <realman/motion/types.hpp>
-#include <omr_vision/calibration/camera_calib.hpp>
-#include <omr_controller/calib/collector.hpp>
-#include <omr_controller/calib/hand_eye.hpp>
-#include <omr_controller/calib/pose_proc.hpp>
-#include <omr_controller/calib/transform.hpp>
 #include <sensor_msgs/msg/image.hpp>
 #include <std_msgs/msg/string.hpp>
 #include <std_srvs/srv/trigger.hpp>
@@ -116,7 +116,7 @@ private:
 
         hand_eye_svc_ =
             create_service<Trigger>("~/hand_eye", [this](const Trigger::Request::SharedPtr,
-                                                          Trigger::Response::SharedPtr res) {
+                                                         Trigger::Response::SharedPtr res) {
                 res->success = true;
                 std::string msg;
                 {

@@ -1,5 +1,4 @@
 #include "omr_controller/calib/hand_eye.hpp"
-#include "omr_controller/calib/pose_proc.hpp"
 
 #include <cmath>
 #include <gtest/gtest.h>
@@ -7,6 +6,7 @@
 #include <array>
 #include <random>
 
+#include "omr_controller/calib/pose_proc.hpp"
 #include "synthetic_poses.h"
 #include <opencv2/calib3d.hpp>
 #include <opencv2/core.hpp>

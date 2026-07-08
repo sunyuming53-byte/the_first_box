@@ -1,6 +1,3 @@
-#include "omr_controller/calib/hand_eye.hpp"
-#include "omr_controller/calib/transform.hpp"
-
 #include <cmath>
 #include <gtest/gtest.h>
 
@@ -9,6 +6,8 @@
 #include <fstream>
 #include <string>
 
+#include "omr_controller/calib/hand_eye.hpp"
+#include "omr_controller/calib/transform.hpp"
 #include "synthetic_poses.h"
 #include <opencv2/core.hpp>
 #include <opencv2/core/persistence.hpp>

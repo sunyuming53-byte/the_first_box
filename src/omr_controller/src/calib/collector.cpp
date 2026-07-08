@@ -1,10 +1,9 @@
+#include "omr_vision/calibration/format_polyfill.hpp"
 #include "omr_vision/camera/stream.hpp"
 #include "omr_vision/capture.hpp"
 #include "realman/core/arm.hpp"
 #include "realman/core/error.hpp"
 #include "realman/motion/types.hpp"
-#include "omr_controller/calib/collector.hpp"
-#include "omr_vision/calibration/format_polyfill.hpp"
 
 #include <cmath>
 #include <cstdlib>
@@ -15,6 +14,7 @@
 #include <span>
 #include <thread>
 
+#include "omr_controller/calib/collector.hpp"
 #include <opencv2/calib3d.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
