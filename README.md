@@ -166,7 +166,7 @@ flowchart TD
     SDK -->|TCP| HW2["RealMan Robot Arm"]
 
     Arm -.->|Lazy connect| Impl
-    Arm -.->|setGripperRoute (RS-485)| GripHw["Gripper<br/><i>CTAG2F90D / EG2-4C2</i>"]
+    Arm -.->|setGripperRoute / RS-485| GripHw["Gripper<br/><i>CTAG2F90D / EG2-4C2</i>"]
 
     %% D-AIS Motor subsystem
     subgraph DaisROS2["ROS2 Control Loop — D-AIS Motor"]
@@ -207,9 +207,9 @@ flowchart TD
     BT --> DTA
     BB -->|action goal| JTC
     BB -->|subscribes| JSB
-    BB -->|action goal (stub)| DJTC
-    BB -->|subscribes (stub)| DJSB
-    BB -->|cmd_vel (Twist) ✗| M65DDC
+    BB -->|action goal / stub| DJTC
+    BB -->|subscribes / stub| DJSB
+    BB -->|cmd_vel Twist ✗| M65DDC
     M65DDC -->|odom ✗| BB
     DTA -->|setPoseTarget / plan / execute| MG
     DTA -->|add / update collision objects| SCENE
