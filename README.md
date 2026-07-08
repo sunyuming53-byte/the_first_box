@@ -209,8 +209,8 @@ flowchart TD
     BB -->|subscribes| JSB
     BB -->|action goal / stub| DJTC
     BB -->|subscribes / stub| DJSB
-    BB -->|cmd_vel Twist [not wired]| M65DDC
-    M65DDC -->|odom [not wired]| BB
+    BB -->|cmd_vel Twist / not wired| M65DDC
+    M65DDC -->|odom / not wired| BB
     DTA -->|setPoseTarget / plan / execute| MG
     DTA -->|add / update collision objects| SCENE
     DTA -->|subscribes| JSB
