@@ -25,7 +25,7 @@ docker run --rm --user root -v $(pwd):/ws realman:develop bash -c '
 
 # 3. clang-format (blocking — MUST use Docker, NOT local clang-format)
 #    Check only changed files against base branch
-CHANGED=$(git diff --name-only origin/main...HEAD -- '**.cpp' '**.hpp' '**.h' | grep -v third_party/ || true)
+CHANGED=$(git diff --name-only --diff-filter=ACMRT origin/main...HEAD -- '**.cpp' '**.hpp' '**.h' | grep -v third_party/ || true)
 if [ -n "$CHANGED" ]; then
   echo "$CHANGED" | sed 's|^|/ws/|' | \
     docker run --rm -i -v $(pwd):/ws realman:develop bash -c '

@@ -79,7 +79,7 @@ jobs:
 
       - name: clang-format (blocking, diff-only)
         run: |
-          CHANGED=$(git diff --name-only ${{ github.event.pull_request.base.sha }}...HEAD \
+          CHANGED=$(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }}...HEAD \
             -- '**.cpp' '**.hpp' '**.h' | grep -v third_party/ || true)
           if [ -z "$CHANGED" ]; then
             echo "No C++ files changed, skipping"
