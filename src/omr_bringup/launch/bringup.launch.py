@@ -239,7 +239,7 @@ def generate_launch_description():
 
         # ── Calibration pipeline ──────────────────────────────────
         Node(
-            package='realman_calibration',
+            package='omr_controller',
             executable='calib_node',
             name='calib_node',
             parameters=[{

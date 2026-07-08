@@ -110,7 +110,7 @@
 \begin{minipage}{0.7\textwidth}
 \large
 \textbf{目标：} 按照本手册逐步操作，验证 \texttt{realman\_driver}、
-\texttt{realman\_vision}、\texttt{realman\_calibration} 三个包
+\texttt{realman\_vision}、\texttt{omr\_controller} 三个包
 在真机上的功能是否正常。
 \end{minipage}
 \end{center}
@@ -207,7 +207,7 @@ ros2 run realman_driver gripper_test
 \textbf{操作：}
 
 \begin{lstlisting}[language=bash]
-ros2 run realman_calibration collect_data \
+ros2 run omr_controller collect_data \
     --ip 192.168.1.18 --output /tmp/test_cam --count 5
 \end{lstlisting}
 
@@ -264,7 +264,7 @@ $roll/pitch/yaw$ 度）。
 有显示器时，运行采集程序在 overlay 窗口读取：
 
 \begin{lstlisting}[language=bash]
-ros2 run realman_calibration collect_data --ip 192.168.1.18 --count 1
+ros2 run omr_controller collect_data --ip 192.168.1.18 --count 1
 \end{lstlisting}
 
 \begin{infobox}
@@ -444,7 +444,7 @@ ros2 run realman_driver gripper_test
 \textbf{操作：}
 
 \begin{lstlisting}[language=bash]
-ros2 run realman_calibration collect_data \
+ros2 run omr_controller collect_data \
     --ip 192.168.1.18 --output /tmp/calib_test --count 18
 \end{lstlisting}
 
@@ -499,7 +499,7 @@ ros2 run realman_calibration collect_data \
 \textbf{操作：}
 
 \begin{lstlisting}[language=bash]
-ros2 run realman_calibration collect_data \
+ros2 run omr_controller collect_data \
     --ip 192.168.1.18 \
     --output /tmp/calib_test \
     --count 18 \
@@ -549,7 +549,7 @@ wc -l /tmp/calib_test/robot_poses.csv     # 应输出 19
 \textbf{方式 A（推荐）：交互式全流程}
 
 \begin{lstlisting}[language=bash]
-ros2 run realman_calibration run_pipeline \
+ros2 run omr_controller run_pipeline \
     --ip 192.168.1.18 \
     --output /tmp/calib_full \
     --count 18 \
@@ -570,15 +570,15 @@ Stage 1 是交互采集阶段，与 T5.1 操作相同。
 
 \begin{lstlisting}[language=bash]
 # 第一步：采集数据
-ros2 run realman_calibration collect_data \
+ros2 run omr_controller collect_data \
     --ip 192.168.1.18 --output /tmp/calib_full --count 18
 
 # 第二步：相机内参标定
-ros2 run realman_calibration calibrate_camera \
+ros2 run omr_controller calibrate_camera \
     --output /tmp/calib_full --board-w 11 --board-h 8 --square-size 0.03
 
 # 第三步：手眼标定
-ros2 run realman_calibration compute_hand_eye \
+ros2 run omr_controller compute_hand_eye \
     --output /tmp/calib_full --mode in_hand
 \end{lstlisting}
 
@@ -631,7 +631,7 @@ cat /tmp/calib_full/calibration_result.yaml
 
 \begin{lstlisting}[language=bash]
 # 终端 1：启动 calib_node
-ros2 run realman_calibration calib_node --ros-args -p arm_ip:=192.168.1.18
+ros2 run omr_controller calib_node --ros-args -p arm_ip:=192.168.1.18
 \end{lstlisting}
 
 验证：

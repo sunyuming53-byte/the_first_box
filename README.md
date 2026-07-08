@@ -63,16 +63,7 @@ pipeline/                            # ROS2 workspace root
 │   │   ├── plugins.xml               #   ArmSystem + DaisHardware + M65Hardware registration
 │   │   ├── CMakeLists.txt
 │   │   └── package.xml
-│   ├── realman_calibration/          # ament_cmake — hand-eye calibration
-│   │   ├── include/realman_calibration/
-│   │   ├── src/
-│   │   ├── apps/                     # Pipeline executables + calib_node
-│   │   ├── config/                   # Board config YAML
-│   │   ├── launch/
-│   │   ├── test/                     # Comprehensive test suite
-│   │   ├── CMakeLists.txt
-│   │   └── package.xml
-│   ├── omr_controller/               # ament_cmake — behavior tree-based task orchestrator
+│   ├── omr_controller/               # ament_cmake — behavior tree-based task orchestrator + hand-eye calibration
 │   │   ├── include/omr_controller/
 │   │   │   ├── orchestrator.hpp      #   TaskOrchestrator (rclcpp::Node + BT.CPP tick loop)
 │   │   │   ├── clients/              #   Non-blocking ROS2 clients
@@ -441,20 +432,16 @@ graph TD
     arm["realman_arm<br/><i>submodule (plain CMake)</i>"]
     motor["dais_motor<br/><i>submodule (plain CMake)</i>"]
     m65["m65_chassis<br/><i>submodule (plain CMake)</i>"]
-    calib["realman_calibration<br/><i>ament_cmake</i>"]
     ctrl["omr_controller<br/><i>ament_cmake</i>"]
     lio["omr_lio<br/><i>ament_cmake</i>"]
     bringup["omr_bringup<br/><i>launch only</i>"]
 
-    vision --> calib
     hw -.->|embeds| arm
     hw -.->|embeds| motor
     hw -.->|embeds| m65
-    hw --> calib
     hw --> ctrl
     vision --> ctrl
     hw --> bringup
-    calib --> bringup
     ctrl --> bringup
     lio --> bringup
     bringup --> moveit["rm65_moveit_config<br/><i>ament_cmake (config only)</i>"]
@@ -464,10 +451,9 @@ graph TD
 
 | Package | Build system | Purpose |
 |---|---|---|
-| `omr_vision` | ament_cmake | RealSense D435 capture (OpenCV + librealsense2, no ROS deps) |
+| `omr_vision` | ament_cmake | RealSense D435 capture + camera calibration (OpenCV + librealsense2, no ROS deps) |
 | `omr_hardware` | ament_cmake | ros2_control plugins (ArmSystem, DaisHardware, M65Hardware) |
-| `realman_calibration` | ament_cmake | Hand-eye calibration pipeline |
-| `omr_controller` | ament_cmake | Behavior tree-based task orchestrator (BT.CPP v4) |
+| `omr_controller` | ament_cmake | Behavior tree-based task orchestrator (BT.CPP v4) + hand-eye calibration pipeline |
 | `rm65_moveit_config` | ament_cmake | MoveIt2 config for RM65 (SRDF, KDL, OMPL) |
 | `omr_lio` | ament_cmake | S-FAST_LIO LiDAR-IMU SLAM, Nav2 navigation, waypoint tools, emergency stop |
 | `omr_bringup` | ament_cmake | Launch files + config + URDF (no compiled code) |
@@ -521,8 +507,9 @@ colcon test
 Test binaries need the SDK library on `LD_LIBRARY_PATH` — the CMake config
 handles this via `APPEND_ENV`.
 
-`realman_calibration` has the most comprehensive test suite: camera calibration,
-pose processing, hand-eye solvers, TF integration, and synthetic data generators.
+`omr_controller` and `omr_vision` share what was formerly `realman_calibration`'s
+comprehensive test suite: camera calibration, pose processing, hand-eye solvers,
+TF integration, and synthetic data generators.
 
 ```bash
 # Required in Docker: set RMW_IMPLEMENTATION for test compatibility

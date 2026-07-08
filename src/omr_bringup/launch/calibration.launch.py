@@ -24,7 +24,7 @@ def generate_launch_description():
                               description='Directory to store/load calibration session data'),
 
         Node(
-            package='realman_calibration',
+            package='omr_controller',
             executable='calib_node',
             name='calib_node',
             parameters=[{

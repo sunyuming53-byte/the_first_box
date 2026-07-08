@@ -49,7 +49,6 @@ build time.
 
 **Build order matters**: `omr_vision` (ament_cmake, no ROS deps) →
 `omr_hardware` (ament_cmake, embeds submodules) →
-`realman_calibration` (depends on both vision + arm) →
 `omr_controller` (depends on omr_hardware + omr_vision) →
 `omr_bringup` (launch/config only, depends on all).
 `colcon build` handles this automatically.
@@ -72,8 +71,7 @@ system includes). `UnusedIncludes` is disabled.
 |---|---|---|
 | `omr_vision` | ament_cmake | RealSense D435 capture (OpenCV + librealsense2). No ROS deps. |
 | `omr_hardware` | ament_cmake | ros2_control hardware interface plugins (ArmSystem, DaisHardware, M65Hardware). Embeds realman_arm, dais_motor, m65_chassis as submodules. |
-| `realman_calibration` | ament_cmake | Hand-eye calibration pipeline. Depends on vision + arm. |
-| `omr_controller` | ament_cmake | Behavior tree-based task orchestrator (BT.CPP v4). Clients: Arm, Gripper, Motor, Base, Vision. Door trajectory math model with MoveIt2 collision-aware planning. |
+| `omr_controller` | ament_cmake | Behavior tree-based task orchestrator (BT.CPP v4). Clients: Arm, Gripper, Motor, Base, Vision. Door trajectory math model with MoveIt2 collision-aware planning. Hand-eye calibration pipeline. |
 | `rm65_moveit_config` | ament_cmake | MoveIt2 config for RM65 (SRDF, KDL kinematics, OMPL, geometric collision primitives). No compiled code. |
 | `omr_bringup` | ament_cmake | Launch files + config + URDF only. No compiled code. |
 
@@ -109,7 +107,7 @@ rm::Arm   (PIMPL facade, non-ROS, non-copyable, movable)
   the arm is deferred to the first command via `ensureConnected()`. This allows
   constructing `Arm` without hardware present.
 - There is NO `ArmNode` class and NO `arm_node` executable. The runtime supervisor
-  starts `ros2_control_node` (via `controller_manager`) and `calib_node`.
+  starts `ros2_control_node` (via `controller_manager`).
 - `dais::Motor` and `m65::Chassis` follow the same pattern: pure C++, zero ROS,
   wrapped by their respective hardware interface plugins in `omr_hardware`.
 
@@ -164,8 +162,8 @@ All packages use **C++23**. The ROS2 Humble base image ships GCC 11.4 which
 has partial C++23 support — avoid features that require GCC 12+ (e.g.,
 `std::expected`, `std::ranges::to`).
 
-The calibration package includes polyfills (`expected_polyfill.hpp`,
-`format_polyfill.hpp`) for this reason.
+The former `realman_calibration` package included polyfills (`expected_polyfill.hpp`,
+`format_polyfill.hpp`) for this reason; these remain in the migrated packages.
 
 ## cmake/ directory (workspace root)
 
@@ -220,11 +218,11 @@ colcon test --packages-select omr_controller --event-handlers console_direct+
 Test binaries need `LD_LIBRARY_PATH` pointing to the SDK lib — CMake config
 handles this via `APPEND_ENV`.
 
-`omr_controller` has 22 test files (~20 test binaries) covering door math,
-collision, BT factory, clients, geometry utils, orchestrator, and
-MoveIt2 integration. `realman_calibration` has the most comprehensive
-suite (camera calibration, pose processing, hand-eye, TF integration,
-synthetic data generators).
+`omr_controller` and `omr_vision` share what was formerly `realman_calibration`'s
+comprehensive test suite (camera calibration, pose processing, hand-eye, TF
+integration, synthetic data generators), alongside `omr_controller`'s own 22
+test files (~20 test binaries) covering door math, collision, BT factory,
+clients, geometry utils, and orchestrator.
 
 ### Docker test gotcha
 

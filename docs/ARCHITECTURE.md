@@ -9,10 +9,9 @@ internally. Read this after [ONBOARDING.md](ONBOARDING.md) and [DEVELOPMENT.md](
 2. [Package: realman_arm (submodule)](#package-realman_arm-submodule)
 3. [Package: omr_hardware](#package-omr_hardware)
 4. [Package: omr_vision](#package-omr_vision)
-5. [Package: realman_calibration](#package-realman_calibration)
-6. [Package: omr_controller](#package-omr_controller)
-7. [Package: omr_bringup](#package-omr_bringup)
-8. [Cross-Cutting Concerns](#cross-cutting-concerns)
+5. [Package: omr_controller](#package-omr_controller)
+6. [Package: omr_bringup](#package-omr_bringup)
+7. [Cross-Cutting Concerns](#cross-cutting-concerns)
 
 ---
 
@@ -59,7 +58,7 @@ Layers communicate through well-defined interfaces:
 - Submodules expose plain C++ classes (no ROS)
 - `omr_hardware` wraps them as `ros2_control` plugins (standard ROS2 interfaces)
 - `omr_controller` talks to the plugins through ROS2 topics and actions
-- `realman_calibration` uses `rm::Arm` directly + `omr_vision` for camera capture
+- `omr_controller` (calibration pipeline) uses `rm::Arm` directly + `omr_vision` for camera capture
 
 ---
 
@@ -296,65 +295,6 @@ testing, other frameworks). The calibration package wraps it for ROS2 use.
 
 ---
 
-## Package: realman_calibration
-
-**Location:** `src/realman_calibration/`
-**Build system:** ament_cmake
-**Dependencies:** omr_vision, realman_arm, OpenCV, rclcpp, tf2_ros, sensor_msgs
-
-### Purpose
-
-Hand-eye calibration pipeline: determines the transformation between the camera
-frame and the robot arm's end-effector frame. Provides:
-
-1. **Camera calibration** — intrinsic parameters (from checkerboard images)
-2. **Pose processing** — detect checkerboard in images, compute board-to-camera transforms
-3. **Hand-eye solving** — compute camera-to-end-effector transform from paired poses
-4. **TF integration** — publish calibration results as ROS2 TF frames
-5. **calib_node** — ROS2 node that orchestrates the full pipeline
-
-### Calibration pipeline
-
-```mermaid
-graph LR
-    intrinsics["Camera intrinsics"]
-    board["Board poses camera"]
-    arm["Arm poses base"]
-    solver["Hand-Eye Solver Tsai/Park/etc"]
-    tf["TF Publisher"]
-    result["camera_to_ee transform"]
-    intrinsics --> solver
-    board --> solver
-    arm --> tf
-    solver --> result
-    tf --> result
-```
-
-### Key classes
-
-| Class | Purpose |
-|---|---|
-| `camera_calib` | Intrinsic calibration from checkerboard images |
-| `CalibDataCollector` | Collects synchronized arm poses + camera images |
-| `pose_proc` | Detects checkerboard, computes board-to-camera transforms |
-| `hand_eye` | Solves AX=XB for camera-to-ee transform |
-| `transform` | TF publishing and transform utilities |
-| `CalibNode` | ROS2 node: orchestrates the pipeline, exposes services |
-
-### Test suite
-
-The most comprehensive test suite in the workspace (15 test binaries):
-camera calibration, pose processing, hand-eye solvers (Tsai, Park), TF
-integration, end-to-end pipeline, synthetic data generators.
-
-### Polyfills
-
-C++23 polyfills for GCC 11.4 compatibility:
-- `expected_polyfill.hpp` — `std::expected` equivalent
-- `format_polyfill.hpp` — `std::format` equivalent
-
----
-
 ## Package: omr_controller
 
 **Location:** `src/omr_controller/`
@@ -469,7 +409,7 @@ gear_ratio:=1000              # D-AIS gear ratio
 - **Standard:** C++23
 - **Compiler:** GCC 11.4 (from Ubuntu 22.04 / ROS2 Humble)
 - **Avoid:** `std::expected`, `std::ranges::to`, `std::print` (require GCC 12+)
-- **Polyfills:** `realman_calibration` provides `expected_polyfill.hpp` and `format_polyfill.hpp`
+- **Polyfills:** The former `realman_calibration` package provides `expected_polyfill.hpp` and `format_polyfill.hpp`; these remain in the migrated packages
 
 ### Code style
 
@@ -498,7 +438,7 @@ works over UDP and does not require shared memory.
 
 ### Build caching (CMake)
 
-`realman_arm` uses `GLOB_RECURSE` with `CONFIGURE_DEPENDS` across source subdirs:
+The `realman_arm` submodule uses `GLOB_RECURSE` with `CONFIGURE_DEPENDS` across source subdirs:
 
 ```cmake
 file(GLOB_RECURSE ARM_SOURCES CONFIGURE_DEPENDS
@@ -542,7 +482,7 @@ command=source /opt/ros/humble/setup.bash && source /ws/install/setup.bash
 
 [program:calib_node]
 command=source /opt/ros/humble/setup.bash && source /ws/install/setup.bash
-        && ros2 run realman_calibration calib_node
+        && ros2 run omr_controller calib_node
 ```
 
 Both auto-start and auto-restart. Logs go to stdout/stderr, visible via

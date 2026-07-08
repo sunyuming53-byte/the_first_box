@@ -1,6 +1,6 @@
 # RealMan 手眼标定流水线 — 真机测试任务清单
 
-> 目标：对 `realman_driver`、`realman_vision`、`realman_calibration` 三个包在真机上完成功能验证，
+> 目标：对 `realman_driver`、`realman_vision`、`omr_controller` 三个包在真机上完成功能验证，
 > 确认 TCP 通信、运动控制、相机采集、标定流水线的每一环节可正常工作。
 
 ---
@@ -32,7 +32,7 @@
 # 快速验证：启动 gripper_test（它也会连接 arm）
 ros2 run realman_driver gripper_test
 # 或跑一次 collect_data（-h 看参数）
-ros2 run realman_calibration collect_data --ip 192.168.1.18 --count 1
+ros2 run omr_controller collect_data --ip 192.168.1.18 --count 1
 ```
 
 > 如果连接失败，检查：机械臂 IP 是否正确、端口 8080 是否开放、防火墙/网络是否在同一网段。
@@ -47,7 +47,7 @@ ros2 run realman_calibration collect_data --ip 192.168.1.18 --count 1
 
 ```bash
 # 用 collect_data 交互模式测试相机
-ros2 run realman_calibration collect_data --ip 192.168.1.18 --output /tmp/test_cam --count 5
+ros2 run omr_controller collect_data --ip 192.168.1.18 --output /tmp/test_cam --count 5
 # 程序启动后会显示相机预览窗口（需要 DISPLAY），按 Q 退出
 ```
 
@@ -139,7 +139,7 @@ ros2 run realman_calibration collect_data --ip 192.168.1.18 --output /tmp/test_c
 | **前提** | T1.2 通过 |
 
 ```bash
-ros2 run realman_calibration collect_data --ip 192.168.1.18 --output /tmp/calib_test --count 18
+ros2 run omr_controller collect_data --ip 192.168.1.18 --output /tmp/calib_test --count 18
 # 交互模式：移动棋盘格，观察 overlay 绿色角点是否稳定
 # 看到绿色角点 → 按 S 保存；红色叉号表示未检测到
 ```
@@ -179,7 +179,7 @@ ros2 run realman_calibration collect_data --ip 192.168.1.18 --output /tmp/calib_
 
 ```bash
 # 方式 A：交互模式跑全流程（采集 + 标定一步完成）
-ros2 run realman_calibration run_pipeline \
+ros2 run omr_controller run_pipeline \
     --ip 192.168.1.18 \
     --output /tmp/calib_test \
     --count 18 \
@@ -187,9 +187,9 @@ ros2 run realman_calibration run_pipeline \
     --board-w 11 --board-h 8 --square-size 0.03
 
 # 方式 B：分步执行
-ros2 run realman_calibration collect_data --ip 192.168.1.18 --output /tmp/calib_test --count 18
-ros2 run realman_calibration calibrate_camera --output /tmp/calib_test --board-w 11 --board-h 8 --square-size 0.03
-ros2 run realman_calibration compute_hand_eye --output /tmp/calib_test --mode in_hand
+ros2 run omr_controller collect_data --ip 192.168.1.18 --output /tmp/calib_test --count 18
+ros2 run omr_controller calibrate_camera --output /tmp/calib_test --board-w 11 --board-h 8 --square-size 0.03
+ros2 run omr_controller compute_hand_eye --output /tmp/calib_test --mode in_hand
 ```
 
 ### T6.2 — 标定结果质量评估
@@ -222,7 +222,7 @@ cat /tmp/calib_test/calibration_result.yaml
 | **通过标准** | `ros2 node list` 可以看到 `/calib_node` |
 
 ```bash
-ros2 run realman_calibration calib_node --ros-args -p arm_ip:=192.168.1.18
+ros2 run omr_controller calib_node --ros-args -p arm_ip:=192.168.1.18
 ```
 
 ### T7.2 — 服务调用

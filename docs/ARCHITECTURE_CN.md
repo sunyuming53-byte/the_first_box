@@ -8,10 +8,9 @@
 2. [包：realman_arm（子模块）](#包realman_arm子模块)
 3. [包：omr_hardware](#包omr_hardware)
 4. [包：omr_vision](#包omr_vision)
-5. [包：realman_calibration](#包realman_calibration)
-6. [包：omr_controller](#包omr_controller)
-7. [包：omr_bringup](#包omr_bringup)
-8. [跨层关注点](#跨层关注点)
+5. [包：omr_controller](#包omr_controller)
+6. [包：omr_bringup](#包omr_bringup)
+7. [跨层关注点](#跨层关注点)
 
 ---
 
@@ -59,7 +58,7 @@ graph TD
 - 子模块暴露纯 C++ 类（不依赖 ROS）
 - `omr_hardware` 将它们封装为 `ros2_control` 插件（标准 ROS2 接口）
 - `omr_controller` 通过 ROS2 主题（topic）和动作（action）与插件通信
-- `realman_calibration` 直接使用 `rm::Arm` + `omr_vision` 进行相机采集
+- `omr_controller`（标定流程）直接使用 `rm::Arm` + `omr_vision` 进行相机采集
 
 ---
 
@@ -282,62 +281,6 @@ RealSense D435 相机采集与图像处理。为以下功能提供简洁的 C++ 
 
 ---
 
-## 包：realman_calibration
-
-**位置：** `src/realman_calibration/`
-**构建系统：** ament_cmake
-**依赖：** omr_vision、realman_arm、OpenCV、rclcpp、tf2_ros、sensor_msgs
-
-### 用途
-
-手眼标定管线：确定相机坐标系与机械臂末端执行器（end-effector）坐标系之间的变换关系。提供：
-
-1. **相机标定**——内参（从棋盘格图像计算）
-2. **位姿处理**——在图像中检测棋盘格，计算棋盘格到相机的变换
-3. **手眼求解**——从配对的位姿计算相机到末端执行器的变换
-4. **TF 集成**——将标定结果发布为 ROS2 TF 坐标系
-5. **calib_node**——编排完整管线的 ROS2 节点
-
-### 标定管线
-
-```mermaid
-graph LR
-    intrinsics["Camera intrinsics"]
-    board["Board poses camera"]
-    arm["Arm poses base"]
-    solver["Hand-Eye Solver Tsai/Park/etc"]
-    tf["TF Publisher"]
-    result["camera_to_ee transform"]
-    intrinsics --> solver
-    board --> solver
-    arm --> tf
-    solver --> result
-    tf --> result
-```
-
-### 核心类
-
-| 类 | 用途 |
-|---|---|
-| `camera_calib` | 从棋盘格图像进行内参标定 |
-| `CalibDataCollector` | 采集同步的机械臂位姿和相机图像 |
-| `pose_proc` | 检测棋盘格，计算棋盘格到相机的变换 |
-| `hand_eye` | 求解 AX=XB，得到相机到末端执行器的变换 |
-| `transform` | TF 发布和变换工具 |
-| `CalibNode` | ROS2 节点：编排管线，暴露服务 |
-
-### 测试套件
-
-工作区中最全面的测试套件（15 个测试二进制文件）：相机标定、位姿处理、手眼求解器（Tsai、Park）、TF 集成、端到端管线、合成数据生成器。
-
-### Polyfills
-
-为兼容 GCC 11.4 的 C++23 polyfill：
-- `expected_polyfill.hpp`——`std::expected` 等价实现
-- `format_polyfill.hpp`——`std::format` 等价实现
-
----
-
 ## 包：omr_controller
 
 **位置：** `src/omr_controller/`
@@ -445,7 +388,7 @@ gear_ratio:=1000              # D-AIS 减速比
 - **标准：** C++23
 - **编译器：** GCC 11.4（来自 Ubuntu 22.04 / ROS2 Humble）
 - **避免使用：** `std::expected`、`std::ranges::to`、`std::print`（需要 GCC 12+）
-- **Polyfills：** `realman_calibration` 提供了 `expected_polyfill.hpp` 和 `format_polyfill.hpp`
+- **Polyfills：** 原 `realman_calibration` 包提供了 `expected_polyfill.hpp` 和 `format_polyfill.hpp`；迁移后仍保留在各包中
 
 ### 代码风格
 
@@ -509,7 +452,7 @@ command=source /opt/ros/humble/setup.bash && source /ws/install/setup.bash
 
 [program:calib_node]
 command=source /opt/ros/humble/setup.bash && source /ws/install/setup.bash
-        && ros2 run realman_calibration calib_node
+        && ros2 run omr_controller calib_node
 ```
 
 两个程序均自动启动和自动重启。日志输出到 stdout/stderr，可通过 `supervisorctl tail` 查看。
