@@ -415,6 +415,8 @@ TEST(HandEyeSolverTest, NoiseComparison) {
 
     ASSERT_TRUE(r_tsai.has_value());
     ASSERT_TRUE(r_dani.has_value());
+    ASSERT_FALSE(r_tsai->R.empty()) << "Tsai returned empty R — input data may be too noisy";
+    ASSERT_FALSE(r_dani->R.empty()) << "Daniilidis returned empty R — input data may be too noisy";
     EXPECT_NEAR(cv::determinant(r_tsai->R), 1.0, 1e-6);
     EXPECT_NEAR(cv::determinant(r_dani->R), 1.0, 1e-6);
 }
