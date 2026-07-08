@@ -105,6 +105,15 @@ pipeline/                            # ROS2 workspace root
 │   │   ├── urdf/                      #   RM65 URDF with geometric collision primitives
 │   │   ├── CMakeLists.txt
 │   │   └── package.xml
+│   ├── omr_lio/                       # ament_cmake — LiDAR-IMU SLAM + Nav2 navigation
+│   │   ├── include/omr_lio/           #   LioNode, EstopperNode, S-FAST_LIO headers
+│   │   ├── src/                       #   lio_node, estopper_node, preprocess
+│   │   ├── third_party/               #   Sophus (Lie algebra), ikd-Tree (incremental kd-tree)
+│   │   ├── config/                    #   lio.yaml, nav2_params.yaml, estopper.yaml
+│   │   ├── launch/                    #   lio_mapping.launch.py, m65_lio_nav.launch.py
+│   │   ├── scripts/                   #   record_waypoints.py, waypoint_follower.py
+│   │   ├── CMakeLists.txt
+│   │   └── package.xml
 │   └── omr_bringup/                  # ament_cmake — launch + config + URDF (no compiled code)
 │       ├── launch/
 │       │   ├── bringup.launch.py      #   ros2_control pipeline (RSP + CM + JSB + JTC + camera + calib)
@@ -349,6 +358,28 @@ not in MoveIt2 config.
   home_joints="0,0,0,0,0,0"/>
 ```
 
+### LiDAR SLAM & Navigation (omr_lio)
+
+`omr_lio` adds autonomous navigation to the M65 mobile base via S-FAST_LIO
+LiDAR-IMU odometry and Nav2 standard navigation stack:
+
+```
+Livox Mid-360 + IMU → LioNode → /lio/odom + TF map→odom
+M65 diff_drive_controller → /odom + TF odom→base_link
+Nav2 (SmacHybrid + RPP) → /cmd_vel → M65 chassis
+```
+
+**Key components:**
+- **LioNode** — S-FAST_LIO LiDAR-inertial odometry (ESKF + ikd-Tree), publishes `/lio/odom`, `/cloud_registered`, `/laser_map`
+- **EstopperNode** — Reactive emergency stop from point cloud (0.3m threshold)
+- **Waypoint tools** — CSV recording from `/lio/odom` + Nav2 FollowWaypoints with task event protocol
+- **Nav2** — SmacHybrid2D planner + RegulatedPurePursuit controller, costmaps from `/cloud_registered`
+
+Launch with M65 chassis:
+```bash
+ros2 launch omr_bringup bringup.launch.py launch_m65:=true launch_m65_lio:=true
+```
+
 ## Building
 
 The SDK is discovered at `/opt/realman-sdk` (or `$REALMAN_SDK`) via
@@ -376,6 +407,7 @@ graph TD
     m65["m65_chassis<br/><i>submodule (plain CMake)</i>"]
     calib["realman_calibration<br/><i>ament_cmake</i>"]
     ctrl["omr_controller<br/><i>ament_cmake</i>"]
+    lio["omr_lio<br/><i>ament_cmake</i>"]
     bringup["omr_bringup<br/><i>launch only</i>"]
 
     vision --> calib
@@ -388,10 +420,21 @@ graph TD
     hw --> bringup
     calib --> bringup
     ctrl --> bringup
+    lio --> bringup
     bringup --> moveit["rm65_moveit_config<br/><i>ament_cmake (config only)</i>"]
 ```
 
 `colcon build` resolves this automatically, but it matters when building packages individually or adding cross-package dependencies.
+
+| Package | Build system | Purpose |
+|---|---|---|
+| `omr_vision` | ament_cmake | RealSense D435 capture (OpenCV + librealsense2, no ROS deps) |
+| `omr_hardware` | ament_cmake | ros2_control plugins (ArmSystem, DaisHardware, M65Hardware) |
+| `realman_calibration` | ament_cmake | Hand-eye calibration pipeline |
+| `omr_controller` | ament_cmake | Behavior tree-based task orchestrator (BT.CPP v4) |
+| `rm65_moveit_config` | ament_cmake | MoveIt2 config for RM65 (SRDF, KDL, OMPL) |
+| `omr_lio` | ament_cmake | S-FAST_LIO LiDAR-IMU SLAM, Nav2 navigation, waypoint tools, emergency stop |
+| `omr_bringup` | ament_cmake | Launch files + config + URDF (no compiled code) |
 
 ### clangd IntelliSense
 
