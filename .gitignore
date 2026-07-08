@@ -27,3 +27,4 @@ lark_auth_qr.png
 *.fdb_latexmk
 *.fls
 texput.log
+ignore/

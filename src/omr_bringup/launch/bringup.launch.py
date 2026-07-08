@@ -1,5 +1,6 @@
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.conditions import IfCondition
 from launch.substitutions import Command, FindExecutable, LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
@@ -43,7 +44,9 @@ def generate_launch_description():
         DeclareLaunchArgument('launch_door_trajectory', default_value='false',
                               description='Launch MoveIt2 door trajectory orchestrator (deprecated, use BT XML)'),
         DeclareLaunchArgument('launch_moveit', default_value='false',
-                              description='Launch MoveIt2 move_group as a persistent planning service'),
+                               description='Launch MoveIt2 move_group as a persistent planning service'),
+        DeclareLaunchArgument('launch_m65_lio', default_value='false',
+                               description='Launch LIO+Nav2 alongside M65 chassis'),
 
         # ── robot_description from xacro ─────────────────────────
         Node(
@@ -216,6 +219,14 @@ def generate_launch_description():
             executable='spawner',
             arguments=['diff_drive_controller', '--controller-manager', '/m65_controller_manager'],
             condition=IfCondition(LaunchConfiguration('launch_m65')),
+        ),
+
+        # ── LIO + Nav2 (launched with M65) ──────────────────────
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource([
+                PathJoinSubstitution([FindPackageShare('omr_lio'), 'launch', 'm65_lio_nav.launch.py'])
+            ]),
+            condition=IfCondition(LaunchConfiguration('launch_m65_lio')),
         ),
 
         # ── RealSense camera ──────────────────────────────────────

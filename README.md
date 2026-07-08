@@ -105,6 +105,15 @@ pipeline/                            # ROS2 workspace root
 │   │   ├── urdf/                      #   RM65 URDF with geometric collision primitives
 │   │   ├── CMakeLists.txt
 │   │   └── package.xml
+│   ├── omr_lio/                       # ament_cmake — LiDAR-IMU SLAM + Nav2 navigation
+│   │   ├── include/omr_lio/           #   LioNode, EstopperNode, S-FAST_LIO headers
+│   │   ├── src/                       #   lio_node, estopper_node, preprocess
+│   │   ├── third_party/               #   Sophus (Lie algebra), ikd-Tree (incremental kd-tree)
+│   │   ├── config/                    #   lio.yaml, nav2_params.yaml, estopper.yaml
+│   │   ├── launch/                    #   lio_mapping.launch.py, m65_lio_nav.launch.py
+│   │   ├── scripts/                   #   record_waypoints.py, inspection_sequencer.py, csv_to_yaml.py
+│   │   ├── CMakeLists.txt
+│   │   └── package.xml
 │   └── omr_bringup/                  # ament_cmake — launch + config + URDF (no compiled code)
 │       ├── launch/
 │       │   ├── bringup.launch.py      #   ros2_control pipeline (RSP + CM + JSB + JTC + camera + calib)
@@ -201,6 +210,25 @@ flowchart TD
     M65HW --> Chassis["m65::Chassis<br/><i>pure C++ serial driver</i>"]
     Chassis -->|Serial| CHW["M65 Mobile Base"]
 
+    %% LiDAR SLAM & Navigation
+    subgraph LIO["LiDAR SLAM & Navigation (omr_lio)"]
+        LIONode["LioNode<br/><i>S-FAST_LIO (ESKF + ikd-Tree)</i>"]
+        ESTOP["EstopperNode<br/><i>reactive stop (0.3m)</i>"]
+        NAV2["Nav2<br/><i>SmacHybrid2D planner<br/>RegulatedPurePursuit controller</i>"]
+        SEQ["InspectionSequencer<br/><i>YAML waypoints → NavigateToPose</i>"]
+    end
+
+    LIDAR["Livox Mid-360"] -->|livox/lidar| LIONode
+    IMU["IMU (built-in)"] -->|livox/imu| LIONode
+    LIONode -->|lio/odom + TF map→odom| M65DDC
+    M65DDC -->|wheel odom| LIONode
+    LIONode -->|cloud_registered| ESTOP
+    LIONode -->|cloud_registered| NAV2
+    LIONode -->|lio/odom| NAV2
+    NAV2 -->|cmd_vel| M65DDC
+    ESTOP -->|lio/emergency_stop| M65DDC
+    SEQ -->|navigate_to_pose| NAV2
+
     %% Task Orchestrator
     subgraph Orchestrator["Task Orchestrator (omr_controller)"]
         ORCH["TaskOrchestrator<br/><i>rclcpp::Node + BT.CPP tick loop (20 Hz)</i>"]
@@ -248,6 +276,20 @@ Note: `MotorClient` in the orchestrator is a stub and not registered in the BT b
 per-wheel velocities → `M65BaseHardware.write()` → `m65::Chassis::set_velocity()` → serial → base.
 Note: `BaseClientImpl` is created in the orchestrator but not registered in the BT blackboard;
 no BT action node can currently command the M65 chassis.
+
+**omr_lio data flow:** `LioNode` fuses Livox Mid-360 point cloud + built-in IMU via
+S-FAST_LIO (ESKF + ikd-Tree), publishing `/lio/odom` and TF `map→odom` for global
+localization. The M65 `diff_drive_controller` provides wheel odometry as `odom→base_link`,
+forming a continuous TF chain: `map → odom → base_footprint → base_link`. Nav2
+(SmacHybrid2D planner + RegulatedPurePursuit controller) uses costmaps from `/cloud_registered`
+and `/lio/odom` to plan collision-free paths. `EstopperNode` monitors `/cloud_registered`
+and publishes `/lio/emergency_stop` when obstacles are detected within 0.3m.
+
+**Inspection flow:** `InspectionSequencer` loads YAML-defined waypoints. On receiving a
+waypoint name via `/inspection_sequencer/go_to_waypoint`, it sends a `NavigateToPose` action
+to Nav2. Upon arrival, if the waypoint has a `task` field, it publishes
+`start:<task>:<name>` on `/chassis/task_event`, waits for `/chassis/task_done` from the
+external scheduler (e.g., arm controller), then publishes `done:<task>:<name>`.
 
 **Orchestrator data flow:** `TaskOrchestrator` runs a BT.CPP v4 behavior tree at 20 Hz.
 Client instances (`arm_`, `gripper_`, `vision_`, `motor_`, `base_`) are created in the
@@ -349,6 +391,31 @@ not in MoveIt2 config.
   home_joints="0,0,0,0,0,0"/>
 ```
 
+### LiDAR SLAM & Navigation (omr_lio)
+
+`omr_lio` adds autonomous navigation to the M65 mobile base via S-FAST_LIO
+LiDAR-IMU odometry and Nav2 standard navigation stack:
+
+```
+Livox Mid-360 + IMU → LioNode → /lio/odom + TF map→odom
+M65 diff_drive_controller → /odom + TF odom→base_link
+Nav2 (SmacHybrid + RPP) → /cmd_vel → M65 chassis
+```
+
+**Key components:**
+- **LioNode** — S-FAST_LIO LiDAR-inertial odometry (ESKF + ikd-Tree), publishes `/lio/odom`, `/cloud_registered`, `/laser_map`
+- **EstopperNode** — Reactive emergency stop from point cloud (0.3m threshold)
+- **Inspection Sequencer** — YAML-defined waypoints, NavigateToPose per point by name, task event handshake (`/chassis/task_event`/`/chassis/task_done`)
+- **Waypoint recording** — CSV recording from `/lio/odom` with auto (distance) and remote (`/waypoint_task`) triggers
+- **Nav2** — SmacHybrid2D planner + RegulatedPurePursuit controller, costmaps from `/cloud_registered`
+
+Launch with M65 chassis:
+```bash
+ros2 launch omr_bringup bringup.launch.py launch_m65:=true launch_m65_lio:=true
+```
+
+For detailed usage instructions, see **[docs/omr_lio_usage.md](docs/omr_lio_usage.md)**.
+
 ## Building
 
 The SDK is discovered at `/opt/realman-sdk` (or `$REALMAN_SDK`) via
@@ -376,6 +443,7 @@ graph TD
     m65["m65_chassis<br/><i>submodule (plain CMake)</i>"]
     calib["realman_calibration<br/><i>ament_cmake</i>"]
     ctrl["omr_controller<br/><i>ament_cmake</i>"]
+    lio["omr_lio<br/><i>ament_cmake</i>"]
     bringup["omr_bringup<br/><i>launch only</i>"]
 
     vision --> calib
@@ -388,10 +456,21 @@ graph TD
     hw --> bringup
     calib --> bringup
     ctrl --> bringup
+    lio --> bringup
     bringup --> moveit["rm65_moveit_config<br/><i>ament_cmake (config only)</i>"]
 ```
 
 `colcon build` resolves this automatically, but it matters when building packages individually or adding cross-package dependencies.
+
+| Package | Build system | Purpose |
+|---|---|---|
+| `omr_vision` | ament_cmake | RealSense D435 capture (OpenCV + librealsense2, no ROS deps) |
+| `omr_hardware` | ament_cmake | ros2_control plugins (ArmSystem, DaisHardware, M65Hardware) |
+| `realman_calibration` | ament_cmake | Hand-eye calibration pipeline |
+| `omr_controller` | ament_cmake | Behavior tree-based task orchestrator (BT.CPP v4) |
+| `rm65_moveit_config` | ament_cmake | MoveIt2 config for RM65 (SRDF, KDL, OMPL) |
+| `omr_lio` | ament_cmake | S-FAST_LIO LiDAR-IMU SLAM, Nav2 navigation, waypoint tools, emergency stop |
+| `omr_bringup` | ament_cmake | Launch files + config + URDF (no compiled code) |
 
 ### clangd IntelliSense
 

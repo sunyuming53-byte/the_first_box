@@ -1,0 +1,5 @@
+/**:
+  ros__parameters:
+    stop_distance: 0.3
+    min_points_in_zone: 5
+    front_only: true

@@ -22,7 +22,7 @@ diff_drive_controller:
     wheel_separation: 0.355  # TODO: measure actual M65 chassis dimensions
     wheel_radius: 0.0625  # TODO: measure actual M65 chassis dimensions
 
-    odom_frame_id: m65_odom
+    odom_frame_id: odom
     base_frame_id: base_footprint
 
     pose_covariance_diagonal: [0.001, 0.001, 1.0e6, 1.0e6, 1.0e6, 0.001]

@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>omr_lio</name>
+  <version>0.1.0</version>
+  <description>LiDAR-inertial odometry (LIO) package for OMR robot — FAST-LIO2-based SLAM</description>
+  <maintainer email="dev@realman-driver.com">RealMan Driver Team</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>sensor_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>tf2_ros</depend>
+  <depend>tf2</depend>
+  <depend>pcl_conversions</depend>
+  <depend>nav2_msgs</depend>
+  <depend>rclpy</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
