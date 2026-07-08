@@ -17,12 +17,10 @@ namespace omr_vision::calibration {
 // ──────────────────────────────────────────────────────────────
 
 // NOLINTNEXTLINE(modernize-pass-by-value)
-CameraCalibrator::CameraCalibrator(const CameraCalibInput& input)
-    : input_{input} {}
+CameraCalibrator::CameraCalibrator(const CameraCalibInput& input) : input_{input} {}
 
 // NOLINTNEXTLINE(readability-function-size)
-auto CameraCalibrator::compute()
-    -> Result<CameraCalibResult> {
+auto CameraCalibrator::compute() -> Result<CameraCalibResult> {
     if (input_.board_type == BoardType::Chessboard) {
         // ── build 3D object points for one chessboard pose ──
         std::vector<cv::Point3f> obj;

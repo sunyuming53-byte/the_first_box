@@ -18,11 +18,9 @@ class Expected {
 
 public:
     // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
-    Expected(T val)
-        : data_(std::move(val)) {}
+    Expected(T val) : data_(std::move(val)) {}
     // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
-    Expected(Unexpected<E> err)
-        : data_(std::move(err.error)) {}
+    Expected(Unexpected<E> err) : data_(std::move(err.error)) {}
 
     [[nodiscard]] bool has_value() const { return data_.index() == 0; }
 
