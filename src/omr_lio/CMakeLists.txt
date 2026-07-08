@@ -23,22 +23,27 @@ find_package(Eigen3 REQUIRED)
 find_package(PCL REQUIRED)
 find_package(OpenMP REQUIRED)
 
-file(GLOB_RECURSE OMR_LIO_SRCS src/*.cpp CONFIGURE_DEPENDS)
+# GLOB all implementation .cpp files, then exclude main entry points
+file(GLOB_RECURSE OMR_LIO_SRCS CONFIGURE_DEPENDS src/*.cpp)
+list(FILTER OMR_LIO_SRCS EXCLUDE REGEX "src/lio_mapping\\.cpp")
+list(FILTER OMR_LIO_SRCS EXCLUDE REGEX "src/estopper_node\\.cpp")
+list(FILTER OMR_LIO_SRCS EXCLUDE REGEX "src/estopper_main\\.cpp")
 
 # ── Executables ──
-function(add_omr_lio_exec NAME)
-    add_executable(${NAME} ${OMR_LIO_SRCS} third_party/ikd-Tree/ikd_Tree.cpp)
+function(add_omr_lio_exec NAME MAIN_SRC)
+    add_executable(${NAME} ${MAIN_SRC} ${OMR_LIO_SRCS} third_party/ikd-Tree/ikd_Tree.cpp)
     target_include_directories(${NAME} PRIVATE
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>
-        third_party/ikd-Tree
+        third_party
+        third_party/Sophus
     )
-    target_link_libraries(${NAME} PRIVATE Sophus)
-    ament_target_dependencies(${NAME} PRIVATE
+    target_link_libraries(${NAME} Sophus)
+    ament_target_dependencies(${NAME}
         rclcpp sensor_msgs nav_msgs geometry_msgs std_msgs
         tf2_ros tf2 pcl_conversions
     )
-    target_link_libraries(${NAME} PRIVATE
+    target_link_libraries(${NAME}
         Eigen3::Eigen
         ${PCL_LIBRARIES}
         OpenMP::OpenMP_CXX
@@ -46,12 +51,16 @@ function(add_omr_lio_exec NAME)
     install(TARGETS ${NAME} DESTINATION lib/${PROJECT_NAME})
 endfunction()
 
-add_omr_lio_exec(lio_node)
-add_omr_lio_exec(estopper_node)
+add_omr_lio_exec(lio_node src/lio_mapping.cpp)
+add_omr_lio_exec(estopper_node src/estopper_main.cpp)
 
 # ── Data directory (waypoint CSV output) ──
 install(DIRECTORY data/ DESTINATION share/${PROJECT_NAME}/data)
 install(DIRECTORY launch/ DESTINATION share/${PROJECT_NAME}/launch)
 install(DIRECTORY config/ DESTINATION share/${PROJECT_NAME}/config)
+
+# ── Python waypoint scripts ──
+install(PROGRAMS scripts/record_waypoints.py DESTINATION lib/${PROJECT_NAME} RENAME record_waypoints)
+install(PROGRAMS scripts/waypoint_follower.py DESTINATION lib/${PROJECT_NAME} RENAME waypoint_follower)
 
 ament_package()
