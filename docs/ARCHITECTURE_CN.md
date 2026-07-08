@@ -272,7 +272,7 @@ RealSense D435 相机采集与图像处理。为以下功能提供简洁的 C++ 
 - 帧采集（彩色 + 深度）
 - 相机内参/外参访问
 
-不依赖 ROS 意味着它可以在非 ROS 上下文中使用（独立标定、测试、其他框架）。标定包将其封装后供 ROS2 使用。
+不依赖 ROS 意味着它可以在非 ROS 上下文中使用（独立标定、测试、其他框架）。相机标定位于 `omr_vision::calibration`；手眼标定流水线位于 `omr_controller::calib`，将其封装后供 ROS2 使用。
 
 ### 核心类
 
@@ -337,9 +337,46 @@ TaskOrchestrator (rclcpp::Node)
 
 自定义 BT 节点在 `bt_factory.hpp`/`bt_factory.cpp` 中注册。添加新节点类型的步骤：在工厂中注册，然后在 XML 中使用。
 
+### 手眼标定流水线
+
+`omr_controller::calib` 命名空间提供了完整的手眼标定流水线，用于计算相机到末端（EyeInHand）或相机到底座（EyeToHand）的变换矩阵。
+
+```mermaid
+graph TD
+    arm["rm::Arm<br/><i>moveJ 路径点</i>"]
+    cam["CameraStream<br/><i>RealSense D435</i>"]
+    collect["CalibDataCollector<br/><i>配对的 (位姿, 图像) 数据</i>"]
+    pproc["PoseProcessor<br/><i>A_i = T_{i+1}·inv(T_i)</i>"]
+    solve["HandEyeSolver<br/><i>AX=XB → 4 种方法, 自动择优</i>"]
+    xform["TransformPublisher<br/><i>TF 广播</i>"]
+
+    arm --> collect
+    cam --> collect
+    collect --> pproc
+    pproc --> solve
+    solve --> xform
+```
+
+**组件：**
+
+| 组件 | 位置 | 用途 |
+|---|---|---|
+| `CalibDataCollector` | `calib/collector.{hpp,cpp}` | 驱动机械臂通过路径点、采集棋盘格图像、验证旋转多样性 |
+| `PoseProcessor` | `calib/pose_proc.{hpp,cpp}` | 从绝对位姿计算相对运动 A_i |
+| `HandEyeSolver` | `calib/hand_eye.{hpp,cpp}` | 通过 OpenCV `calibrateHandEye` 求解 AX=XB（Tsai/Park/Horaud/Daniilidis） |
+| `TransformPublisher` | `calib/transform.{hpp,cpp}` | TF2 + Eigen 转换，广播标定结果 |
+
+**应用**（位于 `apps/`）：`calib_node`（ROS2 运行时）、`collect`、`compute_hand_eye`、
+`process_poses`、`run_pipeline`（CLI 工具）。
+
+流水线直接与 `rm::Arm` 通信（不通过 ros2_control），并使用
+`omr_vision::camera::CameraStream` 进行图像采集。支持交互模式（按键触发）和
+自动采集模式（路径点列表）。
+
 ### 测试套件
 
-14 个测试二进制文件，覆盖每个客户端、BT 工厂、XML 解析、编排器和集成测试。100% 通过率。
+22+ 个测试二进制文件，覆盖每个客户端、BT 工厂、XML 解析、编排器、标定流水线、
+手眼解算器、位姿处理、TF 集成和集成测试。100% 通过率。
 
 ---
 
@@ -388,7 +425,7 @@ gear_ratio:=1000              # D-AIS 减速比
 - **标准：** C++23
 - **编译器：** GCC 11.4（来自 Ubuntu 22.04 / ROS2 Humble）
 - **避免使用：** `std::expected`、`std::ranges::to`、`std::print`（需要 GCC 12+）
-- **Polyfills：** 原 `realman_calibration` 包提供了 `expected_polyfill.hpp` 和 `format_polyfill.hpp`；迁移后仍保留在各包中
+- **Polyfills：** `expected_polyfill.hpp` 和 `format_polyfill.hpp` 位于 `omr_vision::calibration`（供 `omr_vision` 和 `omr_controller` 测试共用）
 
 ### 代码风格
 

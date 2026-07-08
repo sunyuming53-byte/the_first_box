@@ -286,7 +286,8 @@ RealSense D435 camera capture and image processing. Provides a clean C++ API for
 - Camera intrinsic/extrinsic parameter access
 
 Being ROS-free means it can be used in non-ROS contexts (standalone calibration,
-testing, other frameworks). The calibration package wraps it for ROS2 use.
+testing, other frameworks). Camera calibration lives in `omr_vision::calibration`;
+hand-eye pipeline in `omr_controller::calib` wraps it for ROS2 use.
 
 ### Key classes
 
@@ -356,10 +357,49 @@ Tasks are defined in `bt_xml/` as XML files. Example structure:
 Custom BT nodes are registered in `bt_factory.hpp`/`bt_factory.cpp`. Adding a new
 node type: register it in the factory, then use it in XML.
 
+### Hand-eye calibration pipeline
+
+The `omr_controller::calib` namespace provides a complete hand-eye calibration
+pipeline for computing the camera-to-end-effector (EyeInHand) or
+camera-to-base (EyeToHand) transform.
+
+```mermaid
+graph TD
+    arm["rm::Arm<br/><i>moveJ waypoints</i>"]
+    cam["CameraStream<br/><i>RealSense D435</i>"]
+    collect["CalibDataCollector<br/><i>paired (pose, image) data</i>"]
+    pproc["PoseProcessor<br/><i>A_i = T_{i+1}·inv(T_i)</i>"]
+    solve["HandEyeSolver<br/><i>AX=XB → 4 methods, auto-select</i>"]
+    xform["TransformPublisher<br/><i>TF broadcast</i>"]
+
+    arm --> collect
+    cam --> collect
+    collect --> pproc
+    pproc --> solve
+    solve --> xform
+```
+
+**Components:**
+
+| Component | Location | Purpose |
+|---|---|---|
+| `CalibDataCollector` | `calib/collector.{hpp,cpp}` | Moves arm through waypoints, captures chessboard images, validates rotation diversity |
+| `PoseProcessor` | `calib/pose_proc.{hpp,cpp}` | Computes relative arm motions A_i from absolute poses |
+| `HandEyeSolver` | `calib/hand_eye.{hpp,cpp}` | Solves AX=XB via OpenCV `calibrateHandEye` (Tsai/Park/Horaud/Daniilidis) |
+| `TransformPublisher` | `calib/transform.{hpp,cpp}` | TF2 + Eigen conversions, broadcasts calibration result |
+
+**Apps** (in `apps/`): `calib_node` (ROS2 runtime), `collect`, `compute_hand_eye`,
+`process_poses`, `run_pipeline` (CLI tools).
+
+The pipeline talks to `rm::Arm` directly (not through ros2_control) and uses
+`omr_vision::camera::CameraStream` for image capture. It supports both
+interactive (keypress) and auto-collection (waypoint list) modes.
+
 ### Test suite
 
-14 test binaries covering every client, the BT factory, XML parsing, orchestrator,
-and integration tests. 100% pass rate.
+22+ test binaries covering every client, the BT factory, XML parsing, orchestrator,
+calibration pipeline, hand-eye solvers, pose processing, TF integration, and
+integration tests. 100% pass rate.
 
 ---
 
@@ -409,7 +449,7 @@ gear_ratio:=1000              # D-AIS gear ratio
 - **Standard:** C++23
 - **Compiler:** GCC 11.4 (from Ubuntu 22.04 / ROS2 Humble)
 - **Avoid:** `std::expected`, `std::ranges::to`, `std::print` (require GCC 12+)
-- **Polyfills:** The former `realman_calibration` package provides `expected_polyfill.hpp` and `format_polyfill.hpp`; these remain in the migrated packages
+- **Polyfills:** `expected_polyfill.hpp` and `format_polyfill.hpp` live in `omr_vision::calibration` (shared by both `omr_vision` and `omr_controller` tests)
 
 ### Code style
 

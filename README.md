@@ -252,6 +252,21 @@ flowchart TD
     DTA -->|add / update collision objects| SCENE
     DTA -->|subscribes| JSB
 
+    %% Hand-Eye Calibration Pipeline
+    subgraph Calib["Hand-Eye Calibration (omr_controller::calib)"]
+        COLLECT["CalibDataCollector<br/><i>arm waypoints + camera capture</i>"]
+        PPROC["PoseProcessor<br/><i>A_i = T_{i+1}·inv(T_i)</i>"]
+        HESOLVE["HandEyeSolver<br/><i>AX=XB (Tsai/Park/Horaud/Daniilidis)</i>"]
+        XFORM["TransformPublisher<br/><i>TF: camera→end-effector</i>"]
+    end
+
+    Arm -->|moveJ waypoints| COLLECT
+    CamStream -->|RGB frames| COLLECT
+    COLLECT -->|arm poses + images| PPROC
+    PPROC -->|R_tool, t_tool| HESOLVE
+    HESOLVE -->|R, t (X matrix)| XFORM
+    XFORM -->|TF broadcast| RSP
+
     %% MoveIt2 Planning
     subgraph MoveIt["MoveIt2 Planning"]
         MG["move_group<br/><i>collision-aware planning (OMPL)</i>"]
@@ -306,6 +321,15 @@ under `bt_xml/`.
 `/joint_states` independently. MoveGroup sends `FollowJointTrajectory` action goals to the
 arm's JTC and reads `/joint_states`. Planning scene collision objects are managed
 application-side — `move_group` itself is task-agnostic.
+
+**Calibration data flow:** `CalibDataCollector` runs the arm through waypoints via
+`rm::Arm::moveJ()`, captures chessboard images from `CameraStream`, and saves paired
+(arm pose, image) data. `PoseProcessor` computes relative arm motions
+A_i = T_{i+1} · inv(T_i) from the collected poses. `HandEyeSolver` solves the AX=XB
+hand-eye calibration using four methods (Tsai, Park, Horaud, Daniilidis) and picks the
+one with lowest reprojection error. `TransformPublisher` broadcasts the resulting
+camera→end-effector transform as a TF frame. The pipeline supports both EyeInHand and
+EyeToHand modes.
 
 `rm::Arm` is a plain C++ class (not an `rclcpp::Node`) with **zero ROS dependency**.
 It lives in the `realman_arm` git submodule under `omr_hardware/third_party/`.
