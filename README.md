@@ -39,11 +39,15 @@ ros2 launch omr_bringup bringup.launch.py arm_ip:=192.168.1.18
 ```
 pipeline/                            # ROS2 workspace root
 ├── src/
-│   ├── omr_vision/                   # ament_cmake — RealSense D435 capture (no ROS deps)
+│   ├── omr_vision/                   # ament_cmake — RealSense D435 capture + camera calibration
 │   │   ├── include/omr_vision/
 │   │   │   ├── camera/               #   CameraStream, CameraConfig
+│   │   │   ├── calibration/          #   CameraCalibrator, board detection
 │   │   │   └── capture.hpp           #   Capture abstraction
 │   │   ├── src/
+│   │   │   └── calibration/          #   camera_calib.cpp
+│   │   ├── apps/                     #   calibrate_camera
+│   │   ├── test/                     #   8 test files (camera calibration, synthetic data)
 │   │   ├── CMakeLists.txt
 │   │   └── package.xml
 │   ├── omr_hardware/                 # ament_cmake — ros2_control plugins
@@ -77,17 +81,24 @@ pipeline/                            # ROS2 workspace root
 │   │   │   │   └── door_trajectory_action.hpp    #  DoorTrajectoryAction (BT::StatefulActionNode)
 │   │   │   ├── door_math.hpp          #     Door trajectory math model C(θ,φ,ω) + R_T(θ,φ,ω)
 │   │   │   ├── geometry_utils.hpp     #     homogeneous_to_pose() conversion utility
+│   │   │   ├── calib/                  #     Hand-eye calibration pipeline
+│   │   │   │   ├── collector.hpp       #       Data collection from arm + camera
+│   │   │   │   ├── hand_eye.hpp        #       AX=XB solver (Tsai, Park)
+│   │   │   │   ├── pose_proc.hpp       #       Pose preprocessing
+│   │   │   │   └── transform.hpp       #       TF2 + Eigen conversions
 │   │   │   └── types.hpp             #     Core data types
 │   │   ├── src/                      #   Implementation files
 │   │   │   ├── orchestrator.cpp
 │   │   │   ├── state_machine/
 │   │   │   │   └── door_trajectory_action.cpp # DoorTrajectoryAction: MoveIt2 + state machine + collision
+│   │   │   ├── calib/                 #   collector.cpp, hand_eye.cpp, pose_proc.cpp, transform.cpp
 │   │   │   └── clients/
+│   │   ├── apps/                      #   calib_node, collect, compute_hand_eye, process_poses, run_pipeline
 │   │   ├── bt_xml/                   #   Behavior tree XML definitions
 │   │   │   └── pick_and_place.xml
 │   │   ├── launch/                   #   controller.launch.py
 │   │   ├── config/                   #   controller.yaml
-│   │   ├── test/                     #   22 test files covering door math, collision, BT, clients, etc.
+│   │   ├── test/                     #   22+ test files covering door math, collision, BT, clients, calib, etc.
 │   │   ├── CMakeLists.txt
 │   │   └── package.xml
 │   ├── rm65_moveit_config/           # ament_cmake — MoveIt2 config for RM65 (no compiled code)
@@ -507,9 +518,7 @@ colcon test
 Test binaries need the SDK library on `LD_LIBRARY_PATH` — the CMake config
 handles this via `APPEND_ENV`.
 
-`omr_controller` and `omr_vision` share what was formerly `realman_calibration`'s
-comprehensive test suite: camera calibration, pose processing, hand-eye solvers,
-TF integration, and synthetic data generators.
+`omr_controller` and `omr_vision` share a comprehensive test suite: camera calibration, pose processing, hand-eye solvers, TF integration, and synthetic data generators.
 
 ```bash
 # Required in Docker: set RMW_IMPLEMENTATION for test compatibility
@@ -521,13 +530,17 @@ export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 ## Static Analysis
 
 The workspace uses `clang-format` and `clang-tidy` for code quality. Config files
-are at the workspace root.
+are at the workspace root. **Always run in Docker** — local toolchain versions
+differ from CI and will produce false positives/negatives.
 
 ```bash
-# Format all source files
-clang-format -i src/**/*.cpp src/**/*.hpp
+# Format all source files (Docker, required before push)
+docker run --rm -v $(pwd):/ws realman:develop bash -c '
+  find /ws/src -name "*.cpp" -o -name "*.hpp" -o -name "*.h" | \
+    xargs clang-format -i
+'
 
-# Run clang-tidy during build (opt-in, zero warnings)
+# Run clang-tidy during build (opt-in, but CI runs diff-only)
 colcon build --cmake-args -DCLANG_TIDY=ON
 ```
 
@@ -541,7 +554,7 @@ flowchart LR
     subgraph CI["ci.yml — PR / push"]
         B["Build<br/>colcon build"] --> T["Test<br/>colcon test"]
         F["clang-format<br/>blocking"] 
-        CT["clang-tidy<br/>non-blocking"]
+        CT["clang-tidy<br/>blocking (diff-only)"]
     end
 
     subgraph CD["cd.yml — tag v*"]
@@ -554,7 +567,7 @@ flowchart LR
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `ci.yml` | push / PR to `main` | Build + test + clang-tidy (non-blocking) + clang-format |
+| `ci.yml` | push / PR to `main` | Build + test + clang-format + clang-tidy (blocking, diff-only) |
 | `cd.yml` | tag push (`v*`) | Build & push Docker images to `ghcr.io` |
 
 Images are published to GitHub Container Registry:
