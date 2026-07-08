@@ -1,6 +1,6 @@
 # controllers.yaml — MoveIt2 controller configuration for RM65
 # Uses moveit_simple_controller_manager to connect to the existing
-# joint_trajectory_controller at /arm_cm/follow_joint_trajectory
+# joint_trajectory_controller at /arm_cm/joint_trajectory_controller/follow_joint_trajectory
 
 controller_manager:
   type: moveit_simple_controller_manager/MoveItSimpleControllerManager
@@ -10,7 +10,7 @@ controller_names:
 
 arm_cm:
   type: FollowJointTrajectory
-  action_ns: follow_joint_trajectory
+  action_ns: joint_trajectory_controller/follow_joint_trajectory
   default: true
   joints:
     - joint1
