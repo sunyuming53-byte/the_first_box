@@ -80,6 +80,7 @@ def generate_launch_description():
         package='nav2_velocity_smoother', executable='velocity_smoother',
         name='velocity_smoother', output='screen',
         parameters=[nav2_params],
+        remappings=[('/cmd_vel', '/m65_controller_manager/diff_drive_controller/cmd_vel')],
     )
 
     lifecycle_mgr = Node(
