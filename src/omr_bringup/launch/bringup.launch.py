@@ -109,7 +109,7 @@ def generate_launch_description():
             parameters=[{
                 'robot_description': Command([
                     FindExecutable(name='xacro'), ' ',
-                    PathJoinSubstitution([FindPackageShare('omr_bringup'), 'urdf', 'dais.ros2_control.xacro']),
+                    PathJoinSubstitution([FindPackageShare('omr_bringup'), 'urdf', 'dais/dais.ros2_control.xacro']),
                     ' serial_port:=', LaunchConfiguration('serial_port'),
                     ' baud_rate:=', LaunchConfiguration('baud_rate'),
                     ' slave_id:=', LaunchConfiguration('slave_id'),
@@ -132,7 +132,7 @@ def generate_launch_description():
                 {
                     'robot_description': Command([
                         FindExecutable(name='xacro'), ' ',
-                        PathJoinSubstitution([FindPackageShare('omr_bringup'), 'urdf', 'dais.ros2_control.xacro']),
+                        PathJoinSubstitution([FindPackageShare('omr_bringup'), 'urdf', 'dais/dais.ros2_control.xacro']),
                         ' serial_port:=', LaunchConfiguration('serial_port'),
                         ' baud_rate:=', LaunchConfiguration('baud_rate'),
                         ' slave_id:=', LaunchConfiguration('slave_id'),
@@ -168,7 +168,7 @@ def generate_launch_description():
             parameters=[{
                 'robot_description': Command([
                     FindExecutable(name='xacro'), ' ',
-                    PathJoinSubstitution([FindPackageShare('omr_bringup'), 'urdf', 'm65.ros2_control.xacro']),
+                    PathJoinSubstitution([FindPackageShare('omr_bringup'), 'urdf', 'm65/m65.ros2_control.xacro']),
                     ' serial_port:=', LaunchConfiguration('m65_serial_port'),
                     ' baud_rate:=', LaunchConfiguration('m65_baud_rate'),
                     ' wheel_separation:=', LaunchConfiguration('wheel_separation'),
@@ -192,7 +192,7 @@ def generate_launch_description():
                 {
                     'robot_description': Command([
                         FindExecutable(name='xacro'), ' ',
-                        PathJoinSubstitution([FindPackageShare('omr_bringup'), 'urdf', 'm65.ros2_control.xacro']),
+PathJoinSubstitution([FindPackageShare('omr_bringup'), 'urdf', 'm65/m65.ros2_control.xacro']),
                         ' serial_port:=', LaunchConfiguration('m65_serial_port'),
                         ' baud_rate:=', LaunchConfiguration('m65_baud_rate'),
                         ' wheel_separation:=', LaunchConfiguration('wheel_separation'),

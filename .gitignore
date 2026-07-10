@@ -28,3 +28,4 @@ lark_auth_qr.png
 *.fls
 texput.log
 ignore/
+.worktrees/

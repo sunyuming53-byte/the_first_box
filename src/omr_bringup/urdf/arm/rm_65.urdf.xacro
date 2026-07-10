@@ -9,7 +9,7 @@
   <!-- ///////////////////////////////////////   bottom_joint   ////////////////////////////////////////// -->
   <!-- <joint name="bottom_joint" type="fixed">
     <origin xyz="0 0 0" rpy="0 0 0" />
-    <parent link="base_link"/>
+    <parent link="arm_base"/>
     <child link="bottom_link"/>
   </joint>
   <link name="bottom_link">
@@ -29,7 +29,7 @@
   </link> -->
   
   <link
-    name="base_link">
+    name="arm_base">
     <inertial>
       <origin
         xyz="-0.000433277303987328 -3.54664423471128E-05 0.0599427668933796"
@@ -50,7 +50,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://omr_bringup/urdf/meshes/rm_65_arm/base_link.STL" />
+          filename="package://omr_bringup/urdf/arm/meshes/rm_65_arm/base_link.STL" />
       </geometry>
       <material
         name="">
@@ -64,12 +64,12 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://omr_bringup/urdf/meshes/rm_65_arm/base_link.STL" />
+          filename="package://omr_bringup/urdf/arm/meshes/rm_65_arm/base_link.STL" />
       </geometry>
     </collision>
   </link>
   <link
-    name="Link1">
+    name="arm_link1">
     <inertial>
       <origin
         xyz="1.2226305431569E-08 0.0211079974844683 -0.0251854220842269"
@@ -90,7 +90,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://omr_bringup/urdf/meshes/rm_65_arm/link1.STL" />
+          filename="package://omr_bringup/urdf/arm/meshes/rm_65_arm/link1.STL" />
       </geometry>
       <material
         name="">
@@ -104,7 +104,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://omr_bringup/urdf/meshes/rm_65_arm/link1.STL" />
+          filename="package://omr_bringup/urdf/arm/meshes/rm_65_arm/link1.STL" />
       </geometry>
     </collision>
   </link>
@@ -115,9 +115,9 @@
       xyz="0 0 0.2405"
       rpy="0 0 0" />
     <parent
-      link="base_link" />
+      link="arm_base" />
     <child
-      link="Link1" />
+      link="arm_link1" />
     <axis
       xyz="0 0 1" />
     <limit
@@ -127,7 +127,7 @@
       velocity="3.14" />
   </joint>
   <link
-    name="Link2">
+    name="arm_link2">
     <inertial>
       <origin
         xyz="0.152256463426163 4.75383656106654E-07 -0.00620260383607792"
@@ -148,7 +148,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://omr_bringup/urdf/meshes/rm_65_arm/link2.STL" />
+          filename="package://omr_bringup/urdf/arm/meshes/rm_65_arm/link2.STL" />
       </geometry>
       <material
         name="">
@@ -162,7 +162,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://omr_bringup/urdf/meshes/rm_65_arm/link2.STL" />
+          filename="package://omr_bringup/urdf/arm/meshes/rm_65_arm/link2.STL" />
       </geometry>
     </collision>
   </link>
@@ -173,9 +173,9 @@
       xyz="0 0 0"
       rpy="1.5708 -1.5708 0" />
     <parent
-      link="Link1" />
+      link="arm_link1" />
     <child
-      link="Link2" />
+      link="arm_link2" />
     <axis
       xyz="0 0 1" />
     <limit
@@ -185,7 +185,7 @@
       velocity="3.14" />
   </joint>
   <link
-    name="Link3">
+    name="arm_link3">
     <inertial>
       <origin
         xyz="5.05312670989961E-06 -0.0595925663694732 0.010569069212336"
@@ -206,7 +206,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://omr_bringup/urdf/meshes/rm_65_arm/link3.STL" />
+          filename="package://omr_bringup/urdf/arm/meshes/rm_65_arm/link3.STL" />
       </geometry>
       <material
         name="">
@@ -220,7 +220,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://omr_bringup/urdf/meshes/rm_65_arm/link3.STL" />
+          filename="package://omr_bringup/urdf/arm/meshes/rm_65_arm/link3.STL" />
       </geometry>
     </collision>
   </link>
@@ -231,9 +231,9 @@
       xyz="0.256 0 0"
       rpy="0 0 1.5708" />
     <parent
-      link="Link2" />
+      link="arm_link2" />
     <child
-      link="Link3" />
+      link="arm_link3" />
     <axis
       xyz="0 0 1" />
     <limit
@@ -243,7 +243,7 @@
       velocity="3.92" />
   </joint>
   <link
-    name="Link4">
+    name="arm_link4">
     <inertial>
       <origin
         xyz="1.15516617405898E-06 -0.0180424468598241 -0.0215394748352687"
@@ -264,7 +264,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://omr_bringup/urdf/meshes/rm_65_arm/link4.STL" />
+          filename="package://omr_bringup/urdf/arm/meshes/rm_65_arm/link4.STL" />
       </geometry>
       <material
         name="">
@@ -278,7 +278,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://omr_bringup/urdf/meshes/rm_65_arm/link4.STL" />
+          filename="package://omr_bringup/urdf/arm/meshes/rm_65_arm/link4.STL" />
       </geometry>
     </collision>
   </link>
@@ -289,9 +289,9 @@
       xyz="0 -0.21 0"
       rpy="1.5708 0 0" />
     <parent
-      link="Link3" />
+      link="arm_link3" />
     <child
-      link="Link4" />
+      link="arm_link4" />
     <axis
       xyz="0 0 1" />
     <limit
@@ -301,7 +301,7 @@
       velocity="3.92" />
   </joint>
   <link
-    name="Link5">
+    name="arm_link5">
     <inertial>
       <origin
         xyz="3.19794786262152E-06 -0.0593808368101458 0.00736804250989326"
@@ -322,7 +322,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://omr_bringup/urdf/meshes/rm_65_arm/link5.STL" />
+          filename="package://omr_bringup/urdf/arm/meshes/rm_65_arm/link5.STL" />
       </geometry>
       <material
         name="">
@@ -336,7 +336,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://omr_bringup/urdf/meshes/rm_65_arm/link5.STL" />
+          filename="package://omr_bringup/urdf/arm/meshes/rm_65_arm/link5.STL" />
       </geometry>
     </collision>
   </link>
@@ -347,9 +347,9 @@
       xyz="0 0 0"
       rpy="-1.5708 0 0" />
     <parent
-      link="Link4" />
+      link="arm_link4" />
     <child
-      link="Link5" />
+      link="arm_link5" />
     <axis
       xyz="0 0 1" />
     <limit
@@ -360,7 +360,7 @@
   </joint>
   <xacro:if value="${ link6_type =='Link6' }">
     <link
-      name="Link6">
+      name="arm_link6">
       <inertial>
         <origin
           xyz="0.000714234511756999 -0.000396718732824521 -0.0126723660946126"
@@ -381,7 +381,7 @@
           rpy="0 0 0" />
         <geometry>
           <mesh
-            filename="package://omr_bringup/urdf/meshes/rm_65_arm/link6.STL" />
+            filename="package://omr_bringup/urdf/arm/meshes/rm_65_arm/link6.STL" />
         </geometry>
         <material
           name="">
@@ -395,7 +395,7 @@
           rpy="0 0 0" />
         <geometry>
           <mesh
-            filename="package://omr_bringup/urdf/meshes/rm_65_arm/link6.STL" />
+            filename="package://omr_bringup/urdf/arm/meshes/rm_65_arm/link6.STL" />
         </geometry>
       </collision>
     </link>
@@ -406,9 +406,9 @@
         xyz="0 -0.144 0"
         rpy="1.5708 0 0" />
       <parent
-        link="Link5" />
+        link="arm_link5" />
       <child
-        link="Link6" />
+        link="arm_link6" />
       <axis
         xyz="0 0 1" />
       <limit
@@ -420,7 +420,7 @@
   </xacro:if>
   <xacro:if value="${ link6_type =='Link6_6f' }">
     <link
-    name="Link6">
+    name="arm_link6">
     <inertial>
       <origin
         xyz="0.00032231 -0.00017819 -0.028676"
@@ -441,7 +441,7 @@
           rpy="0 0 0" />
         <geometry>
           <mesh
-            filename="package://omr_bringup/urdf/meshes/rm_65_arm/link6_6f.STL" />
+            filename="package://omr_bringup/urdf/arm/meshes/rm_65_arm/link6_6f.STL" />
         </geometry>
         <material
           name="">
@@ -455,7 +455,7 @@
           rpy="0 0 0" />
         <geometry>
           <mesh
-            filename="package://omr_bringup/urdf/meshes/rm_65_arm/link6_6f.STL" />
+            filename="package://omr_bringup/urdf/arm/meshes/rm_65_arm/link6_6f.STL" />
         </geometry>
       </collision>
     </link>
@@ -466,9 +466,9 @@
         xyz="0 -0.1725 0"
         rpy="1.5708 0 0" />
       <parent
-        link="Link5" />
+        link="arm_link5" />
       <child
-        link="Link6" />
+        link="arm_link6" />
       <axis
         xyz="0 0 1" />
       <limit
@@ -480,7 +480,7 @@
   </xacro:if>
   <xacro:if value="${ link6_type =='Link6_6fb' }">
     <link
-      name="Link6">
+      name="arm_link6">
       <inertial>
         <origin
           xyz="0.000138559985614397 -0.00574537418929974 -0.535986173384404"
@@ -501,7 +501,7 @@
           rpy="0 0 0" />
         <geometry>
           <mesh
-            filename="package://omr_bringup/urdf/meshes/rm_65_arm/link6_6fb.STL" />
+            filename="package://omr_bringup/urdf/arm/meshes/rm_65_arm/link6_6fb.STL" />
         </geometry>
         <material
           name="">
@@ -515,7 +515,7 @@
           rpy="0 0 0" />
         <geometry>
           <mesh
-            filename="package://omr_bringup/urdf/meshes/rm_65_arm/link6_6fb.STL" />
+            filename="package://omr_bringup/urdf/arm/meshes/rm_65_arm/link6_6fb.STL" />
         </geometry>
       </collision>
     </link>
@@ -526,9 +526,9 @@
         xyz="0 -0.1613 0"
         rpy="1.5708 0 0" />
       <parent
-        link="Link5" />
+        link="arm_link5" />
       <child
-        link="Link6" />
+        link="arm_link6" />
       <axis
         xyz="0 0 1" />
       <limit

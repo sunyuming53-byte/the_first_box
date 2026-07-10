@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<robot name="m65_chassis" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:arg name="serial_port"      default="/dev/ttyBase"/>
+  <xacro:arg name="baud_rate"        default="115200"/>
+  <xacro:arg name="wheel_separation" default="0.430"/>
+  <xacro:arg name="wheel_radius"     default="0.075"/>
+  <xacro:arg name="encoder_cpr"      default="0"/>
+
+  <ros2_control name="M65Base" type="system">
+    <hardware>
+      <plugin>omr_hardware/M65BaseHardware</plugin>
+      <param name="serial_port">$(arg serial_port)</param>
+      <param name="baud_rate">$(arg baud_rate)</param>
+      <param name="wheel_separation">$(arg wheel_separation)</param>
+      <param name="wheel_radius">$(arg wheel_radius)</param>
+      <param name="encoder_cpr">$(arg encoder_cpr)</param>
+    </hardware>
+
+    <joint name="left_wheel_joint">
+      <command_interface name="velocity"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <joint name="right_wheel_joint">
+      <command_interface name="velocity"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+  </ros2_control>
+
+</robot>

@@ -1,0 +1,111 @@
+<?xml version="1.0"?>
+<!--
+  m65.model.xacro — M65 chassis mechanical model (links + joints only).
+  Pure macro library: no <ros2_control>, no self-invocation.
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:macro name="m65_ros2_control_model"
+               params="mesh_file:=package://omr_bringup/urdf/m65/meshes/base_link.STL
+                       mesh_origin_x:=0.327
+                       mesh_origin_y:=-0.528
+                       mesh_origin_z:=-0.453
+                       mesh_origin_roll:=0
+                       mesh_origin_pitch:=0
+                       mesh_origin_yaw:=1.5708
+                       mesh_scale:=0.001
+                       chassis_mass:=20.0
+                       wheel_mass:=1.0
+                       wheel_separation:=0.430
+                       wheel_radius:=0.075">
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!--  Links                                                      -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+
+    <link name="m65_footprint">
+    </link>
+
+    <link name="m65_base">
+      <inertial>
+        <mass value="${chassis_mass}"/>
+        <inertia ixx="0.5" iyy="0.5" izz="0.5" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+      <visual>
+        <origin xyz="${mesh_origin_x} ${mesh_origin_y} ${mesh_origin_z}"
+                rpy="${mesh_origin_roll} ${mesh_origin_pitch} ${mesh_origin_yaw}"/>
+        <geometry>
+          <mesh filename="${mesh_file}" scale="${mesh_scale} ${mesh_scale} ${mesh_scale}"/>
+        </geometry>
+        <material name="">
+          <color rgba="1 1 1 1"/>
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="${mesh_origin_x} ${mesh_origin_y} ${mesh_origin_z}"
+                rpy="${mesh_origin_roll} ${mesh_origin_pitch} ${mesh_origin_yaw}"/>
+        <geometry>
+          <mesh filename="${mesh_file}" scale="${mesh_scale} ${mesh_scale} ${mesh_scale}"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="m65_wheel_left">
+      <inertial>
+        <mass value="${wheel_mass}"/>
+        <inertia ixx="0.005" iyy="0.005" izz="0.005" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="0.04"/>
+        </geometry>
+        <material name="wheel_black">
+          <color rgba="0.15 0.15 0.15 1"/>
+        </material>
+      </visual>
+    </link>
+
+    <link name="m65_wheel_right">
+      <inertial>
+        <mass value="${wheel_mass}"/>
+        <inertia ixx="0.005" iyy="0.005" izz="0.005" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="0.04"/>
+        </geometry>
+        <material name="wheel_black">
+          <color rgba="0.15 0.15 0.15 1"/>
+        </material>
+      </visual>
+    </link>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!--  Joints                                                      -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+
+    <joint name="chassis_base_footprint_joint" type="fixed">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <parent link="m65_footprint"/>
+      <child link="m65_base"/>
+    </joint>
+
+    <joint name="left_wheel_joint" type="continuous">
+      <origin xyz="0 ${wheel_separation/2} 0" rpy="0 0 0"/>
+      <parent link="m65_base"/>
+      <child link="m65_wheel_left"/>
+      <axis xyz="0 1 0"/>
+    </joint>
+
+    <joint name="right_wheel_joint" type="continuous">
+      <origin xyz="0 ${-wheel_separation/2} 0" rpy="0 0 0"/>
+      <parent link="m65_base"/>
+      <child link="m65_wheel_right"/>
+      <axis xyz="0 1 0"/>
+    </joint>
+
+  </xacro:macro>
+
+</robot>

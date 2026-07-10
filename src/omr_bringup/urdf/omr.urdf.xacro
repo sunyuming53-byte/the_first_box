@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<!--
+  omr.urdf.xacro — Complete OMR robot model.
+  Assembles M65 chassis + D-AIS linear rail + RM65 arm into one URDF tree.
+-->
+<robot name="full_robot" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!--  Subsystem model macros (mechanical links + joints only)    -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <xacro:include filename="m65/m65.model.xacro"/>
+  <xacro:include filename="dais/dais.model.xacro"/>
+  <xacro:include filename="arm/rm_65.urdf.xacro"/>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!--  Instantiate all subsystems                                 -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <xacro:m65_ros2_control_model/>
+  <xacro:dais_ros2_control_model/>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!--  Cross-system fixed joints                                   -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+
+  <!-- M65 chassis → D-AIS rail track -->
+  <!--   XY: (-42.51, 0) mm                                         -->
+  <!--   Z:  chassis top (0.187m) + 637.5mm = 0.8247m               -->
+  <joint name="dais_base_joint" type="fixed">
+    <parent link="m65_base"/>
+    <child link="rail_base"/>
+    <origin xyz="-0.04251 0 0.824694" rpy="0 0 0"/>
+  </joint>
+
+  <!-- D-AIS connector → robot arm base -->
+  <!--   Offset from connector center: (77.25, 2.325, 0) mm        -->
+  <joint name="arm_mount_joint" type="fixed">
+    <parent link="rail_slider"/>
+    <child link="arm_base"/>
+    <origin xyz="0.07725 0.002325 0" rpy="0 ${-pi/2} ${pi}"/>
+  </joint>
+
+</robot>
