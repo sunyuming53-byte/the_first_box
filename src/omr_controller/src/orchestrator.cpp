@@ -4,9 +4,9 @@
 #include <sstream>
 #include <string>
 
+#include "omr_controller/clients/topic_camera_adapter.hpp"
 #include "omr_controller/state_machine/bt_factory.hpp"
 #include <ament_index_cpp/get_package_share_directory.hpp>
-#include <omr_vision/camera/types.hpp>
 
 namespace omr_controller {
 
@@ -16,8 +16,7 @@ TaskOrchestrator::TaskOrchestrator(const rclcpp::NodeOptions& options)
         std::shared_ptr<rclcpp::Node>(static_cast<rclcpp::Node*>(this), [](rclcpp::Node*) {});
     arm_ = std::make_unique<ArmClient>(self);
     gripper_ = std::make_unique<GripperClient>(self);
-    vision_ = std::make_unique<VisionClient>(
-        std::make_unique<CameraStreamAdapter>(omr_vision::camera::CameraConfig{}));
+    vision_ = std::make_unique<VisionClient>(std::make_unique<TopicCameraAdapter>(self));
     motor_ = std::make_unique<MotorClientStub>();
     base_ = std::make_unique<BaseClientImpl>(self);
 

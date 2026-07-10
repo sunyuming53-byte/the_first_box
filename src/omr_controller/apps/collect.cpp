@@ -4,6 +4,7 @@
 #include <string_view>
 
 #include <omr_controller/calib/collector.hpp>
+#include <omr_controller/clients/vision_client.hpp>
 
 int main(int argc, char* argv[]) {
     omr_controller::calib::CalibDataConfig cfg;
@@ -28,7 +29,9 @@ int main(int argc, char* argv[]) {
     }
     // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 
-    omr_controller::calib::CalibDataCollector collector(cfg);
+    omr_controller::calib::CalibDataCollector collector(
+        cfg,
+        std::make_unique<omr_controller::CameraStreamAdapter>(omr_vision::camera::CameraConfig{}));
 
     auto result = collector.run();
     if (!result) {

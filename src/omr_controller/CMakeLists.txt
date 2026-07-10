@@ -16,6 +16,7 @@ find_package(moveit_core REQUIRED)
 find_package(moveit_ros_planning REQUIRED)
 find_package(moveit_ros_planning_interface REQUIRED)
 find_package(nav_msgs REQUIRED)
+find_package(cv_bridge REQUIRED)
 find_package(omr_vision REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_action REQUIRED)
@@ -54,6 +55,7 @@ ament_target_dependencies(${PROJECT_NAME} PUBLIC
     ament_index_cpp
     behaviortree_cpp
     control_msgs
+    cv_bridge
     geometry_msgs
     moveit_msgs
     moveit_ros_planning_interface
@@ -194,6 +196,10 @@ if(BUILD_TESTING)
     ament_add_gtest(collision_avoidance_test test/test_main_ros.cpp test/collision_avoidance_test.cpp)
     target_include_directories(collision_avoidance_test PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
     target_link_libraries(collision_avoidance_test ${PROJECT_NAME} ${OpenCV_LIBS})
+
+    ament_add_gtest(topic_camera_adapter_test test/test_main_ros.cpp test/topic_camera_adapter_test.cpp)
+    target_include_directories(topic_camera_adapter_test PRIVATE test)
+    target_link_libraries(topic_camera_adapter_test ${PROJECT_NAME} ${OpenCV_LIBS})
 
     # ── Calibration tests ──
     # synthetic_poses (minimal copy for hand_eye/tf_integration tests)

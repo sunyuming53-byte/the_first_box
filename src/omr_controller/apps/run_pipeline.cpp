@@ -7,6 +7,7 @@
 #include <omr_controller/calib/collector.hpp>
 #include <omr_controller/calib/hand_eye.hpp>
 #include <omr_controller/calib/pose_proc.hpp>
+#include <omr_controller/clients/vision_client.hpp>
 #include <omr_vision/calibration/camera_calib.hpp>
 #include <opencv2/imgcodecs.hpp>
 
@@ -55,7 +56,9 @@ int main(int argc, char* argv[]) {  // NOLINT(bugprone-exception-escape)
     // ── Stage 1: Data collection ────────────────────────────────────────
     std::cout << std::format("Stage {}: Starting data collection...\n", 1);
 
-    omr_controller::calib::CalibDataCollector collector(cfg);
+    omr_controller::calib::CalibDataCollector collector(
+        cfg,
+        std::make_unique<omr_controller::CameraStreamAdapter>(omr_vision::camera::CameraConfig{}));
     auto session_result = collector.run();
 
     if (!session_result) {

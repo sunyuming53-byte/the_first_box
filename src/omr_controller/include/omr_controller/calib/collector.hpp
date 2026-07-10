@@ -1,7 +1,6 @@
 #pragma once
 
 #include "omr_vision/calibration/expected_polyfill.hpp"
-#include "omr_vision/camera/types.hpp"
 #include "realman/motion/types.hpp"
 
 #include <array>
@@ -12,11 +11,14 @@
 
 #include <opencv2/core/types.hpp>
 
-namespace omr_controller::calib {
+namespace omr_controller {
+
+class ICamera;
+
+namespace calib {
 
 struct CalibDataConfig {
     int total_images{18};
-    omr_vision::camera::CameraConfig camera;
     std::string arm_ip{"192.168.1.18"};
     std::filesystem::path output_dir{"data/calib_session"};
     cv::Size board_size{11, 8};
@@ -35,7 +37,7 @@ struct CalibSession {
 /// 3 axes exceeds 30° before accepting next capture.
 class CalibDataCollector {
 public:
-    explicit CalibDataCollector(const CalibDataConfig& cfg);
+    explicit CalibDataCollector(const CalibDataConfig& cfg, std::unique_ptr<ICamera> camera);
     ~CalibDataCollector();
 
     CalibDataCollector(const CalibDataCollector&) = delete;
@@ -58,4 +60,6 @@ private:
     std::unique_ptr<Impl> impl_;
 };
 
-}  // namespace omr_controller::calib
+}  // namespace calib
+
+}  // namespace omr_controller

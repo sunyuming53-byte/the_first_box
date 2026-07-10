@@ -24,6 +24,7 @@
 #include <omr_controller/calib/hand_eye.hpp>
 #include <omr_controller/calib/pose_proc.hpp>
 #include <omr_controller/calib/transform.hpp>
+#include <omr_controller/clients/topic_camera_adapter.hpp>
 #include <omr_vision/calibration/camera_calib.hpp>
 #include <opencv2/calib3d.hpp>
 #include <opencv2/highgui.hpp>
@@ -308,7 +309,8 @@ private:
         // Stage 1: Collect
         RCLCPP_INFO(get_logger(), "Stage 1: collecting calibration data...");
         collecting_ = true;
-        CalibDataCollector collector(cfg_);
+        CalibDataCollector collector(cfg_,
+                                     std::make_unique<TopicCameraAdapter>(shared_from_this()));
         auto session = collector.run();
         collecting_ = false;
         if (!session) return std::format("collect failed: {}", session.error());

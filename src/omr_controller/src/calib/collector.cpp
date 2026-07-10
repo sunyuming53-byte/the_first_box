@@ -1,5 +1,4 @@
 #include "omr_vision/calibration/format_polyfill.hpp"
-#include "omr_vision/camera/stream.hpp"
 #include "omr_vision/capture.hpp"
 #include "realman/core/arm.hpp"
 #include "realman/core/error.hpp"
@@ -15,6 +14,7 @@
 #include <thread>
 
 #include "omr_controller/calib/collector.hpp"
+#include "omr_controller/clients/vision_client.hpp"
 #include <opencv2/calib3d.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
@@ -60,9 +60,9 @@ constexpr auto kRotationThresholdRad = 30.0 * M_PI / 180.0;  // 30°
 
 class CalibDataCollector::Impl {
 public:
-    explicit Impl(const CalibDataConfig& cfg)
+    explicit Impl(const CalibDataConfig& cfg, std::unique_ptr<ICamera> camera)
         : arm_cfg_{.ip = cfg.arm_ip, .tcp_port = 8080, .model = rm::ArmModel::RM_65},
-          arm_{arm_cfg_}, cam_{cfg.camera},
+          arm_{arm_cfg_}, camera_(std::move(camera)),
           capture_{omr_vision::CaptureConfig{.output_dir = cfg.output_dir,
                                              .total_images = cfg.total_images,
                                              .save_depth = false,
@@ -108,15 +108,15 @@ public:
                 std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 
                 // Grab camera frame
-                auto frame_opt = cam_.next();
+                auto frame_opt = camera_->next();
                 if (!frame_opt.has_value()) {
                     std::cerr << std::format("Camera frame grab failed at waypoint {}\n", idx);
                     continue;
                 }
 
-                auto& frame = *frame_opt;
+                auto& color_img = *frame_opt;
                 cv::Mat gray;
-                cv::cvtColor(frame.color, gray, cv::COLOR_BGR2GRAY);
+                cv::cvtColor(color_img, gray, cv::COLOR_BGR2GRAY);
 
                 // Detect chessboard
                 corners.clear();
@@ -128,6 +128,10 @@ public:
                 }
 
                 // Auto-capture on detection
+                omr_vision::camera::CameraFrame cf;
+                cf.color = color_img;
+                cf.depth_intrinsics = camera_->depth_intrinsics();
+
                 if (found) {
                     auto pose = arm_.toolPose();
                     omr_vision::ArmPose arm_pose{.tx = pose.x,
@@ -136,7 +140,8 @@ public:
                                                  .rx = pose.roll,
                                                  .ry = pose.pitch,
                                                  .rz = pose.yaw};
-                    capture_.save_with_pose(frame, saved_count, arm_pose);
+
+                    capture_.save_with_pose(cf, saved_count, arm_pose);
 
                     saved_poses.push_back(
                         {pose.x, pose.y, pose.z, pose.roll, pose.pitch, pose.yaw});
@@ -151,7 +156,7 @@ public:
                 // Visual feedback (if display available)
                 if (has_display) {
                     auto display =
-                        omr_vision::FrameCapture::draw_overlay(frame, corners, saved_count, total_);
+                        omr_vision::FrameCapture::draw_overlay(cf, corners, saved_count, total_);
                     auto pose = arm_.toolPose();
                     auto arm_text = std::format(
                         "Arm: x={:.3F} y={:.3F} z={:.3F} roll={:.1F} pitch={:.1F} yaw={:.1F}",
@@ -186,14 +191,18 @@ public:
             if (has_display) cv::namedWindow(window_name, cv::WINDOW_NORMAL);
 
             while (true) {
-                auto frame_opt = cam_.next();
+                auto frame_opt = camera_->next();
                 if (!frame_opt.has_value()) {
                     return Unexpected<std::string>("Camera stream ended unexpectedly");
                 }
 
-                auto& frame = *frame_opt;
+                auto& color_img = *frame_opt;
                 cv::Mat gray;
-                cv::cvtColor(frame.color, gray, cv::COLOR_BGR2GRAY);
+                cv::cvtColor(color_img, gray, cv::COLOR_BGR2GRAY);
+
+                omr_vision::camera::CameraFrame cf;
+                cf.color = color_img;
+                cf.depth_intrinsics = camera_->depth_intrinsics();
 
                 // find chessboard corners
                 corners.clear();
@@ -209,7 +218,7 @@ public:
                 if (has_display) {
                     // draw overlay
                     auto display =
-                        omr_vision::FrameCapture::draw_overlay(frame, corners, saved_count, total_);
+                        omr_vision::FrameCapture::draw_overlay(cf, corners, saved_count, total_);
 
                     // arm pose status text
                     auto pose = arm_.toolPose();
@@ -248,7 +257,7 @@ public:
                                                  .rx = pose.roll,
                                                  .ry = pose.pitch,
                                                  .rz = pose.yaw};
-                    capture_.save_with_pose(frame, saved_count, arm_pose);
+                    capture_.save_with_pose(cf, saved_count, arm_pose);
 
                     saved_poses.push_back(
                         {pose.x, pose.y, pose.z, pose.roll, pose.pitch, pose.yaw});
@@ -282,7 +291,6 @@ public:
 
         // clean shutdown
         arm_.stop();
-        // CameraStream and FrameCapture destructors handle cleanup
 
         auto session = CalibSession{
             .dir = output_dir_,
@@ -295,7 +303,7 @@ public:
 private:
     rm::ArmConfig arm_cfg_;
     rm::Arm arm_;
-    omr_vision::camera::CameraStream cam_;
+    std::unique_ptr<ICamera> camera_;
     omr_vision::FrameCapture capture_;
     cv::Size board_size_;
     int total_;
@@ -306,8 +314,8 @@ private:
 // CalibDataCollector (PIMPL facade)
 // ──────────────────────────────────────────────────────────────
 
-CalibDataCollector::CalibDataCollector(const CalibDataConfig& cfg)
-    : impl_{std::make_unique<Impl>(cfg)} {}
+CalibDataCollector::CalibDataCollector(const CalibDataConfig& cfg, std::unique_ptr<ICamera> camera)
+    : impl_{std::make_unique<Impl>(cfg, std::move(camera))} {}
 
 CalibDataCollector::~CalibDataCollector() = default;
 
