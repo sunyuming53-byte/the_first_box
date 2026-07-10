@@ -119,16 +119,27 @@ pipeline/                            # ROS2 workspace root
 │   └── omr_bringup/                  # ament_cmake — launch + config + URDF (no compiled code)
 │       ├── launch/
 │       │   ├── bringup.launch.py      #   ros2_control pipeline (RSP + CM + JSB + JTC + camera + calib)
-│       │   └── calibration.launch.py
+│       │   ├── calibration.launch.py
+│       │   └── view_robot.launch.py   #   RViz visualization of full robot model
 │       ├── config/
 │       │   ├── realman_controllers.yaml  # JSB + JTC config (100Hz, open-loop)
-│       │   └── m65_controllers.yaml     # M65 chassis controller config
+│       │   ├── m65_controllers.yaml     # M65 chassis controller config
+│       │   └── view_robot.rviz          # RViz config for full robot view
 │       ├── urdf/
-│       │   ├── realman.urdf.xacro     #   Main entry (kinematics + ros2_control)
-│       │   ├── realman.ros2_control.xacro  # <ros2_control> wrapper for ArmSystem
-│       │   ├── m65.ros2_control.xacro  #   <ros2_control> wrapper for M65Hardware
-│       │   ├── rm_65.urdf.xacro       #   Vendored upstream RM65 kinematics
-│       │   └── meshes/rm_65_arm/      #   STL meshes
+│       │   ├── omr.urdf.xacro          #   Combined robot model (M65 + D-AIS rail + RM65 arm)
+│       │   ├── m65/
+│       │   │   ├── m65.model.xacro     #   M65 chassis mechanical model
+│       │   │   ├── m65.ros2_control.xacro  # M65 ros2_control config
+│       │   │   └── meshes/             #   M65 STL meshes
+│       │   ├── dais/
+│       │   │   ├── dais.model.xacro    #   D-AIS linear rail mechanical model
+│       │   │   ├── dais.ros2_control.xacro # D-AIS ros2_control config
+│       │   │   └── meshes/             #   Track + connector STL meshes
+│       │   └── arm/
+│       │       ├── realman.urdf.xacro  #   Arm assembly (kinematics + ros2_control)
+│       │       ├── realman.ros2_control.xacro  # Arm ros2_control config
+│       │       ├── rm_65.urdf.xacro    #   Vendored upstream RM65 kinematics
+│       │       └── meshes/rm_65_arm/   #   Arm STL meshes
 │       ├── CMakeLists.txt
 │       └── package.xml
 ├── .github/workflows/                 # CI/CD pipelines
@@ -381,6 +392,19 @@ The bringup now supports `launch_dais:=true` to start a second `controller_manag
 Similarly, `launch_m65:=true` starts a third `controller_manager` for the M65 mobile
 base with `joint_state_broadcaster` and `diff_drive_controller`. The orchestrator's
 `BaseClientImpl` communicates with it via Twist `cmd_vel` + odometry.
+
+### Visualization
+
+The unified robot URDF (`omr.urdf.xacro`) combines all subsystems into a single model
+tree for RViz visualization:
+
+```bash
+ros2 launch omr_bringup view_robot.launch.py
+```
+
+This shows the M65 chassis, D-AIS linear rail with connector plate, and RM65 6-axis arm
+in their correct spatial relationships. Use the joint_state_publisher_gui sliders to
+move the prismatic rail joint and arm joints.
 
 ### MoveIt2 collision-aware planning
 
