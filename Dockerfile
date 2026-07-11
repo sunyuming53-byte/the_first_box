@@ -61,10 +61,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     zsh curl git \
     ros-humble-rmw-cyclonedds-cpp \
     ros-humble-rclcpp \
+    ros-humble-ros-gz-sim \
     ros-humble-std-srvs \
     ros-humble-tf-transformations \
     ros-humble-tf2-ros \
     ros-humble-geometry-msgs \
+    ros-humble-gz-ros2-control \
     ros-humble-hardware-interface \
     ros-humble-pluginlib \
     ros-humble-controller-manager \

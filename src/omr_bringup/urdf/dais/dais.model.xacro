@@ -45,6 +45,13 @@
           <color rgba="1 1 1 1"/>
         </material>
       </visual>
+      <collision>
+        <origin xyz="${track_origin_x} ${track_origin_y} ${track_origin_z}"
+                rpy="${track_origin_roll} ${track_origin_pitch} ${track_origin_yaw}"/>
+        <geometry>
+          <mesh filename="${track_mesh}" scale="${mesh_scale} ${mesh_scale} ${mesh_scale}"/>
+        </geometry>
+      </collision>
     </link>
 
     <!-- dais_slider_link — moving connector plate (STL mesh) -->
@@ -63,6 +70,13 @@
           <color rgba="1 1 1 1"/>
         </material>
       </visual>
+      <collision>
+        <origin xyz="${connector_origin_x} ${connector_origin_y} ${connector_origin_z}"
+                rpy="${connector_origin_roll} ${connector_origin_pitch} ${connector_origin_yaw}"/>
+        <geometry>
+          <mesh filename="${connector_mesh}" scale="${mesh_scale} ${mesh_scale} ${mesh_scale}"/>
+        </geometry>
+      </collision>
     </link>
 
     <!-- ═══════════════════════════════════════════════════════════ -->

@@ -1,0 +1,135 @@
+<?xml version="1.0"?>
+<!--
+  sim_combined.urdf.xacro — Standalone Gazebo Fortress (gz-sim6) robot model.
+  M65 chassis + D-AIS linear rail + RM65 6-axis arm with gz_ros2_control.
+-->
+<robot name="omr_sim" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!--  Subsystem model macros (mechanical links + joints only)    -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <xacro:include filename="m65/m65.model.xacro"/>
+  <xacro:include filename="dais/dais.model.xacro"/>
+  <xacro:include filename="arm/rm_65.urdf.xacro"/>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!--  Instantiate all subsystems                                 -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <xacro:m65_ros2_control_model/>
+  <xacro:dais_ros2_control_model/>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!--  Cross-system fixed joints                                   -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+
+  <!-- M65 chassis → D-AIS rail track -->
+  <joint name="dais_base_joint" type="fixed">
+    <parent link="m65_base"/>
+    <child link="rail_base"/>
+    <origin xyz="-0.04251 0 0.824694" rpy="0 0 0"/>
+  </joint>
+
+  <!-- D-AIS connector → robot arm base -->
+  <joint name="arm_mount_joint" type="fixed">
+    <parent link="rail_slider"/>
+    <child link="arm_base"/>
+    <origin xyz="0.07725 0.002325 0" rpy="0 ${-pi/2} ${pi}"/>
+  </joint>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!--  ros2_control — ARM (joint1~6, position)                    -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <ros2_control name="GazeboArm" type="system">
+    <hardware>
+      <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+    </hardware>
+    <joint name="joint1">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+    </joint>
+    <joint name="joint2">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+    </joint>
+    <joint name="joint3">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+    </joint>
+    <joint name="joint4">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+    </joint>
+    <joint name="joint5">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+    </joint>
+    <joint name="joint6">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+    </joint>
+  </ros2_control>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!--  ros2_control — DAIS (joint_dais, velocity)                 -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <ros2_control name="GazeboDais" type="system">
+    <hardware>
+      <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+    </hardware>
+    <joint name="joint_dais">
+      <command_interface name="velocity"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+  </ros2_control>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!--  Gazebo Fortress plugin blocks                              -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+
+  <!-- ARM controller manager -->
+  <gazebo>
+    <plugin filename="gz_ros2_control-system" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+      <parameters>$(find omr_bringup)/config/sim_controllers_arm.yaml</parameters>
+    </plugin>
+  </gazebo>
+
+  <!-- DAIS controller manager -->
+  <gazebo>
+    <plugin filename="gz_ros2_control-system" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+      <parameters>$(find omr_bringup)/config/sim_controllers_dais.yaml</parameters>
+    </plugin>
+  </gazebo>
+
+  <!-- Sensors system plugin (required for ALL sensors in Fortress) -->
+  <gazebo>
+    <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+  </gazebo>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!--  Depth camera on arm_link6                                  -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <gazebo reference="arm_link6">
+    <sensor name="arm_camera" type="camera">
+      <pose>0.02 0 0.04 0 0 0</pose>
+      <camera>
+        <horizontal_fov>1.0472</horizontal_fov>
+        <image>
+          <width>640</width>
+          <height>480</height>
+          <format>RGB_INT8</format>
+        </image>
+        <clip>
+          <near>0.05</near>
+          <far>10</far>
+        </clip>
+      </camera>
+      <always_on>1</always_on>
+      <update_rate>30</update_rate>
+      <topic>/camera</topic>
+    </sensor>
+  </gazebo>
+
+</robot>
