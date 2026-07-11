@@ -59,12 +59,12 @@ pipeline/                            # ROS2 workspace root
 │   │   ├── include/omr_hardware/
 │   │   │   ├── arm_system.hpp        #   ArmSystem plugin (wraps rm::Arm)
 │   │   │   ├── dais_hardware.hpp     #   DaisHardware plugin (wraps dais::Motor)
-│   │   │   └── m65_hardware.hpp      #   M65Hardware plugin (wraps m65::Chassis)
+│   │   │   └── m65_hardware.hpp      #   M65BaseHardware plugin (wraps m65::Chassis)
 │   │   ├── src/
 │   │   │   ├── arm_system.cpp
 │   │   │   ├── dais_hardware.cpp
 │   │   │   └── m65_hardware.cpp
-│   │   ├── plugins.xml               #   ArmSystem + DaisHardware + M65Hardware registration
+│   │   ├── plugins.xml               #   ArmSystem + DaisHardware + M65BaseHardware registration
 │   │   ├── CMakeLists.txt
 │   │   └── package.xml
 │   ├── omr_controller/               # ament_cmake — behavior tree-based task orchestrator + hand-eye calibration
@@ -255,10 +255,6 @@ flowchart TD
     BT --> DTA
     BB -->|action goal| JTC
     BB -->|subscribes| JSB
-    BB -->|action goal / stub| DJTC
-    BB -->|subscribes / stub| DJSB
-    BB -->|cmd_vel Twist / not wired| M65DDC
-    M65DDC -->|odom / not wired| BB
     DTA -->|setPoseTarget / plan / execute| MG
     DTA -->|add / update collision objects| SCENE
     DTA -->|subscribes| JSB
@@ -348,7 +344,7 @@ It can be used in any context — embedded in your own ROS2 node, linked into a
 `ros2_control` hardware interface, or used standalone outside ROS2.
 
 `dais::Motor` and `m65::Chassis` follow the same pattern — pure C++ drivers (zero ROS deps)
-in their respective submodules, wrapped by `DaisHardware` and `M65Hardware` plugins in `omr_hardware`.
+in their respective submodules, wrapped by `DaisHardware` and `M65BaseHardware` plugins in `omr_hardware`.
 
 ### Bringup
 
@@ -511,8 +507,8 @@ graph TD
 | Package | Build system | Purpose |
 |---|---|---|
 | `omr_vision` | ament_cmake | RealSense D435 capture + camera calibration (OpenCV + librealsense2, no ROS deps) |
-| `omr_hardware` | ament_cmake | ros2_control plugins (ArmSystem, DaisHardware, M65Hardware) |
-| `omr_controller` | ament_cmake | Behavior tree-based task orchestrator (BT.CPP v4) + hand-eye calibration pipeline |
+| `omr_hardware` | ament_cmake | ros2_control plugins (ArmSystem, DaisHardware, M65BaseHardware) |
+| `omr_controller` | ament_cmake | Behavior tree-based task orchestrator (BT.CPP v4) + hand-eye calibration pipeline. Note: `motor_client` and `base_client` are created but not wired into BT blackboard. |
 | `rm65_moveit_config` | ament_cmake | MoveIt2 config for RM65 (SRDF, KDL, OMPL) |
 | `omr_lio` | ament_cmake | S-FAST_LIO LiDAR-IMU SLAM, Nav2 navigation, waypoint tools, emergency stop |
 | `omr_bringup` | ament_cmake | Launch files + config + URDF (no compiled code) |

@@ -69,6 +69,7 @@ build time.
 **Build order matters**: `omr_vision` (ament_cmake, no ROS deps) →
 `omr_hardware` (ament_cmake, embeds submodules) →
 `omr_controller` (depends on omr_hardware + omr_vision) →
+`omr_lio` (ament_cmake, LiDAR SLAM + Nav2) →
 `omr_bringup` (launch/config only, depends on all).
 `colcon build` handles this automatically.
 
@@ -89,15 +90,16 @@ system includes). `UnusedIncludes` is disabled.
 | Package | Build system | Purpose |
 |---|---|---|
 | `omr_vision` | ament_cmake | RealSense D435 capture (OpenCV + librealsense2). No ROS deps. |
-| `omr_hardware` | ament_cmake | ros2_control hardware interface plugins (ArmSystem, DaisHardware, M65Hardware). Embeds realman_arm, dais_motor, m65_chassis as submodules. |
-| `omr_controller` | ament_cmake | Behavior tree-based task orchestrator (BT.CPP v4). Clients: Arm, Gripper, Motor, Base, Vision. Door trajectory math model with MoveIt2 collision-aware planning. Hand-eye calibration pipeline. |
+| `omr_hardware` | ament_cmake | ros2_control hardware interface plugins (ArmSystem, DaisHardware, M65BaseHardware). Embeds realman_arm, dais_motor, m65_chassis as submodules. |
+| `omr_controller` | ament_cmake | Behavior tree-based task orchestrator (BT.CPP v4). Clients: Arm, Gripper, Motor, Base, Vision. Note: `motor_client` and `base_client` are created but NOT registered on BT blackboard — no BT action node can currently command them. Door trajectory math model with MoveIt2 collision-aware planning. Hand-eye calibration pipeline. |
 | `rm65_moveit_config` | ament_cmake | MoveIt2 config for RM65 (SRDF, KDL kinematics, OMPL, geometric collision primitives). No compiled code. |
+| `omr_lio` | ament_cmake | S-FAST_LIO LiDAR-IMU SLAM + Nav2 navigation. LioNode (ESKF + ikd-Tree), EstopperNode (0.3m emergency stop), InspectionSequencer (YAML waypoints with task event handshake). Waypoint recording tools. Depends on Livox Mid-360 + built-in IMU. |
 | `omr_bringup` | ament_cmake | Launch files + config + URDF only. No compiled code. |
 
 **Hardware interface plugins** (all in `omr_hardware/plugins.xml`):
 - `ArmSystem` — wraps `rm::Arm` (RealMan arm via TCP)
 - `DaisHardware` — wraps `dais::Motor` (D-AIS motor via Modbus RTU)
-- `M65Hardware` — wraps `m65::Chassis` (M65 mobile base via serial)
+- `M65BaseHardware` — wraps `m65::Chassis` (M65 mobile base via serial)
 
 **Submodules** (`src/omr_hardware/third_party/`):
 
@@ -304,3 +306,7 @@ m65 feature:      /home/ubuntu/.ws/pipeline-m65-chassis  (feat/m65-chassis)
 **When working in a worktree, ensure file operations target the correct
 workspace path.** A session in `pipeline-gimbal` accidentally writing to
 `pipeline` is a known failure mode — check `pwd` before editing.
+
+The `.worktrees/` directory (bare repo metadata) is git-ignored.
+Worktree paths above are conventions — verify with `git worktree list`.
+`.env` is also git-ignored (developer-specific proxy/ROS config).
