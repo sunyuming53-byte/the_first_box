@@ -51,8 +51,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends gnupg2 && \
     rm -rf /var/lib/apt/lists/*
 
 # Use Tsinghua ROS2 mirror for faster downloads (geographic optimization)
-RUN find /etc/apt/sources.list.d -name "*.list" -exec sed -i \
-    's|http://packages.ros.org/ros2/ubuntu|https://mirrors.tuna.tsinghua.edu.cn/ros2/ubuntu|g' {} \;
+# Tsinghua does not mirror source packages — drop deb-src to avoid 404
+RUN find /etc/apt/sources.list.d \( -name "*.list" -o -name "*.sources" \) -exec sed -i \
+    -e 's|http://packages.ros.org/ros2/ubuntu|https://mirrors.tuna.tsinghua.edu.cn/ros2/ubuntu|g' \
+    -e 's| deb-src||g' {} \;
 
 # System libraries (dev variants — headers + .so)
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -65,6 +67,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     zsh curl git \
     ros-humble-rmw-cyclonedds-cpp \
     ros-humble-rclcpp \
+    ros-humble-ros-gz-bridge \
     ros-humble-ros-gz-sim \
     ros-humble-std-srvs \
     ros-humble-tf-transformations \
