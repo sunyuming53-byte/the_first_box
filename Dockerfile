@@ -50,6 +50,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends gnupg2 && \
     echo "deb [trusted=yes] https://librealsense.intel.com/Debian/apt-repo jammy main" > /etc/apt/sources.list.d/librealsense.list && \
     rm -rf /var/lib/apt/lists/*
 
+# Use Tsinghua ROS2 mirror for faster downloads (geographic optimization)
+# Tsinghua does not mirror source packages — drop deb-src to avoid 404
+RUN find /etc/apt/sources.list.d \( -name "*.list" -o -name "*.sources" \) -exec sed -i \
+    -e 's|http://packages.ros.org/ros2/ubuntu|https://mirrors.tuna.tsinghua.edu.cn/ros2/ubuntu|g' \
+    -e 's| deb-src||g' {} \;
+
 # System libraries (dev variants — headers + .so)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libeigen3-dev \
@@ -58,13 +64,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libopencv-dev \
     libpcl-dev \
     librealsense2-dev \
-    zsh curl git \
+    zsh curl git wget gnupg \
     ros-humble-rmw-cyclonedds-cpp \
     ros-humble-rclcpp \
+    ros-humble-ros-gz-bridge \
+    ros-humble-ros-gz-sim \
     ros-humble-std-srvs \
     ros-humble-tf-transformations \
     ros-humble-tf2-ros \
     ros-humble-geometry-msgs \
+    ros-humble-gz-ros2-control \
     ros-humble-hardware-interface \
     ros-humble-pluginlib \
     ros-humble-controller-manager \
@@ -93,6 +102,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-humble-pcl-conversions \
     ros-humble-pcl-ros \
     && rm -rf /var/lib/apt/lists/*
+
+# clangd + clang-tidy + clang-format from LLVM apt repo (latest available for Jammy)
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=apt-cache-dev --mount=type=cache,target=/var/lib/apt,sharing=locked,id=apt-lib-dev \
+    wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc && \
+    echo "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-19 main" > /etc/apt/sources.list.d/llvm.list && \
+    apt-get update && apt-get install -y --no-install-recommends clangd-19 clang-tidy-19 clang-format-19 && \
+    ln -sf /usr/bin/clangd-19 /usr/bin/clangd && \
+    ln -sf /usr/bin/clang-tidy-19 /usr/bin/clang-tidy && \
+    ln -sf /usr/bin/clang-format-19 /usr/bin/clang-format && \
+    rm -rf /var/lib/apt/lists/*
 
 # RealMan SDK — copy from submodule to /opt/realman-sdk
 RUN mkdir -p /opt/realman-sdk/lib
@@ -189,21 +208,14 @@ FROM realman-base-dev AS realman-develop
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=apt-cache-dev \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked,id=apt-lib-dev \
+    apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
     gdb \
     wget gnupg \
     && rm -rf /var/lib/apt/lists/*
-
-# clangd + clang-tidy + clang-format from LLVM apt repo (latest available for Jammy)
-RUN wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc && \
-    echo "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-19 main" > /etc/apt/sources.list.d/llvm.list && \
-    apt-get update && apt-get install -y --no-install-recommends clangd-19 clang-tidy-19 clang-format-19 && \
-    ln -sf /usr/bin/clangd-19 /usr/bin/clangd && \
-    ln -sf /usr/bin/clang-tidy-19 /usr/bin/clang-tidy && \
-    ln -sf /usr/bin/clang-format-19 /usr/bin/clang-format && \
-    rm -rf /var/lib/apt/lists/*
 
 # Non-root user matching typical host UID, with video (camera) and passwordless sudo
 RUN useradd -m -u 1000 -s /bin/zsh ubuntu && \
