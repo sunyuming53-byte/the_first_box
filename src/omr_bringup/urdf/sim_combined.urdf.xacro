@@ -87,17 +87,14 @@
   <!--  Gazebo Fortress plugin blocks                              -->
   <!-- ═══════════════════════════════════════════════════════════ -->
 
-  <!-- ARM controller manager -->
+  <!-- Single gz_ros2_control plugin for all hardware interfaces.
+       Two separate plugin instances cause class_loader namespace
+       collisions in Humble (hardware_interface → mock_components). -->
   <gazebo>
     <plugin filename="gz_ros2_control-system" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
-      <parameters>$(find omr_bringup)/config/sim_controllers_arm.yaml</parameters>
-    </plugin>
-  </gazebo>
-
-  <!-- DAIS controller manager -->
-  <gazebo>
-    <plugin filename="gz_ros2_control-system" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
-      <parameters>$(find omr_bringup)/config/sim_controllers_dais.yaml</parameters>
+      <robot_param>robot_description</robot_param>
+      <robot_param_node>robot_state_publisher</robot_param_node>
+      <parameters>$(find omr_bringup)/config/sim_controllers_combined.yaml</parameters>
     </plugin>
   </gazebo>
 
