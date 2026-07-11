@@ -1,9 +1,10 @@
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, TimerAction
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, SetEnvironmentVariable, TimerAction
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import Command, FindExecutable, LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
 
 
@@ -19,6 +20,10 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('gui', default_value='true'),
         DeclareLaunchArgument('launch_moveit', default_value='true'),
+
+        # Gazebo Fortress resource path for package:// → model:// resolution
+        SetEnvironmentVariable('GZ_SIM_RESOURCE_PATH',
+                               PathJoinSubstitution([FindPackageShare('omr_bringup'), '..'])),
 
         # ── Gazebo Sim (Fortress) ─────────────────────────
         IncludeLaunchDescription(
@@ -41,7 +46,7 @@ def generate_launch_description():
             package='robot_state_publisher',
             executable='robot_state_publisher',
             name='robot_state_publisher',
-            parameters=[{'robot_description': robot_description, 'use_sim_time': True}],
+            parameters=[{'robot_description': ParameterValue(robot_description, value_type=str), 'use_sim_time': True}],
         ),
 
         # ── Spawn robot ──────────────────────────────────
