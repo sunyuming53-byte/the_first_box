@@ -103,6 +103,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-humble-pcl-ros \
     && rm -rf /var/lib/apt/lists/*
 
+# clangd + clang-tidy + clang-format from LLVM apt repo (latest available for Jammy)
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=apt-cache-dev --mount=type=cache,target=/var/lib/apt,sharing=locked,id=apt-lib-dev \
+    wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc && \
+    echo "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-19 main" > /etc/apt/sources.list.d/llvm.list && \
+    apt-get update && apt-get install -y --no-install-recommends clangd-19 clang-tidy-19 clang-format-19 && \
+    ln -sf /usr/bin/clangd-19 /usr/bin/clangd && \
+    ln -sf /usr/bin/clang-tidy-19 /usr/bin/clang-tidy && \
+    ln -sf /usr/bin/clang-format-19 /usr/bin/clang-format && \
+    rm -rf /var/lib/apt/lists/*
+
 # RealMan SDK — copy from submodule to /opt/realman-sdk
 RUN mkdir -p /opt/realman-sdk/lib
 COPY src/omr_hardware/third_party/realman_arm/third_party/RM_API2/C/include/ /opt/realman-sdk/include/
@@ -198,21 +208,14 @@ FROM realman-base-dev AS realman-develop
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=apt-cache-dev \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked,id=apt-lib-dev \
+    apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
     gdb \
     wget gnupg \
     && rm -rf /var/lib/apt/lists/*
-
-# clangd + clang-tidy + clang-format from LLVM apt repo (latest available for Jammy)
-RUN wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc && \
-    echo "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-19 main" > /etc/apt/sources.list.d/llvm.list && \
-    apt-get update && apt-get install -y --no-install-recommends clangd-19 clang-tidy-19 clang-format-19 && \
-    ln -sf /usr/bin/clangd-19 /usr/bin/clangd && \
-    ln -sf /usr/bin/clang-tidy-19 /usr/bin/clang-tidy && \
-    ln -sf /usr/bin/clang-format-19 /usr/bin/clang-format && \
-    rm -rf /var/lib/apt/lists/*
 
 # Non-root user matching typical host UID, with video (camera) and passwordless sudo
 RUN useradd -m -u 1000 -s /bin/zsh ubuntu && \
