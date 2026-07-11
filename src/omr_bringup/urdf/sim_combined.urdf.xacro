@@ -42,7 +42,6 @@
   <ros2_control name="GazeboArm" type="system">
     <hardware>
       <plugin>gz_ros2_control/GazeboSimSystem</plugin>
-      <param name="position_proportional_gain">1.0</param>
     </hardware>
     <joint name="joint1">
       <command_interface name="position"/>
@@ -76,7 +75,6 @@
   <ros2_control name="GazeboDais" type="system">
     <hardware>
       <plugin>gz_ros2_control/GazeboSimSystem</plugin>
-      <param name="position_proportional_gain">1.0</param>
     </hardware>
     <joint name="joint_dais">
       <command_interface name="velocity"/>
@@ -97,6 +95,7 @@
       <robot_param>robot_description</robot_param>
       <robot_param_node>robot_state_publisher</robot_param_node>
       <parameters>$(find omr_bringup)/config/sim_controllers_combined.yaml</parameters>
+      <position_proportional_gain>1.0</position_proportional_gain>
     </plugin>
   </gazebo>
 
