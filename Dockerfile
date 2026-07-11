@@ -50,6 +50,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends gnupg2 && \
     echo "deb [trusted=yes] https://librealsense.intel.com/Debian/apt-repo jammy main" > /etc/apt/sources.list.d/librealsense.list && \
     rm -rf /var/lib/apt/lists/*
 
+# Use Tsinghua ROS2 mirror for faster downloads (geographic optimization)
+RUN find /etc/apt/sources.list.d -name "*.list" -exec sed -i \
+    's|http://packages.ros.org/ros2/ubuntu|https://mirrors.tuna.tsinghua.edu.cn/ros2/ubuntu|g' {} \;
+
 # System libraries (dev variants — headers + .so)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libeigen3-dev \
