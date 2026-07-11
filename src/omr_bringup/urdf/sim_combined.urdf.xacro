@@ -21,14 +21,23 @@
   <!-- ═══════════════════════════════════════════════════════════ -->
   <!--  Gazebo Fortress: ground collision on root footprint         -->
   <!--  URDF <collision> is dropped by ros_gz_sim create            -->
+  <!--  Must use <gazebo> tag which survives URDF→SDF conversion    -->
   <!-- ═══════════════════════════════════════════════════════════ -->
   <gazebo reference="m65_footprint">
     <collision>
       <geometry>
         <box>
-          <size>0.7 0.5 0.35</size>
+          <size>0.7 0.5 0.9</size>
         </box>
       </geometry>
+      <surface>
+        <friction>
+          <ode>
+            <mu>1.0</mu>
+            <mu2>1.0</mu2>
+          </ode>
+        </friction>
+      </surface>
     </collision>
   </gazebo>
 

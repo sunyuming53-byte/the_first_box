@@ -54,7 +54,7 @@ def generate_launch_description():
             package='ros_gz_sim',
             executable='create',
             name='spawn_omr',
-            arguments=['-topic', 'robot_description', '-name', 'omr', '-z', '0.3'],
+            arguments=['-topic', 'robot_description', '-name', 'omr', '-z', '0.075'],
         ),
 
         # ── Camera bridge (Fortress → ROS2) ─────────────
