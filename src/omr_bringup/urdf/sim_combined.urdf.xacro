@@ -95,6 +95,7 @@
       <robot_param>robot_description</robot_param>
       <robot_param_node>robot_state_publisher</robot_param_node>
       <parameters>$(find omr_bringup)/config/sim_controllers_combined.yaml</parameters>
+      <parameters>$(find omr_bringup)/config/sim_gz_plugin_params.yaml</parameters>
       <position_proportional_gain>1.0</position_proportional_gain>
     </plugin>
   </gazebo>

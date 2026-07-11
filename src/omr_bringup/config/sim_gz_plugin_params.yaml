@@ -1,0 +1,5 @@
+# gz_ros2_control plugin params — loaded via separate <parameters> element
+# to avoid collision with controller_manager namespace.
+gz_ros_control:
+  ros__parameters:
+    position_proportional_gain: 1.0
