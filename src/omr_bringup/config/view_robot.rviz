@@ -50,7 +50,7 @@ Visualization Manager:
       Enabled: true
       Name: RobotModel
       Visual Enabled: true
-      Collision Enabled: true
+      Collision Enabled: false
     - Class: rviz_default_plugins/TF
       Enabled: true
       Frame Timeout: 15

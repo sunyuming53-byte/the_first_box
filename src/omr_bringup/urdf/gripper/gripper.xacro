@@ -1,0 +1,257 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  crt_ctag2f90d.xacro — CRT CTAG2F90D 两指协作手 URDF (xacro macro)
+
+  Converted from SolidWorks exporter URDF provided by Changingtek.
+  7 links, 7 joints: 1 active revolute (Left_1_Joint) + 6 mimic joints.
+  All mimic joints follow Left_1_Joint for synchronized parallel-gripper motion.
+
+  Usage:
+    <xacro:include filename="gripper/crt_ctag2f90d.xacro"/>
+    <xacro:crt_ctag2f90d_gripper parent_link="arm_link6"/>
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:macro name="crt_ctag2f90d_gripper" params="parent_link">
+
+    <!-- Fixed joint: arm end-effector → gripper base -->
+    <!-- TODO: measure actual flange offset on real hardware -->
+    <joint name="gripper_mount" type="fixed">
+      <parent link="${parent_link}"/>
+      <child link="gripper_base_link"/>
+      <origin xyz="0 0 0" rpy="0 0 ${pi/2}"/>
+    </joint>
+
+    <!-- ============================================================ -->
+    <!--  Links                                                        -->
+    <!-- ============================================================ -->
+
+    <!-- gripper_base_link (was vendor's base_link) -->
+    <link name="gripper_base_link">
+      <inertial>
+        <origin xyz="3.849e-6 -4.414e-5 0.05539" rpy="0 0 0"/>
+        <mass value="0.9535"/>
+        <inertia ixx="0.001776" ixy="-8.197e-10" ixz="-3.005e-8"
+                 iyy="0.001874" iyz="-3.980e-7" izz="0.0008754"/>
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://omr_bringup/urdf/gripper/meshes/base_link.STL"/>
+        </geometry>
+        <material name="gripper_material">
+          <color rgba="0.616 0.639 0.675 1"/>
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://omr_bringup/urdf/gripper/meshes/base_link.STL"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <!-- Left_1_Link (primary finger link, left side) -->
+    <link name="gripper_left_1_link">
+      <inertial>
+        <origin xyz="0.02026 0.01876 2.21e-14" rpy="0 0 0"/>
+        <mass value="0.03091"/>
+        <inertia ixx="4.312e-6" ixy="-4.269e-6" ixz="-2.464e-13"
+                 iyy="4.971e-6" iyz="-2.230e-13" izz="9.192e-6"/>
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://omr_bringup/urdf/gripper/meshes/Left_1_Link.STL"/>
+        </geometry>
+        <material name="gripper_material"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://omr_bringup/urdf/gripper/meshes/Left_1_Link.STL"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <!-- Left_Support_Link (finger tip, left side) -->
+    <link name="gripper_left_support_link">
+      <inertial>
+        <origin xyz="-0.01779 0.03543 -3.45e-5" rpy="0 0 0"/>
+        <mass value="0.08287"/>
+        <inertia ixx="2.740e-5" ixy="7.043e-6" ixz="-1.084e-11"
+                 iyy="6.348e-6" iyz="1.184e-11" izz="2.831e-5"/>
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://omr_bringup/urdf/gripper/meshes/Left_Support_Link.STL"/>
+        </geometry>
+        <material name="gripper_material"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://omr_bringup/urdf/gripper/meshes/Left_Support_Link.STL"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <!-- Left_2_Link (secondary finger link, left side) -->
+    <link name="gripper_left_2_link">
+      <inertial>
+        <origin xyz="0.02026 0.01876 2.22e-14" rpy="0 0 0"/>
+        <mass value="0.03091"/>
+        <inertia ixx="4.312e-6" ixy="-4.269e-6" ixz="-2.464e-13"
+                 iyy="4.971e-6" iyz="-2.230e-13" izz="9.192e-6"/>
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://omr_bringup/urdf/gripper/meshes/Left_2_Link.STL"/>
+        </geometry>
+        <material name="gripper_material"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://omr_bringup/urdf/gripper/meshes/Left_2_Link.STL"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <!-- Right_2_Link (secondary finger link, right side — mirrored) -->
+    <link name="gripper_right_2_link">
+      <inertial>
+        <origin xyz="0.02026 0.01876 2.11e-14" rpy="0 0 0"/>
+        <mass value="0.03091"/>
+        <inertia ixx="4.312e-6" ixy="-4.269e-6" ixz="-2.464e-13"
+                 iyy="4.971e-6" iyz="-2.230e-13" izz="9.192e-6"/>
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://omr_bringup/urdf/gripper/meshes/Right_2_Link.STL"/>
+        </geometry>
+        <material name="gripper_material"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://omr_bringup/urdf/gripper/meshes/Right_2_Link.STL"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <!-- Right_1_Link (primary finger link, right side — mirrored) -->
+    <link name="gripper_right_1_link">
+      <inertial>
+        <origin xyz="0.02026 0.01876 2.11e-14" rpy="0 0 0"/>
+        <mass value="0.03091"/>
+        <inertia ixx="4.312e-6" ixy="-4.269e-6" ixz="-2.464e-13"
+                 iyy="4.971e-6" iyz="-2.230e-13" izz="9.192e-6"/>
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://omr_bringup/urdf/gripper/meshes/Right_1_Link.STL"/>
+        </geometry>
+        <material name="gripper_material"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://omr_bringup/urdf/gripper/meshes/Right_1_Link.STL"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <!-- Right_Support_Link (finger tip, right side — mirrored) -->
+    <link name="gripper_right_support_link">
+      <inertial>
+        <origin xyz="-0.01779 0.03543 -2.82e-8" rpy="0 0 0"/>
+        <mass value="0.08287"/>
+        <inertia ixx="2.740e-5" ixy="7.043e-6" ixz="-9.627e-12"
+                 iyy="6.348e-6" iyz="1.281e-11" izz="2.831e-5"/>
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://omr_bringup/urdf/gripper/meshes/Right_Support_Link.STL"/>
+        </geometry>
+        <material name="gripper_material"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://omr_bringup/urdf/gripper/meshes/Right_Support_Link.STL"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <!-- ============================================================ -->
+    <!--  Joints                                                       -->
+    <!-- ============================================================ -->
+
+    <!-- Left_1_Joint: the only ACTIVE joint — drives all others via mimic -->
+    <joint name="gripper_left_1_joint" type="revolute">
+      <origin xyz="0.030141 0 0.10415" rpy="1.5708 0 0"/>
+      <parent link="gripper_base_link"/>
+      <child link="gripper_left_1_link"/>
+      <axis xyz="0 0 -1"/>
+      <limit lower="-0.91" upper="0" effort="10" velocity="10"/>
+    </joint>
+
+    <!-- Left_Support_Joint: mimics Left_1_Joint (inverted) -->
+    <joint name="gripper_left_support_joint" type="revolute">
+      <origin xyz="0.040359 0.037365 0" rpy="0 0 0"/>
+      <parent link="gripper_left_1_link"/>
+      <child link="gripper_left_support_link"/>
+      <axis xyz="0 0 -1"/>
+      <limit lower="0" upper="0" effort="0" velocity="0"/>
+      <mimic joint="gripper_left_1_joint" multiplier="-1" offset="0"/>
+    </joint>
+
+    <!-- Left_2_Joint: mimics Left_1_Joint (same direction) -->
+    <joint name="gripper_left_2_joint" type="revolute">
+      <origin xyz="0.016 0 0.121" rpy="1.5708 0 0"/>
+      <parent link="gripper_base_link"/>
+      <child link="gripper_left_2_link"/>
+      <axis xyz="0 0 -1"/>
+      <limit lower="0" upper="0" effort="0" velocity="0"/>
+      <mimic joint="gripper_left_1_joint" multiplier="1" offset="0"/>
+    </joint>
+
+    <!-- Right_2_Joint: mimics Left_1_Joint (mirrored, inverted) -->
+    <joint name="gripper_right_2_joint" type="revolute">
+      <origin xyz="-0.016 0 0.121" rpy="1.5708 0 3.1416"/>
+      <parent link="gripper_base_link"/>
+      <child link="gripper_right_2_link"/>
+      <axis xyz="0 0 1"/>
+      <limit lower="0" upper="0" effort="0" velocity="0"/>
+      <mimic joint="gripper_left_1_joint" multiplier="-1" offset="0"/>
+    </joint>
+
+    <!-- Right_1_Joint: mimics Left_1_Joint (mirrored, inverted) -->
+    <joint name="gripper_right_1_joint" type="revolute">
+      <origin xyz="-0.030141 0 0.10415" rpy="1.5708 0 3.1416"/>
+      <parent link="gripper_base_link"/>
+      <child link="gripper_right_1_link"/>
+      <axis xyz="0 0 1"/>
+      <limit lower="0" upper="0" effort="0" velocity="0"/>
+      <mimic joint="gripper_left_1_joint" multiplier="-1" offset="0"/>
+    </joint>
+
+    <!-- Right_Support_Joint: mimics Left_1_Joint (mirrored, inverted) -->
+    <joint name="gripper_right_support_joint" type="revolute">
+      <origin xyz="0.040359 0.037365 0" rpy="0 0 0"/>
+      <parent link="gripper_right_1_link"/>
+      <child link="gripper_right_support_link"/>
+      <axis xyz="0 0 -1"/>
+      <limit lower="0" upper="0" effort="0" velocity="0"/>
+      <mimic joint="gripper_left_1_joint" multiplier="-1" offset="0"/>
+    </joint>
+
+  </xacro:macro>
+
+</robot>

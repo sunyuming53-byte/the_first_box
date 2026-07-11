@@ -11,12 +11,18 @@
   <xacro:include filename="m65/m65.model.xacro"/>
   <xacro:include filename="dais/dais.model.xacro"/>
   <xacro:include filename="arm/rm_65.urdf.xacro"/>
+  <xacro:include filename="gripper/gripper.xacro"/>
 
   <!-- ═══════════════════════════════════════════════════════════ -->
   <!--  Instantiate all subsystems                                 -->
   <!-- ═══════════════════════════════════════════════════════════ -->
   <xacro:m65_ros2_control_model/>
   <xacro:dais_ros2_control_model/>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!--  End-effector: CRT CTAG2F90D gripper                        -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <xacro:crt_ctag2f90d_gripper parent_link="arm_link6"/>
 
   <!-- ═══════════════════════════════════════════════════════════ -->
   <!--  Gazebo Fortress: ground collision on root footprint         -->

@@ -91,16 +91,22 @@ def generate_launch_description():
             name='move_group',
             parameters=[
                 {
-                    'robot_description': Command([
-                        PathJoinSubstitution([FindExecutable(name='xacro')]), ' ',
-                        PathJoinSubstitution([FindPackageShare('rm65_moveit_config'),
-                                              'urdf', 'rm65_moveit.urdf.xacro']),
-                    ]),
-                    'robot_description_semantic': Command([
-                        PathJoinSubstitution([FindExecutable(name='xacro')]), ' ',
-                        PathJoinSubstitution([FindPackageShare('rm65_moveit_config'),
-                                              'config', 'rm65.srdf']),
-                    ]),
+                    'robot_description': ParameterValue(
+                        Command([
+                            PathJoinSubstitution([FindExecutable(name='xacro')]), ' ',
+                            PathJoinSubstitution([FindPackageShare('rm65_moveit_config'),
+                                                  'urdf', 'rm65_moveit.urdf.xacro']),
+                        ]),
+                        value_type=str,
+                    ),
+                    'robot_description_semantic': ParameterValue(
+                        Command([
+                            PathJoinSubstitution([FindExecutable(name='xacro')]), ' ',
+                            PathJoinSubstitution([FindPackageShare('rm65_moveit_config'),
+                                                  'config', 'rm65.srdf']),
+                        ]),
+                        value_type=str,
+                    ),
                     'use_sim_time': True,
                     'publish_robot_description_semantic': True,
                 },
