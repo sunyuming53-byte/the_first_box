@@ -64,7 +64,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libopencv-dev \
     libpcl-dev \
     librealsense2-dev \
-    zsh curl git \
+    zsh curl git wget gnupg \
     ros-humble-rmw-cyclonedds-cpp \
     ros-humble-rclcpp \
     ros-humble-ros-gz-bridge \
