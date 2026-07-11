@@ -30,7 +30,7 @@ def generate_launch_description():
             PythonLaunchDescriptionSource([
                 PathJoinSubstitution([FindPackageShare('ros_gz_sim'), 'launch', 'gz_sim.launch.py'])
             ]),
-            launch_arguments=[('gz_args', ['-r empty.sdf'])],
+            launch_arguments=[('gz_args', ['-r ', PathJoinSubstitution([FindPackageShare('omr_bringup'), 'worlds', 'empty_with_physics.sdf'])])],
         ),
 
         # ── Clock bridge (Gazebo → ROS2 /clock) ──────────
