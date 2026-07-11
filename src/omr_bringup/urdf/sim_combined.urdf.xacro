@@ -19,6 +19,20 @@
   <xacro:dais_ros2_control_model/>
 
   <!-- ═══════════════════════════════════════════════════════════ -->
+  <!--  Gazebo Fortress: ground collision on root footprint         -->
+  <!--  URDF <collision> is dropped by ros_gz_sim create            -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <gazebo reference="m65_footprint">
+    <collision>
+      <geometry>
+        <box>
+          <size>0.7 0.5 0.35</size>
+        </box>
+      </geometry>
+    </collision>
+  </gazebo>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
   <!--  Cross-system fixed joints                                   -->
   <!-- ═══════════════════════════════════════════════════════════ -->
 
