@@ -42,10 +42,10 @@
         </material>
       </visual>
       <collision>
-        <origin xyz="${mesh_origin_x} ${mesh_origin_y} ${mesh_origin_z}"
-                rpy="${mesh_origin_roll} ${mesh_origin_pitch} ${mesh_origin_yaw}"/>
+        <!-- Fortress doesn't handle STL mesh collision well; use box as fallback -->
+        <origin xyz="0 0 -0.15" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="${mesh_file}" scale="${mesh_scale} ${mesh_scale} ${mesh_scale}"/>
+          <box size="0.7 0.5 0.35"/>
         </geometry>
       </collision>
     </link>
