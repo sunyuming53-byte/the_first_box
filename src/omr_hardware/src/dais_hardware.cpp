@@ -110,8 +110,8 @@ hardware_interface::return_type DaisHardware::write(const rclcpp::Time& /*time*/
         return hardware_interface::return_type::OK;
     }
 
-    motor_->set_velocity_command(
-        hw_velocity_cmd_ * (2.0 * M_PI) / screw_lead_m_);  // m/s → rad/s (via screw lead)
+    motor_->set_velocity_command(hw_velocity_cmd_ * (2.0 * M_PI) /
+                                 screw_lead_m_);  // m/s → rad/s (via screw lead)
 
     return hardware_interface::return_type::OK;
 }
