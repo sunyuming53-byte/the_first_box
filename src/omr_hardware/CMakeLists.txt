@@ -19,6 +19,7 @@ find_package(rclcpp REQUIRED)
 
 add_library(${PROJECT_NAME} SHARED
     src/arm_system.cpp
+    src/dais_hardware.cpp
     src/m65_hardware.cpp
 )
 target_include_directories(${PROJECT_NAME} PUBLIC
