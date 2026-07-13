@@ -48,4 +48,10 @@ install(DIRECTORY third_party/m65_chassis/include/ DESTINATION include/m65)
 
 ament_export_libraries(${PROJECT_NAME})
 ament_export_include_directories(include)
+# ── Tests (gated behind BUILD_TESTING) ──
+if(BUILD_TESTING)
+  find_package(ament_cmake_gtest REQUIRED)
+  add_subdirectory(test)
+endif()
+
 ament_package()

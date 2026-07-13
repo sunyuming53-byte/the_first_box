@@ -1,0 +1,4 @@
+find_package(ament_cmake_gtest REQUIRED)
+
+ament_add_gtest(test_dais_conversion test_dais_conversion.cpp)
+target_compile_features(test_dais_conversion PRIVATE cxx_std_23)
