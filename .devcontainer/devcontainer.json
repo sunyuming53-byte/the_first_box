@@ -1,7 +1,7 @@
-// RealMan ROS2 Humble Development Container
+// OMRobot ROS2 Humble Development Container
 // Requires: Docker, VS Code Dev Containers extension, X11 server (for RViz/GUI)
 {
-	"name": "RealMan ROS2 Humble",
+	"name": "OMRobot ROS2 Humble",
 	"dockerComposeFile": "../docker-compose.yml",
 	"service": "develop",
 	"runServices": ["develop"],

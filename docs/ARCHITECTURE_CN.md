@@ -48,7 +48,7 @@ graph TD
         libsdk["libapi_c.so TCP:8080"]
     end
     subgraph L6["Hardware"]
-        armhw["RealMan Robot Arm"]
+        armhw["RM65 Robot Arm"]
     end
     L1 --> L2 --> L3 --> L4 --> L5 --> L6
 ```

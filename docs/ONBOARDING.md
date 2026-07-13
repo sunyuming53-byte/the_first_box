@@ -19,8 +19,7 @@ comfortable with C++ and Linux, but not necessarily with ROS2 or robotics.
 ## What We Build
 
 OMRobot is a complete robot control system built on ROS2 Humble (Ubuntu 22.04),
-with [RealMan robot arms](https://www.realman-robot.com/) (RM65, RM75, ECO65,
-and others) as the primary manipulator. The system includes:
+integrating an M65 omnidirectional chassis, D-AIS linear rail, and [RealMan robot arms](https://www.realman-robot.com/) (RM65, RM75, ECO65, and others). The system includes:
 
 - **Arm control** — a pure C++ library wrapping the RealMan C SDK, embedded in a
   `ros2_control` hardware interface
@@ -33,8 +32,8 @@ The code runs in two environments:
 
 | Environment | Purpose |
 |---|---|
-| **Develop container** (`realman:develop`) | GUI tools, RViz, building, testing — on your workstation |
-| **Runtime container** (`realman:runtime`) | Headless, runs on the robot MiniPC — auto-starts controllers |
+| **Develop container** (`omrobot:develop`) | GUI tools, RViz, building, testing — on your workstation |
+| **Runtime container** (`omrobot:runtime`) | Headless, runs on the robot MiniPC — auto-starts controllers |
 
 ---
 
@@ -64,8 +63,8 @@ docker run hello-world
 ### 1. Clone the repository
 
 ```bash
-git clone --recurse-submodules git@github.com:ChiefTechLabs/pipeline.git
-cd pipeline
+git clone --recurse-submodules git@github.com:ChiefTechLabs/omrobot.git
+cd omrobot
 ```
 
 This pulls the main repo plus two nested submodules:
@@ -145,7 +144,7 @@ Walk through the key directories. Open them side-by-side with this guide.
 
 ```mermaid
 graph TD
-    root["pipeline/"]
+    root["omrobot/"]
     root --> src["src/ all packages (5)"]
     root --> cmake["cmake/ shared CMake"]
     root --> scripts["scripts/ deploy+build"]

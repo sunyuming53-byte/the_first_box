@@ -1,4 +1,4 @@
-# AGENTS.md — RealMan ROS2 Workspace
+# AGENTS.md — OMRobot ROS2 Workspace
 
 ## Pre-push gate
 
@@ -15,7 +15,7 @@ Verify locally with:
 docker compose build develop
 
 # 2. Build and test (match CI exactly)
-docker run --rm --user root -v $(pwd):/ws realman:develop bash -c '
+docker run --rm --user root -v $(pwd):/ws omrobot:develop bash -c '
   set -euo pipefail
   set +u; source /opt/ros/humble/setup.bash; set -u
   colcon build --symlink-install
@@ -28,7 +28,7 @@ docker run --rm --user root -v $(pwd):/ws realman:develop bash -c '
 CHANGED=$(git diff --name-only --diff-filter=ACMRT origin/main...HEAD -- '**.cpp' '**.hpp' '**.h' | grep -v third_party/ || true)
 if [ -n "$CHANGED" ]; then
   echo "$CHANGED" | sed 's|^|/ws/|' | \
-    docker run --rm -i -v $(pwd):/ws realman:develop bash -c '
+    docker run --rm -i -v $(pwd):/ws omrobot:develop bash -c '
       xargs -r clang-format --dry-run --Werror
     '
 fi
@@ -265,8 +265,8 @@ Docker testing, check this first.
 
 Two-container architecture:
 
-- **Develop** (`realman-develop`): GUI, build tools, workspace mounted at `/ws`
-- **Runtime** (`realman-runtime`): Headless, runs on robot MiniPC with
+- **Develop** (`omrobot-develop`): GUI, build tools, workspace mounted at `/ws`
+- **Runtime** (`omrobot-runtime`): Headless, runs on robot MiniPC with
   supervisor auto-starting `controller_manager` + `calib_node`
 
 Deploy workflow (from develop container):
@@ -283,7 +283,7 @@ customize. `docker compose` reads proxy vars from `.env`.
 
 **When adding a new ROS2 `<depend>` in any `package.xml`**: also add the
 corresponding `ros-humble-*` apt package to the `RUN apt-get install` blocks in
-the Dockerfile (both `realman-base-dev` and `realman-base` stages). The
+the Dockerfile (both `omrobot-base-dev` and `omrobot-base` stages). The
 Dockerfile uses explicit `apt-get install` instead of `rosdep` because
 `rosdep update` fails in GitHub Actions CI (DNS cannot resolve
 `raw.githubusercontent.com` from Docker build containers).

@@ -16,7 +16,7 @@ Mapping of documentation to pipeline use cases for Changingtek CTAG2F90D gripper
 
 ## Critical Integration Points
 
-### 1. Gripper ↔ RealMan Arm
+### 1. Gripper ↔ Arm Subsystem
 - The gripper is **independent** from the arm — separate serial port, separate protocol
 - Arm uses TCP/IP via `libapi_c.so`; gripper uses RS-485 via USB serial
 - Coordinate arm motion + gripper action in a single ROS2 node or state machine
@@ -24,7 +24,7 @@ Mapping of documentation to pipeline use cases for Changingtek CTAG2F90D gripper
 ### 2. Communication Stack
 ```
 Your ROS2 Node
-├── rm::Arm (TCP/IP) → RealMan Arm
+├── rm::Arm (TCP/IP) → RM65 Arm
 └── MotorController (Modbus RTU /dev/ttyUSB0) → CTAG2F90D Gripper
 ```
 

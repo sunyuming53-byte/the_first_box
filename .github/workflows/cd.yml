@@ -57,7 +57,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          target: realman-develop
+          target: omrobot-develop
           push: true
           tags: ${{ steps.meta-develop.outputs.tags }}
           labels: ${{ steps.meta-develop.outputs.labels }}
@@ -68,7 +68,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          target: realman-runtime
+          target: omrobot-runtime
           push: true
           tags: ${{ steps.meta-runtime.outputs.tags }}
           labels: ${{ steps.meta-runtime.outputs.labels }}

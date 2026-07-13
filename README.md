@@ -1,7 +1,7 @@
-# RealMan Robot Arm — ROS2 Workspace
+# OMRobot — Mobile Platform Robotic Arm ROS2 Workspace
 
-ROS2 Humble workspace for controlling [RealMan](https://www.realman-robot.com/) robot arms
-(RM65, RM75, ECO65, ECO63, RML63, RML63-III, GEN72, GEN72-II) via the official RM_API2 SDK.
+ROS2 Humble workspace for OMRobot — a mobile platform robotic arm system integrating M65 omnidirectional chassis, D-AIS linear rail, RM65 6-axis arm, and LiDAR SLAM navigation.
+Compatible arm models (RM65, RM75, ECO65, ECO63, RML63, RML63-III, GEN72, GEN72-II) via the official RM_API2 SDK.
 
 ## Prerequisites
 
@@ -20,8 +20,8 @@ ros2 --version
 
 ```bash
 # 1. Clone with submodule
-git clone --recurse-submodules git@github.com:ChiefTechLabs/pipeline.git
-cd pipeline
+git clone --recurse-submodules git@github.com:ChiefTechLabs/omrobot.git
+cd omrobot
 
 # 2. Build
 source /opt/ros/humble/setup.bash
@@ -37,7 +37,7 @@ ros2 launch omr_bringup bringup.launch.py arm_ip:=192.168.1.18
 ## Project Structure
 
 ```
-pipeline/                            # ROS2 workspace root
+omrobot/                            # ROS2 workspace root
 ├── src/
 │   ├── omr_vision/                   # ament_cmake — RealSense D435 capture + camera calibration
 │   │   ├── include/omr_vision/
@@ -170,7 +170,7 @@ pipeline/                            # ROS2 workspace root
 
 ```mermaid
 flowchart TD
-    subgraph ROS2["ROS2 Control Loop — Arm"]
+    subgraph ROS2["ROS2 Control Loop — Arm Subsystem"]
         RSP["robot_state_publisher<br/><i>TF + /robot_description</i>"]
         CM["controller_manager<br/><i>ros2_control_node @ /controller_manager</i>"]
         JSB["joint_state_broadcaster<br/><i>→ /joint_states</i>"]
@@ -185,7 +185,7 @@ flowchart TD
     Arm["rm::Arm<br/><i>PIMPL facade — zero ROS deps</i>"]
     Arm --> Impl["Arm::Impl<br/><i>worker thread + cmd queue</i>"]
     Impl --> SDK["libapi_c.so<br/><i>RM_API2 C SDK</i>"]
-    SDK -->|TCP| HW2["RealMan Robot Arm"]
+    SDK -->|TCP| HW2["RM65 Robot Arm"]
 
     Arm -.->|Lazy connect| Impl
     Arm -.->|setGripperRoute / RS-485| GripHw["Gripper<br/><i>CTAG2F90D / EG2-4C2</i>"]
@@ -579,7 +579,7 @@ differ from CI and will produce false positives/negatives.
 
 ```bash
 # Format all source files (Docker, required before push)
-docker run --rm -v $(pwd):/ws realman:develop bash -c '
+docker run --rm -v $(pwd):/ws omrobot:develop bash -c '
   find /ws/src -name "*.cpp" -o -name "*.hpp" -o -name "*.h" | \
     xargs clang-format -i
 '
@@ -615,8 +615,8 @@ flowchart LR
 | `cd.yml` | tag push (`v*`) | Build & push Docker images to `ghcr.io` |
 
 Images are published to GitHub Container Registry:
-- `ghcr.io/chieftechlabs/pipeline-develop` — dev image
-- `ghcr.io/chieftechlabs/pipeline-runtime` — runtime image
+- `ghcr.io/chieftechlabs/omrobot-develop` — dev image
+- `ghcr.io/chieftechlabs/omrobot-runtime` — runtime image
 
 ## Docker & Dev Container
 
@@ -625,12 +625,12 @@ The project uses a multi-stage Dockerfile and VS Code dev container.
 ```mermaid
 flowchart TD
     subgraph Base["Stage 1 — Base"]
-        B1["realman-base-dev<br/>ros:humble-desktop + OpenCV + realsense2"]
-        B2["realman-base<br/>ros:humble + OpenCV + realsense2"]
+        B1["omrobot-base-dev<br/>ros:humble-desktop + OpenCV + realsense2"]
+        B2["omrobot-base<br/>ros:humble + OpenCV + realsense2"]
     end
 
-    B1 --> Dev["realman-develop<br/>+ build tools + dev user + clangd"]
-    B2 --> Runtime["realman-runtime<br/>+ supervisor + sshd"]
+    B1 --> Dev["omrobot-develop<br/>+ build tools + dev user + clangd"]
+    B2 --> Runtime["omrobot-runtime<br/>+ supervisor + sshd"]
 
     Dev -->|ssh-keygen| Key["~/.ssh/id_rsa"]
     Key -->|COPY --from| Runtime
@@ -643,10 +643,10 @@ flowchart TD
 docker compose up develop
 
 # Or manual build:
-docker build . --target realman-develop -t realman:develop
+docker build . --target omrobot-develop -t omrobot:develop
 docker run -it --network host --device /dev \
     -v $(pwd):/ws -v /tmp/.X11-unix:/tmp/.X11-unix -e DISPLAY \
-    realman:develop
+    omrobot:develop
 ```
 
 Or open in VS Code → "Reopen in Container" (uses `.devcontainer/devcontainer.json`).

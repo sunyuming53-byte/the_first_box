@@ -1,6 +1,6 @@
 # 新人入门指南 — OMRobot
 
-欢迎加入 OMRobot 项目。OMRobot 是一套完整的机器人控制系统，核心硬件采用 RealMan 机械臂（RM65、RM75、ECO65 等型号），集成了视觉感知、手眼标定、任务编排和辅助电机控制等模块。本文档带你从零开始，覆盖环境搭建、架构概览到你的第一次代码贡献。假设你熟悉 C++ 和 Linux，但不一定熟悉 ROS2 或机器人学。
+欢迎加入 OMRobot 项目。OMRobot 是一套完整的机器人控制系统，核心硬件采用 M65 全向底盘 + D-AIS 直线导轨 + RM65 六轴机械臂，集成了视觉感知、手眼标定、任务编排、LiDAR SLAM 导航和辅助电机控制等模块。本文档带你从零开始，覆盖环境搭建、架构概览到你的第一次代码贡献。假设你熟悉 C++ 和 Linux，但不一定熟悉 ROS2 或机器人学。
 
 ## 目录
 
@@ -16,7 +16,7 @@
 
 ## 我们做什么
 
-OMRobot 是基于 ROS2 Humble（Ubuntu 22.04）的完整机器人控制系统，核心硬件采用 [RealMan 机器人臂](https://www.realman-robot.com/)（RM65、RM75、ECO65 等型号）。系统包含以下模块：
+OMRobot 是基于 ROS2 Humble（Ubuntu 22.04）的完整机器人控制系统，核心硬件采用 M65 全向底盘 + D-AIS 直线导轨 + [RealMan 机器人臂](https://www.realman-robot.com/)（RM65、RM75、ECO65 等型号），并集成 LiDAR SLAM 自主导航。系统包含以下模块：
 
 - **机械臂控制（Arm control）** — 封装 RealMan C SDK 的纯 C++ 库，嵌入在 `ros2_control` 硬件接口（hardware interface）中
 - **计算机视觉（Computer vision）** — RealSense D435 相机采集与 OpenCV 图像处理
@@ -28,8 +28,8 @@ OMRobot 是基于 ROS2 Humble（Ubuntu 22.04）的完整机器人控制系统，
 
 | 环境 | 用途 |
 |---|---|
-| **开发容器（Develop container）** `realman:develop` | GUI 工具、RViz、构建、测试 — 在你的工作站上运行 |
-| **运行时容器（Runtime container）** `realman:runtime` | 无头模式，运行在机器人 MiniPC 上 — 自动启动控制器 |
+| **开发容器（Develop container）** `omrobot:develop` | GUI 工具、RViz、构建、测试 — 在你的工作站上运行 |
+| **运行时容器（Runtime container）** `omrobot:runtime` | 无头模式，运行在机器人 MiniPC 上 — 自动启动控制器 |
 
 ---
 
@@ -58,8 +58,8 @@ docker run hello-world
 ### 1. 克隆仓库（Clone the repository）
 
 ```bash
-git clone --recurse-submodules git@github.com:ChiefTechLabs/pipeline.git
-cd pipeline
+git clone --recurse-submodules git@github.com:ChiefTechLabs/omrobot.git
+cd omrobot
 ```
 
 这会拉取主仓库及两个嵌套子模块：
@@ -134,7 +134,7 @@ colcon test
 
 ```mermaid
 graph TD
-    root["pipeline/"]
+    root["omrobot/"]
     root --> src["src/ 所有包（5个）"]
     root --> cmake["cmake/ 共享 CMake 模块"]
     root --> scripts["scripts/ 部署+构建脚本"]

@@ -1,6 +1,6 @@
 # Visual Perception Pipeline Index
 
-Mapping of documentation to pipeline use cases for RealMan robotic arm visual grasping.
+Mapping of documentation to pipeline use cases for OMRobot visual grasping.
 
 ## Use Case → Document Map
 
@@ -29,7 +29,7 @@ convert() (numpy)
   ↓ H_cam_ee * H_ee_base * p_cam
 rm::Arm (C++) / RM API
   ↓ moveJ / moveL / gripper
-RealMan Robot Arm
+OMRobot Arm Subsystem
 ```
 
 ### 2. Hand-Eye Calibration Result Is the Linchpin
@@ -59,7 +59,7 @@ If hand-eye calibration is wrong, **every subsequent grasp will miss**.
 
 Current workspace has:
 ```
-src/realman_driver/   # rm::Arm PIMPL + rm::ArmNode
+src/omr_hardware/   # rm::Arm PIMPL + ArmSystem hardware interface
 ```
 
 To add visual grasping, create alongside:

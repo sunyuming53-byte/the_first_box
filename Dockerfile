@@ -1,26 +1,26 @@
 # =============================================================================
-# RealMan Robot Arm — Multi-stage Docker build
+# OMRobot — Multi-stage Docker build
 # =============================================================================
 #
 # Stages:
-#   realman-base-dev   ← osrf/ros:humble-desktop + OpenCV + realsense2
-#   realman-base       ← ros:humble              + OpenCV + realsense2
-#   realman-develop    ← base-dev + build tools + dev user
-#   realman-runtime    ← base     + supervisor + entrypoint
+#   omrobot-base-dev   ← osrf/ros:humble-desktop + OpenCV + realsense2
+#   omrobot-base       ← ros:humble              + OpenCV + realsense2
+#   omrobot-develop    ← base-dev + build tools + dev user
+#   omrobot-runtime    ← base     + supervisor + entrypoint
 #
 # Build:
-#   docker build . --target realman-develop -t realman:develop
-#   docker build . --target realman-runtime  -t realman:runtime
+#   docker build . --target omrobot-develop -t omrobot:develop
+#   docker build . --target omrobot-runtime  -t omrobot:runtime
 #
 # Run dev:
 #   docker run -it --network host --device /dev \
 #       -v $(pwd)/src:/ws/src -v /tmp/.X11-unix:/tmp/.X11-unix -e DISPLAY \
-#       realman:develop
+#       omrobot:develop
 #
 # Run runtime:
 #   docker run -d --restart=always --network host --device /dev \
 #       -v $(pwd)/install:/ws/install \
-#       realman:runtime
+#       omrobot:runtime
 
 # Build-time proxy args — set via docker compose --build-arg or compose build.args
 ARG HTTP_PROXY
@@ -29,7 +29,7 @@ ARG HTTPS_PROXY
 # =============================================================================
 # Stage 1a — Dev base (desktop: GUI tools, RViz, display support)
 # =============================================================================
-FROM osrf/ros:humble-desktop AS realman-base-dev
+FROM osrf/ros:humble-desktop AS omrobot-base-dev
 
 ARG HTTP_PROXY
 ARG HTTPS_PROXY
@@ -133,7 +133,7 @@ RUN sh -c "$(curl -fsSL --retry 5 --retry-delay 10 https://raw.githubusercontent
 # =============================================================================
 # Stage 1b — Runtime base (ros-base: no GUI, smaller image)
 # =============================================================================
-FROM ros:humble AS realman-base
+FROM ros:humble AS omrobot-base
 
 ARG HTTP_PROXY
 ARG HTTPS_PROXY
@@ -204,7 +204,7 @@ RUN sh -c "$(curl -fsSL --retry 5 --retry-delay 10 https://raw.githubusercontent
 # =============================================================================
 # Stage 2 — Develop
 # =============================================================================
-FROM realman-base-dev AS realman-develop
+FROM omrobot-base-dev AS omrobot-develop
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -226,11 +226,11 @@ RUN useradd -m -u 1000 -s /bin/zsh ubuntu && \
 
 # SSH key — generated at build time for remote deployment to runtime container
 RUN mkdir -p /home/ubuntu/.ssh && \
-    ssh-keygen -t ed25519 -f /home/ubuntu/.ssh/id_rsa -N '' -C "realman-dev" && \
+    ssh-keygen -t ed25519 -f /home/ubuntu/.ssh/id_rsa -N '' -C "omrobot-dev" && \
     chown -R ubuntu:ubuntu /home/ubuntu/.ssh
 
 # oh-my-zsh for ubuntu user (copy from root install in base-dev)
-COPY --from=realman-base-dev --chown=ubuntu:ubuntu \
+COPY --from=omrobot-base-dev --chown=ubuntu:ubuntu \
     /root/.oh-my-zsh /home/ubuntu/.oh-my-zsh
 RUN echo 'export ZSH="$HOME/.oh-my-zsh"' > /home/ubuntu/.zshrc && \
     echo 'ZSH_THEME="powerlevel10k/powerlevel10k"' >> /home/ubuntu/.zshrc && \
@@ -264,7 +264,7 @@ ENTRYPOINT ["/entrypoint-dev.sh"]
 # =============================================================================
 # Stage 3 — Runtime
 # =============================================================================
-FROM realman-base AS realman-runtime
+FROM omrobot-base AS omrobot-runtime
 
 # supervisor + sshd + rsync for remote deployment
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -277,7 +277,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Authorize dev container's public key for passwordless SSH
 RUN mkdir -p /root/.ssh && chmod 700 /root/.ssh
-COPY --from=realman-develop --chown=root:root \
+COPY --from=omrobot-develop --chown=root:root \
     /home/ubuntu/.ssh/id_rsa.pub /root/.ssh/authorized_keys
 RUN chmod 600 /root/.ssh/authorized_keys
 
@@ -289,7 +289,7 @@ RUN echo 'export ZSH="$HOME/.oh-my-zsh"' > /root/.zshrc && \
     chsh -s /bin/zsh
 
 COPY scripts/entrypoint-runtime.sh /entrypoint-runtime.sh
-COPY scripts/supervisord.conf    /etc/supervisor/conf.d/realman.conf
+COPY scripts/supervisord.conf    /etc/supervisor/conf.d/omrobot.conf
 RUN chmod +x /entrypoint-runtime.sh
 
 SHELL ["/bin/zsh", "-c"]

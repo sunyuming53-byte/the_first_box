@@ -2,7 +2,7 @@
 <package format="3">
   <name>omr_bringup</name>
   <version>0.1.0</version>
-  <description>System-level launch and configuration for RealMan robot arm + RealSense camera + hand-eye calibration</description>
+  <description>System-level launch and configuration for OMRobot: M65 chassis + D-AIS rail + RM65 arm + RealSense D435 + LiDAR SLAM + hand-eye calibration</description>
   <maintainer email="dev@realman-driver.com">RealMan Driver Team</maintainer>
   <license>MIT</license>
   <buildtool_depend>ament_cmake</buildtool_depend>

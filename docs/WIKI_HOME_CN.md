@@ -1,6 +1,6 @@
 # OMRobot 开发文档
 
-欢迎来到 OMRobot 项目知识库。OMRobot 是一套基于 ROS2 Humble 的完整机器人控制系统，核心硬件采用 RealMan 机械臂，集成了视觉感知、手眼标定、任务编排和辅助电机控制等模块。
+欢迎来到 OMRobot 项目知识库。OMRobot 是一套基于 ROS2 Humble 的完整机器人控制系统，核心硬件采用 M65 全向底盘 + D-AIS 直线导轨 + RM65 六轴机械臂 + LiDAR SLAM 导航，集成了视觉感知、手眼标定、任务编排和辅助电机控制等模块。
 
 ## 文档导航
 
@@ -20,7 +20,7 @@
 
 ## 项目仓库
 
-- GitHub: [ChiefTechLabs/pipeline](https://github.com/ChiefTechLabs/pipeline)
+- GitHub: [ChiefTechLabs/omrobot](https://github.com/ChiefTechLabs/omrobot)
 
 ## 关键链接
 

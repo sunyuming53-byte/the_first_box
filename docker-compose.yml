@@ -1,6 +1,6 @@
 # services:
 #   develop   — build + debug environment with GUI and /dev passthrough
-#   runtime   — headless deployment with auto-starting arm_node + calib_node
+#   runtime   — headless deployment with auto-starting controller_manager + calib_node
 #
 # Usage:
 #   docker compose up develop    # interactive dev shell
@@ -8,10 +8,10 @@
 
 services:
   develop:
-    image: realman:develop
+    image: omrobot:develop
     build:
       context: .
-      target: realman-develop
+      target: omrobot-develop
       network: host
       args:
         - HTTP_PROXY=${HTTP_PROXY:-}
@@ -40,10 +40,10 @@ services:
     tty: true
 
   runtime:
-    image: realman:runtime
+    image: omrobot:runtime
     build:
       context: .
-      target: realman-runtime
+      target: omrobot-runtime
       network: host
       args:
         - HTTP_PROXY=${HTTP_PROXY:-}

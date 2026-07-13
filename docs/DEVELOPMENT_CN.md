@@ -25,10 +25,10 @@
 
 ```mermaid
 graph TD
-    base_dev["realman-base-dev<br/>ros:humble-desktop + OpenCV<br/>+ realsense2 + ROS2 包"]
-    develop["realman-develop<br/>+ 构建工具, clangd<br/>开发用户 ubuntu:1000"]
-    base["realman-base<br/>ros:humble + OpenCV<br/>+ realsense2 + 运行时包"]
-    runtime["realman-runtime<br/>+ supervisor, sshd<br/>入口脚本"]
+    base_dev["omrobot-base-dev<br/>ros:humble-desktop + OpenCV<br/>+ realsense2 + ROS2 包"]
+    develop["omrobot-develop<br/>+ 构建工具, clangd<br/>开发用户 ubuntu:1000"]
+    base["omrobot-base<br/>ros:humble + OpenCV<br/>+ realsense2 + 运行时包"]
+    runtime["omrobot-runtime<br/>+ supervisor, sshd<br/>入口脚本"]
     base_dev --> develop
     base --> runtime
 ```
@@ -362,10 +362,10 @@ CI 运行会复用缓存的镜像层。
 
 触发条件：标签推送（`v*`）、手动触发
 
-构建 `realman:develop` 和 `realman:runtime` 两个镜像，并将其推送到：
+构建 `omrobot:develop` 和 `omrobot:runtime` 两个镜像，并将其推送到：
 
-- `ghcr.io/chieftechlabs/pipeline-develop`（标签：`v1.2.3`、`sha-abc1234`、`latest`）
-- `ghcr.io/chieftechlabs/pipeline-runtime`（标签：`v1.2.3`、`sha-abc1234`）
+- `ghcr.io/chieftechlabs/omrobot-develop`（标签：`v1.2.3`、`sha-abc1234`、`latest`）
+- `ghcr.io/chieftechlabs/omrobot-runtime`（标签：`v1.2.3`、`sha-abc1234`）
 
 ---
 
@@ -376,8 +376,8 @@ CI 运行会复用缓存的镜像层。
 1. 在包的 `package.xml` 中添加 `<depend>package_name</depend>`
 2. 在 `CMakeLists.txt` 中添加 `find_package(package_name REQUIRED)` 和 `ament_target_dependencies(... package_name)`
 3. **同时也要在 Dockerfile 的所有相关阶段中添加对应的 `ros-humble-*` apt 包**：
-   - 构建依赖 → 添加到 `realman-base-dev`
-   - 运行时依赖 → 添加到 `realman-base`
+- 构建依赖 → 添加到 `omrobot-base-dev`
+- 运行时依赖 → 添加到 `omrobot-base`
    - Dockerfile 使用显式 `apt-get install` 而非 `rosdep`，因为 CI 环境中 `rosdep update` 会失败（DNS 无法解析 `raw.githubusercontent.com`）
 
 4. 如果依赖在架构上具有重要性，更新 `AGENTS.md`
@@ -410,7 +410,7 @@ RealMan C SDK 是一个嵌套子模块：
 
 ```mermaid
 graph TD
-    pipeline["pipeline/"]
+    pipeline["omrobot/"]
     realman["src/omr_hardware/third_party/realman_arm/"]
     sdk["third_party/RM_API2/ ← SDK"]
     lib["C/linux/vv1.1.5/libapi_c.so"]

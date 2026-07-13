@@ -26,10 +26,10 @@ The `Dockerfile` has four stages in a dependency chain:
 
 ```mermaid
 graph TD
-    base_dev["realman-base-dev<br/>ros:humble-desktop + OpenCV<br/>+ realsense2 + ROS2 pkgs"]
-    develop["realman-develop<br/>+ build tools, clangd<br/>dev user ubuntu:1000"]
-    base["realman-base<br/>ros:humble + OpenCV<br/>+ realsense2 + runtime pkgs"]
-    runtime["realman-runtime<br/>+ supervisor, sshd<br/>entrypoint"]
+    base_dev["omrobot-base-dev<br/>ros:humble-desktop + OpenCV<br/>+ realsense2 + ROS2 pkgs"]
+    develop["omrobot-develop<br/>+ build tools, clangd<br/>dev user ubuntu:1000"]
+    base["omrobot-base<br/>ros:humble + OpenCV<br/>+ realsense2 + runtime pkgs"]
+    runtime["omrobot-runtime<br/>+ supervisor, sshd<br/>entrypoint"]
     base_dev --> develop
     base --> runtime
 ```
@@ -368,10 +368,10 @@ cached image layers if the Dockerfile and dependencies haven't changed.
 
 Triggers on: tag push (`v*`), manual dispatch
 
-Builds both `realman:develop` and `realman:runtime` images and pushes to:
+Builds both `omrobot:develop` and `omrobot:runtime` images and pushes to:
 
-- `ghcr.io/chieftechlabs/pipeline-develop` (tags: `v1.2.3`, `sha-abc1234`, `latest`)
-- `ghcr.io/chieftechlabs/pipeline-runtime` (tags: `v1.2.3`, `sha-abc1234`)
+- `ghcr.io/chieftechlabs/omrobot-develop` (tags: `v1.2.3`, `sha-abc1234`, `latest`)
+- `ghcr.io/chieftechlabs/omrobot-runtime` (tags: `v1.2.3`, `sha-abc1234`)
 
 ---
 
@@ -382,8 +382,8 @@ Builds both `realman:develop` and `realman:runtime` images and pushes to:
 1. Add `<depend>package_name</depend>` to `package.xml` in the package
 2. Add `find_package(package_name REQUIRED)` and `ament_target_dependencies(... package_name)` to `CMakeLists.txt`
 3. **Also add the `ros-humble-*` apt package to the Dockerfile** in all relevant stages:
-   - For build dependencies → add to `realman-base-dev`
-   - For runtime dependencies → add to `realman-base`
+- For build dependencies → add to `omrobot-base-dev`
+- For runtime dependencies → add to `omrobot-base`
    - The Dockerfile uses explicit `apt-get install` instead of `rosdep` because
      `rosdep update` fails in CI (DNS cannot resolve `raw.githubusercontent.com`)
 
@@ -417,7 +417,7 @@ The RealMan C SDK is a nested submodule:
 
 ```mermaid
 graph TD
-    pipeline["pipeline/"]
+    pipeline["omrobot/"]
     realman["src/omr_hardware/third_party/realman_arm/"]
     sdk["third_party/RM_API2/ = SDK"]
     lib["C/linux/vv1.1.5/libapi_c.so"]

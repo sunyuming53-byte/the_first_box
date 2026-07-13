@@ -2,7 +2,7 @@
 <package format="3">
   <name>omr_controller</name>
   <version>0.1.0</version>
-  <description>Behavior tree-based arm controller with task-space planning for OMR robot</description>
+  <description>Behavior tree-based multi-subsystem task orchestrator for OMRobot: arm (MoveIt2), gripper, motor, base, vision + hand-eye calibration</description>
   <maintainer email="dev@realman-driver.com">RealMan Driver Team</maintainer>
   <license>MIT</license>
 

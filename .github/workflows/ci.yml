@@ -31,9 +31,9 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          target: realman-develop
+          target: omrobot-develop
           load: true
-          tags: realman:develop
+          tags: omrobot:develop
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -42,7 +42,7 @@ jobs:
           docker run --rm \
             --user root \
             -v ${{ github.workspace }}:/ws \
-            realman:develop \
+            omrobot:develop \
             bash -c "
               set -euo pipefail
               set +u; source /opt/ros/humble/setup.bash; set -u
@@ -71,9 +71,9 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          target: realman-develop
+          target: omrobot-develop
           load: true
-          tags: realman:develop
+          tags: omrobot:develop
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -86,7 +86,7 @@ jobs:
             exit 0
           fi
           echo "$CHANGED" | sed 's|^|/ws/|' | \
-            docker run --rm -i -v $(pwd):/ws realman:develop bash -c '
+            docker run --rm -i -v $(pwd):/ws omrobot:develop bash -c '
               xargs -r clang-format --dry-run --Werror
             '
 
@@ -94,7 +94,7 @@ jobs:
         run: |
           docker run --rm --user root \
             -v ${{ github.workspace }}:/ws \
-            realman:develop \
+            omrobot:develop \
             bash -c '
               set -euo pipefail
               rm -rf /ws/log /ws/build /ws/install && mkdir -p /ws/log

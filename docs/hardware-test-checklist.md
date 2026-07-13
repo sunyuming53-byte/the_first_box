@@ -1,6 +1,6 @@
-# RealMan 真机测试操作手册
+# OMRobot 真机测试操作手册
 
-> 目标：按照这份手册逐步操作，验证 `realman_driver`、`realman_vision`、`omr_controller` 三个包在真机上的功能是否正常。
+> 目标：按照这份手册逐步操作，验证 `omr_hardware`、`omr_vision`、`omr_controller` 三个包在真机上的功能是否正常。
 
 ---
 
@@ -48,7 +48,7 @@ ls /dev/video*        # 应该能看到 realsense 相关的 video 设备
 
 ```bash
 # 运行 gripper_test，它会自动连接机械臂（默认 IP 192.168.1.18）
-ros2 run realman_driver gripper_test
+ros2 run omr_hardware gripper_test
 ```
 
 **期望看到：**
@@ -105,7 +105,7 @@ ros2 run omr_controller collect_data --ip 192.168.1.18 --output /tmp/test_cam --
 **操作：**
 
 ```bash
-ros2 run realman_driver joint_test
+ros2 run omr_hardware joint_test
 ```
 
 > 连接机械臂后每秒打印一次 6 个关节角度（同时显示弧度和度），共 20 次。按 `Ctrl+C` 可提前退出。
@@ -159,7 +159,7 @@ ros2 run omr_controller collect_data --ip 192.168.1.18 --count 1
 2. 运行 movej_test：
 
 ```bash
-ros2 run realman_driver movej_test
+ros2 run omr_hardware movej_test
 ```
 
 3. 观察机械臂实际运动后，在示教器上再次读取 Joint1 角度
@@ -179,7 +179,7 @@ ros2 run realman_driver movej_test
 
 ```bash
 # 终端 1：启动 arm_node
-ros2 run realman_driver arm_node --ros-args -p arm_ip:=192.168.1.18
+ros2 run omr_hardware arm_node --ros-args -p arm_ip:=192.168.1.18
 
 # 终端 2：发送一个运动指令让机械臂动起来（通过服务或有专门的测试），
 # 然后立即调用紧急停止
@@ -199,7 +199,7 @@ ros2 service call /arm_node/stop std_srvs/srv/Trigger "{}"
 **操作：**
 
 ```bash
-ros2 run realman_driver movel_test
+ros2 run omr_hardware movel_test
 ```
 
 > 程序连接机械臂 → 读取当前 TCP 位姿 → Z 轴 +50mm → 执行 moveL → 读取并打印最终位姿和 Z 偏移量。
@@ -231,7 +231,7 @@ moveL test PASSED
 **操作：**
 
 ```bash
-ros2 run realman_driver gripper_test
+ros2 run omr_hardware gripper_test
 ```
 
 **观察：**

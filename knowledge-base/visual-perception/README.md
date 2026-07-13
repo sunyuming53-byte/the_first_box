@@ -1,4 +1,4 @@
-# Visual Perception Knowledge Base — RealMan Robotic Arm
+# Visual Perception Knowledge Base — OMRobot
 
 机械臂视觉感知完整知识库，涵盖 YOLOV8 视觉识别、手眼标定、坐标变换三大核心模块。
 

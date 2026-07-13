@@ -13,10 +13,10 @@ fi
 
 service ssh start
 
-echo "RealMan runtime starting..."
+echo "OMRobot runtime starting..."
 echo "  sshd:22     — remote access"
 echo "  controller_manager — ros2_control arm driver"
 echo "  calib_node  — calibration pipeline services"
 echo ""
 
-exec /usr/bin/supervisord -n -c /etc/supervisor/conf.d/realman.conf
+exec /usr/bin/supervisord -n -c /etc/supervisor/conf.d/omrobot.conf
