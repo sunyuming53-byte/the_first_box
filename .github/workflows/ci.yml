@@ -11,8 +11,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-and-test:
-    name: Build & Test
+  ci:
+    name: CI
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
@@ -37,7 +37,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Build and test
+      - name: Build
         run: |
           docker run --rm \
             --user root \
@@ -46,40 +46,25 @@ jobs:
             bash -c "
               set -euo pipefail
               set +u; source /opt/ros/humble/setup.bash; set -u
-              colcon build --symlink-install
-              colcon build --cmake-args -DBUILD_TESTING=ON
+              colcon build --symlink-install \
+                --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DBUILD_TESTING=ON
+            "
+
+      - name: Test
+        run: |
+          docker run --rm \
+            --user root \
+            -v ${{ github.workspace }}:/ws \
+            omrobot:develop \
+            bash -c "
+              set -euo pipefail
+              set +u; source /opt/ros/humble/setup.bash; set -u
               colcon test --return-code-on-test-failure
             "
 
-  lint:
-    name: Lint
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          token: ${{ secrets.GH_PAT }}
-          fetch-depth: 0
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-        with:
-          driver-opts: network=host
-
-      - name: Build develop image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          target: omrobot-develop
-          load: true
-          tags: omrobot:develop
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
       - name: clang-format (blocking, diff-only)
         run: |
-          CHANGED=$(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }}...HEAD \
+          CHANGED=$(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha || 'HEAD~1' }}...HEAD \
             -- '**.cpp' '**.hpp' '**.h' | grep -v third_party/ || true)
           if [ -z "$CHANGED" ]; then
             echo "No C++ files changed, skipping"
@@ -97,9 +82,8 @@ jobs:
             omrobot:develop \
             bash -c '
               set -euo pipefail
-              rm -rf /ws/log /ws/build /ws/install && mkdir -p /ws/log
               git config --global --add safe.directory /ws 2>/dev/null || true
               set +u; source /opt/ros/humble/setup.bash; set -u
-              colcon build --symlink-install --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON 2>&1 | tail -3
-              GIT_BASE_REF="${{ github.event.pull_request.base.sha }}" python3 /ws/.github/scripts/run-clang-tidy-diff.py
+              GIT_BASE_REF="${{ github.event.pull_request.base.sha || 'HEAD~1' }}" \
+                python3 /ws/.github/scripts/run-clang-tidy-diff.py
             '
