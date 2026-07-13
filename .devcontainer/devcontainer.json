@@ -60,7 +60,8 @@
 					"--background-index",
 					"--clang-tidy=false",
 					"--completion-style=detailed",
-					"--header-insertion=iwyu"
+					"--header-insertion=iwyu",
+					"--query-driver=/usr/bin/g++"
 				]
 			}
 		}

@@ -47,6 +47,7 @@ function(add_omr_lio_exec NAME MAIN_SRC)
         third_party/Sophus
     )
     target_link_libraries(${NAME} Sophus)
+    target_compile_definitions(${NAME} PRIVATE BOOST_BIND_GLOBAL_PLACEHOLDERS)
     ament_target_dependencies(${NAME}
         rclcpp sensor_msgs nav_msgs geometry_msgs std_msgs
         tf2_ros tf2 pcl_conversions
