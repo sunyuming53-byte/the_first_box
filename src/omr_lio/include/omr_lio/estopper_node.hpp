@@ -15,6 +15,7 @@ private:
 
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr sub_cloud_;
     rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr pub_estop_;
+    rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr parameter_callback_handle_;
 
     double stop_distance_{0.3};
     int min_points_in_zone_{5};

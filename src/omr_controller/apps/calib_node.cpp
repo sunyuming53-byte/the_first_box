@@ -30,6 +30,7 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
+#include <rcl_interfaces/msg/set_parameters_result.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <realman/core/arm.hpp>
 #include <realman/motion/types.hpp>
@@ -70,6 +71,7 @@ public:
         cfg_.board_size =
             cv::Size(get_parameter("board_w").as_int(), get_parameter("board_h").as_int());
         cfg_.square_size_m = static_cast<float>(get_parameter("square_size_m").as_double());
+        setupParameterCallback();
 
         // Reconnect arm with configured IP
         arm_ = rm::Arm(rm::ArmConfig{.ip = cfg_.arm_ip});
@@ -89,6 +91,82 @@ public:
     }
 
 private:
+    void setupParameterCallback() {
+        parameter_callback_handle_ =
+            add_on_set_parameters_callback([this](const std::vector<rclcpp::Parameter>& params) {
+                rcl_interfaces::msg::SetParametersResult result;
+                result.successful = true;
+
+                int board_w = cfg_.board_size.width;
+                int board_h = cfg_.board_size.height;
+                auto square_size_m = static_cast<double>(cfg_.square_size_m);
+                auto session_dir = cfg_.output_dir.string();
+
+                for (const auto& param : params) {
+                    const auto& name = param.get_name();
+                    if (name == "arm_ip" || name == "mode") {
+                        result.successful = false;
+                        result.reason = name + " is read-only at runtime";
+                        return result;
+                    }
+                    if (name == "board_w") {
+                        if (param.get_type() != rclcpp::ParameterType::PARAMETER_INTEGER ||
+                            param.as_int() <= 1) {
+                            result.successful = false;
+                            result.reason = "board_w must be an integer > 1";
+                            return result;
+                        }
+                        board_w = static_cast<int>(param.as_int());
+                    } else if (name == "board_h") {
+                        if (param.get_type() != rclcpp::ParameterType::PARAMETER_INTEGER ||
+                            param.as_int() <= 1) {
+                            result.successful = false;
+                            result.reason = "board_h must be an integer > 1";
+                            return result;
+                        }
+                        board_h = static_cast<int>(param.as_int());
+                    } else if (name == "square_size_m") {
+                        if (param.get_type() != rclcpp::ParameterType::PARAMETER_DOUBLE ||
+                            param.as_double() <= 0.0) {
+                            result.successful = false;
+                            result.reason = "square_size_m must be a positive double";
+                            return result;
+                        }
+                        square_size_m = param.as_double();
+                    } else if (name == "session_dir") {
+                        if (param.get_type() != rclcpp::ParameterType::PARAMETER_STRING ||
+                            param.as_string().empty()) {
+                            result.successful = false;
+                            result.reason = "session_dir must be a non-empty string";
+                            return result;
+                        }
+                        session_dir = param.as_string();
+                    } else if (name == "parent_frame_id" || name == "child_frame_id") {
+                        if (param.get_type() != rclcpp::ParameterType::PARAMETER_STRING ||
+                            param.as_string().empty()) {
+                            result.successful = false;
+                            result.reason = name + " must be a non-empty string";
+                            return result;
+                        }
+                    } else {
+                        result.successful = false;
+                        result.reason = name + " is not supported for runtime update";
+                        return result;
+                    }
+                }
+
+                std::lock_guard lock{mtx_};
+                cfg_.board_size = cv::Size(board_w, board_h);
+                cfg_.square_size_m = static_cast<float>(square_size_m);
+                cfg_.output_dir = session_dir;
+
+                RCLCPP_INFO(get_logger(), "Updated calibration params: board=%dx%d sq=%.3fm dir=%s",
+                            cfg_.board_size.width, cfg_.board_size.height, cfg_.square_size_m,
+                            cfg_.output_dir.string().c_str());
+                return result;
+            });
+    }
+
     void setupServices() {
         using Trigger = std_srvs::srv::Trigger;
 
@@ -361,6 +439,7 @@ private:
     rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr cam_calib_svc_;
     rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr hand_eye_svc_;
     rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr stop_svc_;
+    rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr parameter_callback_handle_;
 };
 
 }  // namespace omr_controller::calib

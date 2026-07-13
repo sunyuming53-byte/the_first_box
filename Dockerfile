@@ -66,6 +66,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     librealsense2-dev \
     zsh curl git wget gnupg \
     ros-humble-rmw-cyclonedds-cpp \
+    ros-humble-rcl-interfaces \
     ros-humble-rclcpp \
     ros-humble-ros-gz-bridge \
     ros-humble-ros-gz-sim \
@@ -89,6 +90,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-humble-ament-index-cpp \
     ros-humble-behaviortree-cpp \
     ros-humble-control-msgs \
+    ros-humble-diagnostic-msgs \
+    ros-humble-diagnostic-updater \
+    ros-humble-foxglove-bridge \
     ros-humble-moveit-ros-planning \
     ros-humble-moveit-planners-ompl \
     ros-humble-moveit-ros-move-group \
@@ -160,10 +164,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libmodbus-dev \
     zsh curl git \
     ros-humble-rmw-cyclonedds-cpp \
+    ros-humble-rcl-interfaces \
     ros-humble-ament-cmake-test \
     ros-humble-ament-index-cpp \
     ros-humble-behaviortree-cpp \
     ros-humble-control-msgs \
+    ros-humble-diagnostic-msgs \
+    ros-humble-diagnostic-updater \
+    ros-humble-foxglove-bridge \
     ros-humble-moveit-ros-planning \
     ros-humble-moveit-planners-ompl \
     ros-humble-moveit-ros-move-group \

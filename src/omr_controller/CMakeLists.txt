@@ -10,6 +10,8 @@ find_package(ament_cmake REQUIRED)
 find_package(ament_index_cpp REQUIRED)
 find_package(behaviortree_cpp REQUIRED)
 find_package(control_msgs REQUIRED)
+find_package(diagnostic_msgs REQUIRED)
+find_package(diagnostic_updater REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(moveit_msgs REQUIRED)
 find_package(moveit_core REQUIRED)
@@ -18,6 +20,7 @@ find_package(moveit_ros_planning_interface REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(omr_vision REQUIRED)
+find_package(rcl_interfaces REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_action REQUIRED)
 find_package(sensor_msgs REQUIRED)
@@ -56,11 +59,14 @@ ament_target_dependencies(${PROJECT_NAME} PUBLIC
     behaviortree_cpp
     control_msgs
     cv_bridge
+    diagnostic_msgs
+    diagnostic_updater
     geometry_msgs
     moveit_msgs
     moveit_ros_planning_interface
     nav_msgs
     omr_vision
+    rcl_interfaces
     rclcpp
     rclcpp_action
     sensor_msgs
@@ -83,10 +89,15 @@ add_executable(task_orchestrator src/main.cpp)
 target_link_libraries(task_orchestrator ${PROJECT_NAME})
 install(TARGETS task_orchestrator DESTINATION lib/${PROJECT_NAME})
 
+add_executable(robot_diagnostics apps/robot_diagnostics_main.cpp)
+target_link_libraries(robot_diagnostics ${PROJECT_NAME})
+install(TARGETS robot_diagnostics DESTINATION lib/${PROJECT_NAME})
+
 # ── Calibration executables ──
 add_executable(calib_node apps/calib_node.cpp)
 target_link_libraries(calib_node ${PROJECT_NAME} ${_realman_arm_lib})
-ament_target_dependencies(calib_node rclcpp sensor_msgs std_msgs std_srvs tf2_ros geometry_msgs visualization_msgs)
+ament_target_dependencies(calib_node rclcpp rcl_interfaces sensor_msgs std_msgs std_srvs tf2_ros
+                          geometry_msgs visualization_msgs)
 
 add_executable(collect_data apps/collect.cpp)
 target_link_libraries(collect_data ${PROJECT_NAME})

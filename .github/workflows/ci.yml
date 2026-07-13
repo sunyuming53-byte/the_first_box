@@ -84,6 +84,8 @@ jobs:
               set -euo pipefail
               git config --global --add safe.directory /ws 2>/dev/null || true
               set +u; source /opt/ros/humble/setup.bash; set -u
+              colcon build --symlink-install --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON 2>&1 | tail -3
+              generate-compile-commands.sh 2>&1 | tail -1
               GIT_BASE_REF="${{ github.event.pull_request.base.sha || 'HEAD~1' }}" \
                 python3 /ws/.github/scripts/run-clang-tidy-diff.py
             '

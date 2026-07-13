@@ -12,6 +12,9 @@ add_subdirectory(third_party/Sophus)
 # ── Dependencies ──
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rcl_interfaces REQUIRED)
+find_package(diagnostic_msgs REQUIRED)
+find_package(diagnostic_updater REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
@@ -50,7 +53,7 @@ function(add_omr_lio_exec NAME MAIN_SRC)
     target_compile_definitions(${NAME} PRIVATE BOOST_BIND_GLOBAL_PLACEHOLDERS)
     ament_target_dependencies(${NAME}
         rclcpp sensor_msgs nav_msgs geometry_msgs std_msgs
-        tf2_ros tf2 pcl_conversions
+        tf2_ros tf2 pcl_conversions rcl_interfaces diagnostic_msgs diagnostic_updater
     )
     target_link_libraries(${NAME}
         Eigen3::Eigen

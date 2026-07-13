@@ -8,13 +8,19 @@
 #include <tf2/LinearMath/Quaternion.h>
 #include <unistd.h>
 
+#include <algorithm>
+#include <array>
+#include <chrono>
 #include <fstream>
 #include <iostream>
+#include <string_view>
 #include <thread>
 
 #include <Eigen/Core>
+#include <diagnostic_msgs/msg/diagnostic_status.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <geometry_msgs/msg/vector3.hpp>
+#include <rcl_interfaces/msg/set_parameters_result.hpp>
 
 #define INIT_TIME (0.1)
 #define LASER_POINT_COV (0.001)
@@ -23,11 +29,150 @@
 #define ROOT_DIR "./"
 #endif
 
+namespace {
+
+constexpr double kDiagnosticTopicTimeoutSec = 2.0;
+
+template <std::size_t N>
+bool containsName(const std::array<std::string_view, N>& names, const std::string& name) {
+    return std::any_of(names.begin(), names.end(),
+                       [&name](std::string_view candidate) { return candidate == name; });
+}
+
+bool isReadOnlyRuntimeParam(const std::string& name) {
+    static constexpr std::array<std::string_view, 7> kReadOnlyParams{
+        "common.lid_topic",          "common.imu_topic",    "map_file_path",
+        "mapping.extrinsic_T",       "mapping.extrinsic_R", "preprocess.lidar_type",
+        "preprocess.timestamp_unit",
+    };
+    return containsName(kReadOnlyParams, name);
+}
+
+bool isWritableRuntimeParam(const std::string& name) {
+    static constexpr std::array<std::string_view, 24> kWritableParams{
+        "publish.path_en",
+        "publish.scan_publish_en",
+        "publish.dense_publish_en",
+        "publish.scan_bodyframe_pub_en",
+        "common.time_sync_en",
+        "common.time_offset_lidar_to_imu",
+        "max_iteration",
+        "filter_size_surf",
+        "filter_size_map",
+        "cube_side_length",
+        "mapping.det_range",
+        "mapping.fov_degree",
+        "mapping.gyr_cov",
+        "mapping.acc_cov",
+        "mapping.b_gyr_cov",
+        "mapping.b_acc_cov",
+        "mapping.extrinsic_est_en",
+        "preprocess.blind",
+        "preprocess.scan_line",
+        "preprocess.scan_rate",
+        "point_filter_num",
+        "feature_extract_enable",
+        "pcd_save.pcd_save_en",
+        "pcd_save.interval",
+    };
+    return containsName(kWritableParams, name);
+}
+
+bool isBoolRuntimeParam(const std::string& name) {
+    static constexpr std::array<std::string_view, 8> kBoolParams{
+        "publish.path_en",          "publish.scan_publish_en",
+        "publish.dense_publish_en", "publish.scan_bodyframe_pub_en",
+        "common.time_sync_en",      "mapping.extrinsic_est_en",
+        "feature_extract_enable",   "pcd_save.pcd_save_en",
+    };
+    return containsName(kBoolParams, name);
+}
+
+bool isIntegerRuntimeParam(const std::string& name) {
+    static constexpr std::array<std::string_view, 5> kIntegerParams{
+        "max_iteration",    "preprocess.scan_line", "preprocess.scan_rate",
+        "point_filter_num", "pcd_save.interval",
+    };
+    return containsName(kIntegerParams, name);
+}
+
+bool isDoubleRuntimeParam(const std::string& name) {
+    static constexpr std::array<std::string_view, 11> kDoubleParams{
+        "common.time_offset_lidar_to_imu",
+        "filter_size_surf",
+        "filter_size_map",
+        "cube_side_length",
+        "mapping.det_range",
+        "mapping.fov_degree",
+        "mapping.gyr_cov",
+        "mapping.acc_cov",
+        "mapping.b_gyr_cov",
+        "mapping.b_acc_cov",
+        "preprocess.blind",
+    };
+    return containsName(kDoubleParams, name);
+}
+
+bool mustBePositiveIntegerRuntimeParam(const std::string& name) {
+    static constexpr std::array<std::string_view, 4> kPositiveIntegerParams{
+        "max_iteration",
+        "preprocess.scan_line",
+        "preprocess.scan_rate",
+        "point_filter_num",
+    };
+    return containsName(kPositiveIntegerParams, name);
+}
+
+bool validateRuntimeParam(const rclcpp::Parameter& param, std::string& reason) {
+    const auto& name = param.get_name();
+    if (isReadOnlyRuntimeParam(name)) {
+        reason = name + " is read-only at runtime";
+        return false;
+    }
+    if (!isWritableRuntimeParam(name)) {
+        reason = name + " is not supported for runtime update";
+        return false;
+    }
+
+    const auto type = param.get_type();
+    if (isBoolRuntimeParam(name) && type != rclcpp::ParameterType::PARAMETER_BOOL) {
+        reason = name + " must be a bool";
+        return false;
+    }
+    if (isIntegerRuntimeParam(name) && type != rclcpp::ParameterType::PARAMETER_INTEGER) {
+        reason = name + " must be an integer";
+        return false;
+    }
+    if (isDoubleRuntimeParam(name) && type != rclcpp::ParameterType::PARAMETER_DOUBLE) {
+        reason = name + " must be a double";
+        return false;
+    }
+    if (mustBePositiveIntegerRuntimeParam(name) && param.as_int() <= 0) {
+        reason = name + " must be positive";
+        return false;
+    }
+    if (name == "pcd_save.interval" && param.as_int() < -1) {
+        reason = "pcd_save.interval must be -1 or a non-negative integer";
+        return false;
+    }
+    if (isDoubleRuntimeParam(name) && name != "common.time_offset_lidar_to_imu" &&
+        param.as_double() <= 0.0) {
+        reason = name + " must be positive";
+        return false;
+    }
+    return true;
+}
+
+}  // namespace
+
 namespace omr_lio {
 
-LioNode::LioNode(const rclcpp::NodeOptions& options) : rclcpp::Node("lio_node", options) {
+LioNode::LioNode(const rclcpp::NodeOptions& options)
+    : rclcpp::Node("lio_node", options), diagnostics_(this) {
     declare_params();
     load_params();
+    setup_parameter_callback();
+    setup_diagnostics();
 
     // ── Publishers ──
     rclcpp::QoS qos_reliable(100);
@@ -160,11 +305,150 @@ void LioNode::load_params() {
     this->get_parameter<int>("pcd_save.interval", pcd_save_interval_);
 }
 
+void LioNode::setup_parameter_callback() {
+    parameter_callback_handle_ =
+        add_on_set_parameters_callback([this](const std::vector<rclcpp::Parameter>& params) {
+            rcl_interfaces::msg::SetParametersResult result;
+            result.successful = true;
+
+            for (const auto& param : params) {
+                std::string reason;
+                if (!validateRuntimeParam(param, reason)) {
+                    result.successful = false;
+                    result.reason = reason;
+                    return result;
+                }
+            }
+
+            bool imu_noise_changed = false;
+            for (const auto& param : params) {
+                const auto& name = param.get_name();
+                if (name == "publish.path_en")
+                    path_en_ = param.as_bool();
+                else if (name == "publish.scan_publish_en")
+                    scan_pub_en_ = param.as_bool();
+                else if (name == "publish.dense_publish_en")
+                    dense_pub_en_ = param.as_bool();
+                else if (name == "publish.scan_bodyframe_pub_en")
+                    scan_body_pub_en_ = param.as_bool();
+                else if (name == "common.time_sync_en")
+                    time_sync_en_ = param.as_bool();
+                else if (name == "common.time_offset_lidar_to_imu")
+                    time_diff_lidar_to_imu_ = param.as_double();
+                else if (name == "max_iteration")
+                    num_max_iterations_ = static_cast<int>(param.as_int());
+                else if (name == "filter_size_surf") {
+                    filter_size_surf_min_ = param.as_double();
+                    downSizeFilterSurf_.setLeafSize(filter_size_surf_min_, filter_size_surf_min_,
+                                                    filter_size_surf_min_);
+                } else if (name == "filter_size_map") {
+                    filter_size_map_min_ = param.as_double();
+                    downSizeFilterMap_.setLeafSize(filter_size_map_min_, filter_size_map_min_,
+                                                   filter_size_map_min_);
+                    ikdtree_.set_downsample_param(filter_size_map_min_);
+                } else if (name == "cube_side_length")
+                    cube_len_ = param.as_double();
+                else if (name == "mapping.det_range")
+                    det_range_ = param.as_double();
+                else if (name == "mapping.fov_degree")
+                    fov_deg_ = param.as_double();
+                else if (name == "mapping.gyr_cov") {
+                    gyr_cov_ = param.as_double();
+                    imu_noise_changed = true;
+                } else if (name == "mapping.acc_cov") {
+                    acc_cov_ = param.as_double();
+                    imu_noise_changed = true;
+                } else if (name == "mapping.b_gyr_cov") {
+                    b_gyr_cov_ = param.as_double();
+                    imu_noise_changed = true;
+                } else if (name == "mapping.b_acc_cov") {
+                    b_acc_cov_ = param.as_double();
+                    imu_noise_changed = true;
+                } else if (name == "mapping.extrinsic_est_en")
+                    extrinsic_est_en_ = param.as_bool();
+                else if (name == "preprocess.blind")
+                    p_pre_->blind = param.as_double();
+                else if (name == "preprocess.scan_line")
+                    p_pre_->N_SCANS = static_cast<int>(param.as_int());
+                else if (name == "preprocess.scan_rate")
+                    p_pre_->SCAN_RATE = static_cast<int>(param.as_int());
+                else if (name == "point_filter_num")
+                    p_pre_->point_filter_num = static_cast<int>(param.as_int());
+                else if (name == "feature_extract_enable")
+                    p_pre_->feature_enabled = param.as_bool();
+                else if (name == "pcd_save.pcd_save_en")
+                    pcd_save_en_ = param.as_bool();
+                else if (name == "pcd_save.interval")
+                    pcd_save_interval_ = static_cast<int>(param.as_int());
+            }
+
+            if (imu_noise_changed) {
+                p_imu_->set_param(
+                    Lidar_T_wrt_IMU_, Lidar_R_wrt_IMU_, V3D(gyr_cov_, gyr_cov_, gyr_cov_),
+                    V3D(acc_cov_, acc_cov_, acc_cov_), V3D(b_gyr_cov_, b_gyr_cov_, b_gyr_cov_),
+                    V3D(b_acc_cov_, b_acc_cov_, b_acc_cov_));
+            }
+
+            return result;
+        });
+}
+
+void LioNode::setup_diagnostics() {
+    diagnostics_.setHardwareID("lio_node");
+    diagnostics_.add("mapping", this, &LioNode::produce_diagnostics);
+    diagnostics_timer_ =
+        create_wall_timer(std::chrono::seconds(1), [this]() { diagnostics_.force_update(); });
+}
+
+void LioNode::produce_diagnostics(diagnostic_updater::DiagnosticStatusWrapper& stat) {
+    const auto now = this->now();
+    const double lidar_age =
+        last_lidar_rx_time_.nanoseconds() == 0 ? -1.0 : (now - last_lidar_rx_time_).seconds();
+    const double imu_age =
+        last_imu_rx_time_.nanoseconds() == 0 ? -1.0 : (now - last_imu_rx_time_).seconds();
+    const double cloud_age = last_cloud_publish_time_.nanoseconds() == 0
+                                 ? -1.0
+                                 : (now - last_cloud_publish_time_).seconds();
+
+    if (lidar_age < 0.0 || imu_age < 0.0) {
+        stat.summary(diagnostic_msgs::msg::DiagnosticStatus::WARN, "waiting for lidar/imu input");
+    } else if (lidar_age > kDiagnosticTopicTimeoutSec || imu_age > kDiagnosticTopicTimeoutSec) {
+        stat.summary(diagnostic_msgs::msg::DiagnosticStatus::ERROR, "lidar/imu input stale");
+    } else if (!flg_EKF_inited_) {
+        stat.summary(diagnostic_msgs::msg::DiagnosticStatus::WARN, "ESKF not initialized");
+    } else if (cloud_age > kDiagnosticTopicTimeoutSec) {
+        stat.summary(diagnostic_msgs::msg::DiagnosticStatus::WARN, "registered cloud stale");
+    } else {
+        stat.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, "LIO healthy");
+    }
+
+    stat.add("lidar_topic", lid_topic_);
+    stat.add("imu_topic", imu_topic_);
+    stat.add("cloud_topic", "/cloud_registered");
+    stat.add("map_topic", "/laser_map");
+    stat.add("lidar_age_sec", lidar_age);
+    stat.add("imu_age_sec", imu_age);
+    stat.add("cloud_age_sec", cloud_age);
+    stat.add("scan_count", scan_count_);
+    stat.add("processed_scan_count", processed_scan_count_);
+    stat.add("cloud_publish_count", cloud_publish_count_);
+    stat.add("feats_down_size", feats_down_size_);
+    stat.add("map_points_total", ikdtree_.size());
+    stat.add("map_points_valid", ikdtree_.validnum());
+    stat.add("ekf_initialized", flg_EKF_inited_ ? "true" : "false");
+    stat.add("last_mapping_duration_ms", last_mapping_duration_ms_);
+    stat.add("path_publish_enabled", path_en_ ? "true" : "false");
+    stat.add("scan_publish_enabled", scan_pub_en_ ? "true" : "false");
+    stat.add("dense_publish_enabled", dense_pub_en_ ? "true" : "false");
+    stat.add("bodyframe_publish_enabled", scan_body_pub_en_ ? "true" : "false");
+}
+
 // ── Callbacks ──
 
 void LioNode::lidar_callback(const sensor_msgs::msg::PointCloud2::SharedPtr msg) {
     std::lock_guard<std::mutex> lock(mtx_buffer_);
     scan_count_++;
+    last_lidar_rx_time_ = this->now();
     double msg_sec = rclcpp::Time(msg->header.stamp).seconds();
     if (msg_sec < last_timestamp_lidar_) {
         RCLCPP_ERROR(this->get_logger(), "lidar loop back, clear buffer");
@@ -181,6 +465,7 @@ void LioNode::lidar_callback(const sensor_msgs::msg::PointCloud2::SharedPtr msg)
 
 void LioNode::imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg_in) {
     publish_count_++;
+    last_imu_rx_time_ = this->now();
     sensor_msgs::msg::Imu::SharedPtr msg(new sensor_msgs::msg::Imu(*msg_in));
 
     double msg_sec = rclcpp::Time(msg_in->header.stamp).seconds();
@@ -304,8 +589,10 @@ void LioNode::run() {
             if (scan_pub_en_ && scan_body_pub_en_) publish_frame_body();
 
             double t11 = omp_get_wtime();
+            processed_scan_count_++;
+            last_mapping_duration_ms_ = (t11 - t00) * 1000.0;
             RCLCPP_DEBUG(this->get_logger(), "feats_down_size: %d  mapping time: %.2f ms",
-                         feats_down_size_, (t11 - t00) * 1000);
+                         feats_down_size_, last_mapping_duration_ms_);
         }
 
         rate.sleep();
@@ -553,6 +840,8 @@ void LioNode::publish_cloud() {
         laserCloudmsg.header.stamp = this->now();
         laserCloudmsg.header.frame_id = "map";
         pub_cloud_registered_->publish(laserCloudmsg);
+        last_cloud_publish_time_ = rclcpp::Time(laserCloudmsg.header.stamp);
+        cloud_publish_count_++;
         publish_count_ -= PUBFRAME_PERIOD;
     }
 

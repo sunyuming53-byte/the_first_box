@@ -4,6 +4,7 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.conditions import IfCondition
 from launch.substitutions import Command, FindExecutable, LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
 
 
@@ -47,6 +48,14 @@ def generate_launch_description():
                                description='Launch MoveIt2 move_group as a persistent planning service'),
         DeclareLaunchArgument('launch_m65_lio', default_value='false',
                                description='Launch LIO+Nav2 alongside M65 chassis'),
+        DeclareLaunchArgument('launch_foxglove', default_value='true',
+                              description='Launch foxglove_bridge for browser visualization'),
+        DeclareLaunchArgument('foxglove_address', default_value='0.0.0.0',
+                              description='foxglove_bridge bind address'),
+        DeclareLaunchArgument('foxglove_port', default_value='8765',
+                              description='foxglove_bridge websocket port'),
+        DeclareLaunchArgument('launch_diagnostics', default_value='true',
+                              description='Launch aggregate robot diagnostics node'),
 
         # ── robot_description from xacro ─────────────────────────
         Node(
@@ -229,6 +238,16 @@ PathJoinSubstitution([FindPackageShare('omr_bringup'), 'urdf', 'm65/m65.ros2_con
             condition=IfCondition(LaunchConfiguration('launch_m65_lio')),
         ),
 
+        # ── Task orchestrator (optional BT runtime) ─────────────────────
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource([
+                PathJoinSubstitution([
+                    FindPackageShare('omr_controller'), 'launch', 'controller.launch.py',
+                ])
+            ]),
+            condition=IfCondition(LaunchConfiguration('launch_door_trajectory')),
+        ),
+
         # ── RealSense camera ──────────────────────────────────────
         Node(
             package='realsense2_camera',
@@ -276,6 +295,37 @@ PathJoinSubstitution([FindPackageShare('omr_bringup'), 'urdf', 'm65/m65.ros2_con
                                       'config', 'controllers.yaml']),
             ],
             condition=IfCondition(LaunchConfiguration('launch_moveit')),
+            output='screen',
+        ),
+
+        # ── Aggregate diagnostics for Foxglove /diagnostics panel ───────
+        Node(
+            package='omr_controller',
+            executable='robot_diagnostics',
+            name='robot_diagnostics',
+            parameters=[{
+                'monitor_arm': ParameterValue(LaunchConfiguration('launch_arm'), value_type=bool),
+                'monitor_dais': ParameterValue(LaunchConfiguration('launch_dais'), value_type=bool),
+                'monitor_m65': ParameterValue(LaunchConfiguration('launch_m65'), value_type=bool),
+                'monitor_lio': ParameterValue(
+                    LaunchConfiguration('launch_m65_lio'), value_type=bool),
+                'monitor_orchestrator': ParameterValue(
+                    LaunchConfiguration('launch_door_trajectory'), value_type=bool),
+            }],
+            condition=IfCondition(LaunchConfiguration('launch_diagnostics')),
+            output='screen',
+        ),
+
+        # ── Foxglove websocket bridge ───────────────────────────────────
+        Node(
+            package='foxglove_bridge',
+            executable='foxglove_bridge',
+            name='foxglove_bridge',
+            parameters=[{
+                'address': LaunchConfiguration('foxglove_address'),
+                'port': ParameterValue(LaunchConfiguration('foxglove_port'), value_type=int),
+            }],
+            condition=IfCondition(LaunchConfiguration('launch_foxglove')),
             output='screen',
         ),
     ])
