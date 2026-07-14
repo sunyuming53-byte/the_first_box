@@ -404,7 +404,7 @@ TEST(HandEyeSolverTest, ConditionNumber) {
 
 // ── Test 8 — Noise comparison Tsai vs Daniilidis ──
 TEST(HandEyeSolverTest, NoiseComparison) {
-    constexpr double kNoise = 0.3;
+    constexpr double kNoise = 0.5;
     auto data = generate_test_data(HandEyeMode::EyeInHand, kNumMotions, kNoise);
     HandEyeSolver solver(HandEyeMode::EyeInHand);
 
