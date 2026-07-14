@@ -30,6 +30,12 @@ CallbackReturn DaisHardware::on_init(const hardware_interface::HardwareInfo& inf
     motor_config_.gear_ratio_denom = std::stoi(info.hardware_parameters.at("gear_ratio"));
     screw_lead_m_ = std::stod(info.hardware_parameters.at("screw_lead"));
 
+    if (screw_lead_m_ <= 0.0) {
+        RCLCPP_ERROR(rclcpp::get_logger("DaisHardware"), "Invalid screw_lead: %.4f (must be > 0)",
+                     screw_lead_m_);
+        return CallbackReturn::ERROR;
+    }
+
     RCLCPP_INFO(rclcpp::get_logger("DaisHardware"),
                 "DaisHardware on_init: port=%s baud=%d slave=%d gear=%d lead=%.4f joint=%s",
                 motor_config_.serial_port.c_str(), motor_config_.baud_rate, motor_config_.slave_id,
