@@ -234,7 +234,7 @@ RUN useradd -m -u 1000 -s /bin/zsh ubuntu && \
 
 # SSH key — generated at build time for remote deployment to runtime container
 RUN mkdir -p /home/ubuntu/.ssh && \
-    ssh-keygen -t ed25519 -f /home/ubuntu/.ssh/id_rsa -N '' -C "omrobot-dev" && \
+    ssh-keygen -t ed25519 -f /home/ubuntu/.ssh/id_ed25519 -N '' -C "omrobot-dev" && \
     chown -R ubuntu:ubuntu /home/ubuntu/.ssh
 
 # oh-my-zsh for ubuntu user (copy from root install in base-dev)
@@ -286,7 +286,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Authorize dev container's public key for passwordless SSH
 RUN mkdir -p /root/.ssh && chmod 700 /root/.ssh
 COPY --from=omrobot-develop --chown=root:root \
-    /home/ubuntu/.ssh/id_rsa.pub /root/.ssh/authorized_keys
+    /home/ubuntu/.ssh/id_ed25519.pub /root/.ssh/authorized_keys
 RUN chmod 600 /root/.ssh/authorized_keys
 
 # zsh as default shell for root (oh-my-zsh installed in base stage)

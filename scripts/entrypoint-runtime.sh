@@ -14,7 +14,7 @@ fi
 service ssh start
 
 echo "OMRobot runtime starting..."
-echo "  sshd:22     — remote access"
+echo "  sshd:2022   — remote access"
 echo "  controller_manager — ros2_control arm driver"
 echo "  calib_node  — calibration pipeline services"
 echo ""
