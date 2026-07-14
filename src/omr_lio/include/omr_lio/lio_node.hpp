@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <ikd-Tree/ikd_Tree.h>
 #include <pcl/filters/voxel_grid.h>
 #include <tf2_ros/transform_broadcaster.h>
@@ -18,6 +19,7 @@
 #include "omr_lio/esekfom.hpp"
 #include "omr_lio/preprocess.h"
 #include <Eigen/Core>
+#include <diagnostic_updater/diagnostic_updater.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <nav_msgs/msg/path.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -60,6 +62,9 @@ private:
     // ── Configuration ──
     void declare_params();
     void load_params();
+    void setup_parameter_callback();
+    void setup_diagnostics();
+    void produce_diagnostics(diagnostic_updater::DiagnosticStatusWrapper& stat);
 
     // ── Threading ──
     std::mutex mtx_buffer_;
@@ -72,6 +77,11 @@ private:
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_cloud_registered_body_;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_laser_map_;
     rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr pub_path_;
+
+    // ── Runtime parameter / diagnostics handles ──
+    rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr parameter_callback_handle_;
+    diagnostic_updater::Updater diagnostics_;
+    rclcpp::TimerBase::SharedPtr diagnostics_timer_;
 
     // ── Subscribers ──
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr sub_lidar_;
@@ -126,6 +136,12 @@ private:
     bool lidar_pushed_{false};
     bool flg_first_scan_{true};
     bool flg_EKF_inited_{false};
+    uint64_t processed_scan_count_{0};
+    uint64_t cloud_publish_count_{0};
+    double last_mapping_duration_ms_{0.0};
+    rclcpp::Time last_lidar_rx_time_{0, 0, RCL_ROS_TIME};
+    rclcpp::Time last_imu_rx_time_{0, 0, RCL_ROS_TIME};
+    rclcpp::Time last_cloud_publish_time_{0, 0, RCL_ROS_TIME};
 
     // ── Buffers ──
     std::deque<double> time_buffer_;

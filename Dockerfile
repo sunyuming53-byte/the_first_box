@@ -66,6 +66,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     librealsense2-dev \
     zsh curl git wget gnupg \
     ros-humble-rmw-cyclonedds-cpp \
+    ros-humble-rcl-interfaces \
     ros-humble-rclcpp \
     ros-humble-ros-gz-bridge \
     ros-humble-ros-gz-sim \
@@ -89,6 +90,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-humble-ament-index-cpp \
     ros-humble-behaviortree-cpp \
     ros-humble-control-msgs \
+    ros-humble-diagnostic-msgs \
+    ros-humble-diagnostic-updater \
+    ros-humble-foxglove-bridge \
     ros-humble-moveit-ros-planning \
     ros-humble-moveit-planners-ompl \
     ros-humble-moveit-ros-move-group \
@@ -107,7 +111,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=apt-cache-dev --mount=type=cache,target=/var/lib/apt,sharing=locked,id=apt-lib-dev \
     wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc && \
     echo "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-19 main" > /etc/apt/sources.list.d/llvm.list && \
-    apt-get update && apt-get install -y --no-install-recommends clangd-19 clang-tidy-19 clang-format-19 && \
+    apt-get update && apt-get install -y --no-install-recommends clangd-19 clang-tidy-19 clang-format-19 libomp-19-dev && \
     ln -sf /usr/bin/clangd-19 /usr/bin/clangd && \
     ln -sf /usr/bin/clang-tidy-19 /usr/bin/clang-tidy && \
     ln -sf /usr/bin/clang-format-19 /usr/bin/clang-format && \
@@ -160,10 +164,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libmodbus-dev \
     zsh curl git \
     ros-humble-rmw-cyclonedds-cpp \
+    ros-humble-rcl-interfaces \
     ros-humble-ament-cmake-test \
     ros-humble-ament-index-cpp \
     ros-humble-behaviortree-cpp \
     ros-humble-control-msgs \
+    ros-humble-diagnostic-msgs \
+    ros-humble-diagnostic-updater \
+    ros-humble-foxglove-bridge \
     ros-humble-moveit-ros-planning \
     ros-humble-moveit-planners-ompl \
     ros-humble-moveit-ros-move-group \

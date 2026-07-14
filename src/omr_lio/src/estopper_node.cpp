@@ -1,5 +1,6 @@
 #include "omr_lio/estopper_node.hpp"
 
+#include <rcl_interfaces/msg/set_parameters_result.hpp>
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 
 namespace omr_lio {
@@ -9,6 +10,53 @@ EstopperNode::EstopperNode(const rclcpp::NodeOptions& options) : Node("estopper_
     stop_distance_ = this->declare_parameter<double>("stop_distance", 0.3);
     min_points_in_zone_ = this->declare_parameter<int>("min_points_in_zone", 5);
     front_only_ = this->declare_parameter<bool>("front_only", true);
+
+    parameter_callback_handle_ =
+        add_on_set_parameters_callback([this](const std::vector<rclcpp::Parameter>& params) {
+            rcl_interfaces::msg::SetParametersResult result;
+            result.successful = true;
+
+            for (const auto& param : params) {
+                const auto& name = param.get_name();
+                if (name == "stop_distance") {
+                    if (param.get_type() != rclcpp::ParameterType::PARAMETER_DOUBLE ||
+                        param.as_double() <= 0.0) {
+                        result.successful = false;
+                        result.reason = "stop_distance must be a positive double";
+                        return result;
+                    }
+                } else if (name == "min_points_in_zone") {
+                    if (param.get_type() != rclcpp::ParameterType::PARAMETER_INTEGER ||
+                        param.as_int() <= 0) {
+                        result.successful = false;
+                        result.reason = "min_points_in_zone must be a positive integer";
+                        return result;
+                    }
+                } else if (name == "front_only") {
+                    if (param.get_type() != rclcpp::ParameterType::PARAMETER_BOOL) {
+                        result.successful = false;
+                        result.reason = "front_only must be a bool";
+                        return result;
+                    }
+                } else {
+                    result.successful = false;
+                    result.reason = name + " is not supported for runtime update";
+                    return result;
+                }
+            }
+
+            for (const auto& param : params) {
+                const auto& name = param.get_name();
+                if (name == "stop_distance")
+                    stop_distance_ = param.as_double();
+                else if (name == "min_points_in_zone")
+                    min_points_in_zone_ = static_cast<int>(param.as_int());
+                else if (name == "front_only")
+                    front_only_ = param.as_bool();
+            }
+
+            return result;
+        });
 
     // ── Subscriber ──
     sub_cloud_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(

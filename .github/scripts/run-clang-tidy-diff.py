@@ -12,14 +12,16 @@ from glob import glob
 
 
 def main() -> int:
-    # Find first compile_commands.json (any package — clang-tidy-diff
-    # resolves paths relative to it)
-    dbs = sorted(glob("/ws/build/*/compile_commands.json"))
-    if not dbs:
-        print("No compile_commands.json found — build with -DCMAKE_EXPORT_COMPILE_COMMANDS=ON first")
-        return 1
-
-    build_dir = os.path.dirname(dbs[0])
+    merged = "/ws/build/compile_commands.json"
+    if os.path.exists(merged):
+        build_dir = "/ws/build"
+    else:
+        dbs = sorted(glob("/ws/build/*/compile_commands.json"))
+        if not dbs:
+            print("No compile_commands.json found — build with "
+                  "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON first")
+            return 1
+        build_dir = os.path.dirname(dbs[0])
 
     # Get changed C++ files via git diff.  In CI, the base ref is available;
     # locally, diff against HEAD~1 or just check all workspace files.
@@ -37,7 +39,7 @@ def main() -> int:
             text=True, stderr=subprocess.PIPE,
         ).strip()
     except subprocess.CalledProcessError as e:
-        print(f"git diff failed: {e.stderr.decode().strip()}")
+        print(f"git diff failed: {e.stderr.strip()}")
         return 1
 
     if not changed:
@@ -61,6 +63,7 @@ def main() -> int:
             "-p", build_dir,
             "--header-filter=/ws/src/.*",
             "--quiet",
+            "--extra-arg=-Wno-enum-constexpr-conversion",
         ] + [f"/ws/{f}" for f in src_files],
         check=False,
     ).returncode
