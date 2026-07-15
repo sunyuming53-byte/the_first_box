@@ -421,7 +421,7 @@ robot system.
 | `launch/bringup.launch.py` | Main launch file: RSP + CM + JSB + JTC + camera + calib |
 | `launch/calibration.launch.py` | Calibration-only launch |
 | `config/realman_controllers.yaml` | JSB + JTC parameters (100 Hz, open-loop) |
-| `urdf/realman.urdf.xacro` | Main URDF entry (kinematics + ros2_control) |
+| `urdf/arm/realman.urdf.xacro` | Main URDF entry (kinematics + ros2_control) |
 | `urdf/realman.ros2_control.xacro` | `<ros2_control>` wrapper for ArmSystem plugin |
 | `urdf/rm_65.urdf.xacro` | Vendored upstream RM65 kinematics |
 | `urdf/meshes/rm_65_arm/` | STL mesh files for visualization |

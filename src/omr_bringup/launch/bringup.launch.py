@@ -67,7 +67,7 @@ def generate_launch_description():
             parameters=[{
                 'robot_description': Command([
                     PathJoinSubstitution([FindExecutable(name='xacro')]), ' ',
-                    PathJoinSubstitution([FindPackageShare('omr_bringup'), 'urdf', 'realman.urdf.xacro']), ' ',
+                    PathJoinSubstitution([FindPackageShare('omr_bringup'), 'urdf', 'arm', 'realman.urdf.xacro']), ' ',
                     'arm_ip:=', LaunchConfiguration('arm_ip'),
                 ]),
             }],
@@ -87,7 +87,7 @@ def generate_launch_description():
                 {
                     'robot_description': Command([
                         PathJoinSubstitution([FindExecutable(name='xacro')]), ' ',
-                        PathJoinSubstitution([FindPackageShare('omr_bringup'), 'urdf', 'realman.urdf.xacro']), ' ',
+                        PathJoinSubstitution([FindPackageShare('omr_bringup'), 'urdf', 'arm', 'realman.urdf.xacro']), ' ',
                         'arm_ip:=', LaunchConfiguration('arm_ip'),
                     ]),
                 },

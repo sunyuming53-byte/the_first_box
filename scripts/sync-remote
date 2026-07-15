@@ -9,7 +9,7 @@ if [ $# -lt 1 ]; then
 fi
 
 echo "Syncing /ws/install → $1:/ws/install ..."
-rsync -avz --delete \
+rsync -avzL --delete \
     -e "ssh -p 2022 -o StrictHostKeyChecking=no" \
     /ws/install/ "root@$1:/ws/install/"
 
