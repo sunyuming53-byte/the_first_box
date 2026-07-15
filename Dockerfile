@@ -225,14 +225,22 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=apt-cache-dev \
     --mount=type=cache,target=/var/lib/apt,sharing=locked,id=apt-lib-dev \
     apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    ccache \
     cmake \
     gdb \
     wget gnupg \
     && rm -rf /var/lib/apt/lists/*
 
+# ccache: transparent compiler cache (symlink-based interception works for all cmake versions)
+ENV PATH=/usr/lib/ccache:$PATH \
+    CCACHE_DIR=/ccache \
+    CCACHE_BASEDIR=/ws \
+    CCACHE_MAXSIZE=5G
+
 # Non-root user matching typical host UID, with video (camera) and passwordless sudo
 RUN useradd -m -u 1000 -s /bin/zsh ubuntu && \
     mkdir -p /ws && chown ubuntu:ubuntu /ws && \
+    mkdir -p /ccache && chown ubuntu:ubuntu /ccache && \
     usermod -aG video ubuntu && \
     usermod -aG sudo ubuntu && \
     echo "ubuntu ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/ubuntu
