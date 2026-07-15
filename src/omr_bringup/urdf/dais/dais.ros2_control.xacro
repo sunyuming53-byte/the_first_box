@@ -5,6 +5,7 @@
   <xacro:arg name="baud_rate"   default="57600"/>
   <xacro:arg name="slave_id"    default="1"/>
   <xacro:arg name="gear_ratio"  default="1000"/>
+  <xacro:arg name="screw_lead" default="0.01"/>
 
   <ros2_control name="DaisMotor" type="system">
     <hardware>
@@ -13,6 +14,7 @@
       <param name="baud_rate">$(arg baud_rate)</param>
       <param name="slave_id">$(arg slave_id)</param>
       <param name="gear_ratio">$(arg gear_ratio)</param>
+      <param name="screw_lead">$(arg screw_lead)</param>
     </hardware>
 
     <joint name="joint_dais">

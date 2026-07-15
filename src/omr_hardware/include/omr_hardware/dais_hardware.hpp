@@ -32,6 +32,7 @@ private:
     double hw_position_state_ = 0.0;
     double hw_velocity_state_ = 0.0;
     double hw_velocity_cmd_ = 0.0;
+    double screw_lead_m_ = 0.01;  // meters per revolution (screw lead)
 };
 
 }  // namespace omr_hardware

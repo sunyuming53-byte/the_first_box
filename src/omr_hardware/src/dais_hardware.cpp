@@ -28,11 +28,18 @@ CallbackReturn DaisHardware::on_init(const hardware_interface::HardwareInfo& inf
     motor_config_.baud_rate = std::stoi(info.hardware_parameters.at("baud_rate"));
     motor_config_.slave_id = std::stoi(info.hardware_parameters.at("slave_id"));
     motor_config_.gear_ratio_denom = std::stoi(info.hardware_parameters.at("gear_ratio"));
+    screw_lead_m_ = std::stod(info.hardware_parameters.at("screw_lead"));
+
+    if (screw_lead_m_ <= 0.0) {
+        RCLCPP_ERROR(rclcpp::get_logger("DaisHardware"), "Invalid screw_lead: %.4f (must be > 0)",
+                     screw_lead_m_);
+        return CallbackReturn::ERROR;
+    }
 
     RCLCPP_INFO(rclcpp::get_logger("DaisHardware"),
-                "DaisHardware on_init: port=%s baud=%d slave=%d gear=%d joint=%s",
+                "DaisHardware on_init: port=%s baud=%d slave=%d gear=%d lead=%.4f joint=%s",
                 motor_config_.serial_port.c_str(), motor_config_.baud_rate, motor_config_.slave_id,
-                motor_config_.gear_ratio_denom, joint_name_.c_str());
+                motor_config_.gear_ratio_denom, screw_lead_m_, joint_name_.c_str());
 
     return CallbackReturn::SUCCESS;
 }
@@ -97,8 +104,8 @@ hardware_interface::return_type DaisHardware::read(const rclcpp::Time& /*time*/,
     }
 
     dais::MotorState s = motor_->read_state();
-    hw_position_state_ = s.position_rad;
-    hw_velocity_state_ = s.velocity_rpm * (2.0 * M_PI / 60.0);  // rpm → rad/s
+    hw_position_state_ = s.position_rad * screw_lead_m_ / (2.0 * M_PI);
+    hw_velocity_state_ = s.velocity_rpm * screw_lead_m_ / 60.0;  // rpm → m/s (via screw lead)
 
     return hardware_interface::return_type::OK;
 }
@@ -109,7 +116,8 @@ hardware_interface::return_type DaisHardware::write(const rclcpp::Time& /*time*/
         return hardware_interface::return_type::OK;
     }
 
-    motor_->set_velocity_command(hw_velocity_cmd_);  // rad/s, motor converts internally
+    motor_->set_velocity_command(hw_velocity_cmd_ * (2.0 * M_PI) /
+                                 screw_lead_m_);  // m/s → rad/s (via screw lead)
 
     return hardware_interface::return_type::OK;
 }
