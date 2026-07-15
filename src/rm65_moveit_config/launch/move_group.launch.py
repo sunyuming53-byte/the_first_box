@@ -1,6 +1,7 @@
 import os
 import yaml
 
+from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.conditions import IfCondition, UnlessCondition
@@ -11,8 +12,7 @@ from launch_ros.substitutions import FindPackageShare
 
 
 def load_yaml(package_name, relative_path):
-    package_share = os.path.join(
-        '/home/estelle/ws/omrobot/install', package_name, 'share', package_name)
+    package_share = get_package_share_directory(package_name)
     file_path = os.path.join(package_share, relative_path)
     with open(file_path, 'r') as f:
         return yaml.safe_load(f)
