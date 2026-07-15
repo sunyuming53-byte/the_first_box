@@ -5,6 +5,14 @@ arm_group:
   kinematics_solver_attempts: 3
   solve_type: Speed
   joint_limits:
+    joint_dais:
+      has_velocity_limits: true
+      max_velocity: 2.0
+      has_acceleration_limits: false
+      max_acceleration: 0.0
+      has_position_limits: true
+      min_position: -0.27125
+      max_position: 0.52425
     joint1:
       has_velocity_limits: true
       max_velocity: 3.14

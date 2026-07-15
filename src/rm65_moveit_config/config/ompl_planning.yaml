@@ -11,7 +11,7 @@ arm_group:
   planner_configs:
     - RRTConnect
     - RRTstar
-  projection_evaluator: joints(joint1,joint2)
+  projection_evaluator: joints(joint_dais,joint1,joint2)
   longest_valid_segment_fraction: 0.005
   ename: arm_group
   planner_interface: ompl_interface/OMPLPlanner

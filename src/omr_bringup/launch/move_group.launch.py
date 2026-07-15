@@ -4,7 +4,7 @@ import yaml
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
-from launch.conditions import IfCondition, UnlessCondition
+from launch.conditions import IfCondition
 from launch.substitutions import Command, FindExecutable, LaunchConfiguration, PathJoinSubstitution
 from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.actions import Node
@@ -31,7 +31,8 @@ def generate_launch_description():
                               'config', 'rm65_full.srdf']),
     ])
     robot_description_semantic = {
-        'robot_description_semantic': ParameterValue(robot_description_semantic_content, value_type=str),
+        'robot_description_semantic': ParameterValue(
+            robot_description_semantic_content, value_type=str),
     }
 
     kinematics_params = load_yaml('rm65_moveit_config', 'config/kinematics.yaml')
@@ -40,20 +41,24 @@ def generate_launch_description():
 
     return LaunchDescription([
         DeclareLaunchArgument('use_rviz', default_value='true'),
+        DeclareLaunchArgument('use_sim_time', default_value='false'),
         DeclareLaunchArgument('launch_arm', default_value='true'),
+        DeclareLaunchArgument('standalone', default_value='true',
+                              description='Launch robot_state_publisher and joint state sources'),
 
         Node(
             package='robot_state_publisher', executable='robot_state_publisher',
             name='robot_state_publisher',
             parameters=[robot_description],
             output='screen',
+            condition=IfCondition(LaunchConfiguration('standalone')),
         ),
 
         Node(
             package='joint_state_publisher', executable='joint_state_publisher',
             name='joint_state_publisher',
-            parameters=[{'use_sim_time': False}],
-            condition=UnlessCondition(LaunchConfiguration('launch_arm')),
+            parameters=[{'use_sim_time': LaunchConfiguration('use_sim_time')}],
+            condition=IfCondition(LaunchConfiguration('standalone')),
         ),
 
         Node(
@@ -62,7 +67,10 @@ def generate_launch_description():
             parameters=[
                 robot_description,
                 robot_description_semantic,
-                {'use_sim_time': False, 'publish_robot_description_semantic': True},
+                {
+                    'use_sim_time': LaunchConfiguration('use_sim_time'),
+                    'publish_robot_description_semantic': True,
+                },
                 kinematics_params,
                 ompl_params,
                 controllers_params,
@@ -73,7 +81,7 @@ def generate_launch_description():
         Node(
             package='controller_manager', executable='spawner',
             arguments=['joint_state_broadcaster', '--controller-manager', '/controller_manager'],
-            condition=IfCondition(LaunchConfiguration('launch_arm')),
+            condition=IfCondition(LaunchConfiguration('standalone')),
         ),
 
         Node(

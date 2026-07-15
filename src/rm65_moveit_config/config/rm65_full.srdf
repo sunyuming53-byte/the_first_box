@@ -4,7 +4,7 @@
   <virtual_joint name="virtual_joint" type="fixed" parent_frame="world" child_link="m65_footprint" />
 
   <group name="arm_group">
-    <chain base_link="arm_base" tip_link="arm_link6" />
+    <chain base_link="rail_base" tip_link="arm_link6" />
   </group>
 
   <group name="endeffector">
@@ -12,6 +12,10 @@
   </group>
 
   <disable_collisions link1="arm_base" link2="arm_link1" reason="Adjacent" />
+
+  <disable_collisions link1="rail_base" link2="rail_slider" reason="Adjacent" />
+  <disable_collisions link1="rail_slider" link2="arm_base" reason="Adjacent" />
+
   <disable_collisions link1="arm_link1" link2="arm_link2" reason="Adjacent" />
   <disable_collisions link1="arm_link2" link2="arm_link3" reason="Adjacent" />
   <disable_collisions link1="arm_link3" link2="arm_link4" reason="Adjacent" />

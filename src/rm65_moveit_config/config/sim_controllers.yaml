@@ -20,7 +20,7 @@
 
     dais_cm:
       type: FollowJointTrajectory
-      action_ns: /dais_controller_manager/joint_trajectory_controller/follow_joint_trajectory
+      action_ns: /controller_manager/dais_joint_trajectory_controller/follow_joint_trajectory
       default: false
       joints:
         - joint_dais
