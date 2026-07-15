@@ -36,6 +36,7 @@ def generate_launch_description():
 
     kinematics_params = load_yaml('rm65_moveit_config', 'config/kinematics.yaml')
     ompl_params = load_yaml('rm65_moveit_config', 'config/ompl_planning.yaml')
+    controllers_params = load_yaml('rm65_moveit_config', 'config/controllers.yaml')
 
     return LaunchDescription([
         DeclareLaunchArgument('use_rviz', default_value='true'),
@@ -64,17 +65,7 @@ def generate_launch_description():
                 {'use_sim_time': False, 'publish_robot_description_semantic': True},
                 kinematics_params,
                 ompl_params,
-                {
-                    'moveit_controller_manager': 'moveit_simple_controller_manager/MoveItSimpleControllerManager',
-                    'controller_names': ['arm_cm'],
-                    'arm_cm': {
-                        'type': 'FollowJointTrajectory',
-                        'action_ns': 'joint_trajectory_controller/follow_joint_trajectory',
-                        'default': True,
-                        'joints': ['joint1', 'joint2', 'joint3', 'joint4', 'joint5', 'joint6'],
-                        'action_monitor_rate': 20.0,
-                    },
-                },
+                controllers_params,
             ],
             output='screen',
         ),
