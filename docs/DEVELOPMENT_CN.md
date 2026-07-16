@@ -339,6 +339,24 @@ docker compose up runtime -d
 SSH 密钥对在构建时生成 — 开发容器的公钥已内置到运行时机器的 `authorized_keys` 中。
 无需手动配置密钥。
 
+### Foxglove 远程可视化
+
+foxglove_bridge 已在 bringup 中默认启动（`launch_foxglove:=true`），WebSocket 端口 8765。
+
+| 组件 | 版本 | 协议 |
+|------|------|------|
+| foxglove_bridge | 3.4.2 (foxglove-sdk-cpp 0.25.3) | `foxglove.sdk.v1` |
+| Foxglove Studio | **≥ 2.56.0** | `foxglove.sdk.v1` |
+
+> **注意**：旧版 Foxglove Studio (≤ 2.9.0) 使用 `foxglove.websocket.v1` 子协议，与 foxglove_bridge 3.x 不兼容，握手会返回 HTTP 400。请升级到 2.56.0+。
+
+```bash
+# 升级 Foxglove Studio
+sudo apt update && sudo apt install foxglove-studio
+```
+
+连接 URL：`ws://<robot-ip>:8765`
+
 ---
 
 ## CI/CD 流水线

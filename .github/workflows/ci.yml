@@ -37,18 +37,40 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Restore ccache
+        id: ccache-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: .ccache
+          key: ccache-${{ runner.os }}-${{ hashFiles('src/**/*.cpp', 'src/**/*.hpp', 'src/**/*.h') }}
+          restore-keys: |
+            ccache-${{ runner.os }}-
+
       - name: Build
         run: |
+          mkdir -p .ccache
           docker run --rm \
             --user root \
             -v ${{ github.workspace }}:/ws \
+            -v ${{ github.workspace }}/.ccache:/ccache \
+            -e CCACHE_DIR=/ccache \
+            -e CCACHE_BASEDIR=/ws \
             omrobot:develop \
-            bash -c "
+            bash -c '
               set -euo pipefail
+              ccache -z
               set +u; source /opt/ros/humble/setup.bash; set -u
               colcon build --symlink-install \
                 --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DBUILD_TESTING=ON
-            "
+              ccache -s
+            '
+
+      - name: Save ccache
+        if: always() && steps.ccache-restore.outputs.cache-primary-key != ''
+        uses: actions/cache/save@v4
+        with:
+          path: .ccache
+          key: ${{ steps.ccache-restore.outputs.cache-primary-key }}
 
       - name: Test
         run: |
@@ -56,11 +78,11 @@ jobs:
             --user root \
             -v ${{ github.workspace }}:/ws \
             omrobot:develop \
-            bash -c "
+            bash -c '
               set -euo pipefail
               set +u; source /opt/ros/humble/setup.bash; set -u
-              colcon test --return-code-on-test-failure
-            "
+              colcon test --return-code-on-test-failure --event-handlers console_direct+
+            '
 
       - name: clang-format (blocking, diff-only)
         run: |
@@ -84,8 +106,7 @@ jobs:
               set -euo pipefail
               git config --global --add safe.directory /ws 2>/dev/null || true
               set +u; source /opt/ros/humble/setup.bash; set -u
-              colcon build --symlink-install --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON 2>&1 | tail -3
-              generate-compile-commands.sh 2>&1 | tail -1
+              generate-compile-commands.sh
               GIT_BASE_REF="${{ github.event.pull_request.base.sha || 'HEAD~1' }}" \
                 python3 /ws/.github/scripts/run-clang-tidy-diff.py
             '

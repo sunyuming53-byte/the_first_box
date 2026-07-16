@@ -397,7 +397,7 @@ graph TD
 | `launch/bringup.launch.py` | 主启动文件：RSP + CM + JSB + JTC + camera + calib |
 | `launch/calibration.launch.py` | 仅标定的启动文件 |
 | `config/realman_controllers.yaml` | JSB + JTC 参数（100 Hz，开环） |
-| `urdf/realman.urdf.xacro` | 主 URDF 入口（运动学 + ros2_control） |
+| `urdf/arm/realman.urdf.xacro` | 主 URDF 入口（运动学 + ros2_control） |
 | `urdf/realman.ros2_control.xacro` | ArmSystem 插件的 `<ros2_control>` 封装 |
 | `urdf/rm_65.urdf.xacro` | 上游提供的 RM65 运动学文件 |
 | `urdf/meshes/rm_65_arm/` | 用于可视化的 STL 网格文件 |
