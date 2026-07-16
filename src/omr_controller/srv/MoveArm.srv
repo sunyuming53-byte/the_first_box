@@ -1,0 +1,5 @@
+float64[6] positions       # 6 joint angles (rad), order: joint1..joint6
+float64 time_from_start    # trajectory duration (0.0 = default 1s)
+---
+bool success
+string message

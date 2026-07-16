@@ -33,6 +33,10 @@ public:
     /// Cancel the active goal.
     void stop();
 
+    /// Check if action server is available (for pre-check before sending goal).
+    /// Returns true if the action server responds within timeout_s seconds.
+    bool actionServerReady(double timeout_s = 1.0);
+
 private:
     void jointStateCallback(const sensor_msgs::msg::JointState::SharedPtr msg);
 

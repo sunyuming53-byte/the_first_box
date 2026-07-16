@@ -190,6 +190,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-humble-pcl-conversions \
     ros-humble-pcl-ros \
     ros-humble-tf-transformations \
+    ros-humble-xacro \
+    ros-humble-diff-drive-controller \
     && rm -rf /var/lib/apt/lists/*
 
 # SDK runtime — libapi_c.so for arm control at runtime

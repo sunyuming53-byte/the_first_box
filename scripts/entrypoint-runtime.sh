@@ -15,8 +15,7 @@ service ssh start
 
 echo "OMRobot runtime starting..."
 echo "  sshd:2022   — remote access"
-echo "  controller_manager — ros2_control arm driver"
-echo "  calib_node  — calibration pipeline services"
+echo "  bringup.launch.py — full robot stack (arm+dais+m65+camera+foxglove+LIO/Nav2)"
 echo ""
 
 exec /usr/bin/supervisord -n -c /etc/supervisor/conf.d/omrobot.conf

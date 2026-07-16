@@ -80,6 +80,10 @@ void ArmClient::stop() {
     }
 }
 
+bool ArmClient::actionServerReady(double timeout_s) {
+    return actionClient_->wait_for_action_server(std::chrono::duration<double>(timeout_s));
+}
+
 void ArmClient::jointStateCallback(const sensor_msgs::msg::JointState::SharedPtr msg) {
     std::lock_guard<std::mutex> lock(mutex_);
     jointPositions_ = msg->position;

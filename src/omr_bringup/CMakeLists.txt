@@ -7,6 +7,7 @@ install(DIRECTORY launch/ DESTINATION share/${PROJECT_NAME}/launch)
 install(DIRECTORY config/ DESTINATION share/${PROJECT_NAME}/config)
 install(DIRECTORY urdf/ DESTINATION share/${PROJECT_NAME}/urdf)
 install(DIRECTORY worlds/ DESTINATION share/${PROJECT_NAME}/worlds)
+install(DIRECTORY foxglove/ DESTINATION share/${PROJECT_NAME}/foxglove)
 
 # Suppress "CMAKE_EXPORT_COMPILE_COMMANDS was not used by the project"
 set(CMAKE_EXPORT_COMPILE_COMMANDS ${CMAKE_EXPORT_COMPILE_COMMANDS})
