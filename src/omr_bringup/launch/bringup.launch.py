@@ -161,7 +161,7 @@ def generate_launch_description():
         Node(
             package='controller_manager',
             executable='spawner',
-            arguments=['joint_state_broadcaster', '--controller-manager', '/dais_controller_manager'],
+            arguments=['dais_joint_state_broadcaster', '--controller-manager', '/dais_controller_manager'],
             condition=IfCondition(LaunchConfiguration('launch_dais')),
         ),
 
@@ -169,7 +169,7 @@ def generate_launch_description():
         Node(
             package='controller_manager',
             executable='spawner',
-            arguments=['joint_trajectory_controller', '--controller-manager', '/dais_controller_manager'],
+            arguments=['dais_joint_trajectory_controller', '--controller-manager', '/dais_controller_manager'],
             condition=IfCondition(LaunchConfiguration('launch_dais')),
         ),
 

@@ -200,8 +200,8 @@ flowchart TD
     %% D-AIS Motor subsystem
     subgraph DaisROS2["ROS2 Control Loop — D-AIS Motor"]
         DCM["dais_controller_manager<br/><i>ros2_control_node @ /dais_controller_manager</i>"]
-        DJSB["dais_joint_state_broadcaster<br/><i>→ /dais/joint_states</i>"]
-        DJTC["dais_joint_trajectory_controller<br/><i>action: .../follow_joint_trajectory</i>"]
+        DJSB["dais_joint_state_broadcaster<br/><i>→ /joint_states</i>"]
+        DJTC["dais_joint_trajectory_controller<br/><i>action: /dais_joint_trajectory_controller/follow_joint_trajectory</i>"]
         DHW["DaisHardware<br/><i>hardware_interface plugin (velocity cmd)</i>"]
     end
 
@@ -290,10 +290,11 @@ flowchart TD
 → `rm::Arm::moveJ()` → TCP → arm. Gripper is controlled via `rm::Arm::setGripperRoute()`
 (RS-485 through arm end-effector), not through ros2_control.
 
-**D-AIS motor data flow:** `DaisHardware.read()` → `dais::Motor::read_state()` → `/dais/joint_states`.
-The `joint_trajectory_controller` (velocity-mode, PID closed-loop) receives action goals →
+**D-AIS motor data flow:** `DaisHardware.read()` → `dais::Motor::read_state()` → `/joint_states`
+(`joint_dais`). The `dais_joint_trajectory_controller` (velocity-mode, PID closed-loop)
+receives action goals →
 `DaisHardware.write()` → `dais::Motor::set_velocity_command()` → Modbus RTU → motor.
-Note: `MotorClient` in the orchestrator is a stub and not registered in the BT blackboard.
+Note: `MotorClientImpl` is created by the orchestrator but is not registered in the BT blackboard.
 
 **M65 chassis data flow:** `M65BaseHardware.read()` → `m65::Chassis::read_state()` (encoder→rad)
 → `/m65/joint_states`. The `diff_drive_controller` receives `cmd_vel` (Twist) → computes
@@ -537,7 +538,7 @@ interfaces:
 TaskOrchestrator (20 Hz BT tick loop)
   ├── ArmClient       → /arm_cm/follow_joint_trajectory
   ├── GripperClient   → /gripper/follow_joint_trajectory
-  ├── MotorClient     → /dais_cm/follow_joint_trajectory (stub)
+  ├── MotorClient     → /dais_joint_trajectory_controller/follow_joint_trajectory
   ├── BaseClientImpl  → /m65_controller_manager/diff_drive_controller/cmd_vel + /odom
   └── VisionClient    → RealSense D435 + OpenCV detection
 ```

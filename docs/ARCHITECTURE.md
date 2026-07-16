@@ -257,7 +257,7 @@ A parallel control loop for auxiliary motors (linear actuators) using Modbus RTU
 graph TD
     cm["dais_controller_manager 50Hz"]
     cm --> jsb["dais_joint_state_broadcaster"]
-    jsb --> topic["/dais/joint_states"]
+    jsb --> topic["/joint_states (joint_dais)"]
     cm --> jtc["dais_joint_trajectory_controller velocity-mode PID"]
     jtc --> hw["DaisHardware::write()"]
     hw --> motor["dais::Motor::setVelocity()"]
@@ -318,7 +318,7 @@ TaskOrchestrator (rclcpp::Node)
   └── Client layer (non-blocking)
         ├── ArmClient        → /arm_cm/follow_joint_trajectory (action)
         ├── GripperClient    → /gripper/follow_joint_trajectory (action)
-        ├── MotorClient      → /dais_cm/follow_joint_trajectory (stub)
+        ├── MotorClient      → /dais_joint_trajectory_controller/follow_joint_trajectory
         ├── BaseClient       → (stub — future mobile base)
         └── VisionClient     → RealSense + OpenCV object detection
 ```

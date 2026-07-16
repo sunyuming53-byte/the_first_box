@@ -23,7 +23,14 @@ TaskOrchestrator::TaskOrchestrator(const rclcpp::NodeOptions& options)
     arm_ = std::make_unique<ArmClient>(node_handle_);
     gripper_ = std::make_unique<GripperClient>(node_handle_);
     vision_ = std::make_unique<VisionClient>(std::make_unique<TopicCameraAdapter>(node_handle_));
-    motor_ = std::make_unique<MotorClientStub>();
+
+    const auto motorJtcAction = declare_parameter<std::string>(
+        "motor_jtc_action", "/dais_joint_trajectory_controller/follow_joint_trajectory");
+    const auto motorJointStateTopic =
+        declare_parameter<std::string>("motor_joint_state_topic", "/joint_states");
+    const auto motorJointName = declare_parameter<std::string>("motor_joint_name", "joint_dais");
+    motor_ = std::make_unique<MotorClientImpl>(node_handle_, motorJtcAction, motorJointStateTopic,
+                                               motorJointName);
     base_ = std::make_unique<BaseClientImpl>(node_handle_);
 
     // State publisher

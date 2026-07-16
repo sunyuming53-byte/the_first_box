@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<!-- Standalone cabinet entity spawned separately from the mobile robot. -->
+<robot name="omr_cabinet" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:include filename="environment.model.xacro"/>
+
+  <xacro:environment_model/>
+
+  <!-- Keep the cabinet fixed in the Gazebo world. -->
+  <gazebo>
+    <static>true</static>
+  </gazebo>
+</robot>

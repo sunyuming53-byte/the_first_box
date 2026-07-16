@@ -1,0 +1,151 @@
+<?xml version="1.0"?>
+<!--
+  Static cabinet model used by the Gazebo simulation.
+
+  All geometry is kept on one link. Gazebo Fortress reduces fixed URDF joints
+  while converting to SDF; a multi-link static model can otherwise leave stale
+  frame references and fail PoseRelativeToGraph validation during spawning.
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:macro name="environment_model" params="prefix:='env_' mesh_scale:=0.001">
+    <xacro:property name="mesh_root"
+                    value="package://omr_bringup/urdf/environment/meshes"/>
+
+    <!-- Absolute centres in the env_base_link frame, in metres. This static
+         model keeps the STL source axes: X=left/right, Y=up, Z=front/back. -->
+    <xacro:property name="door_hinge_xyz" value="${[0.60000, 0.12200, 0.98425]}"/>
+    <xacro:property name="door_mesh_xyz" value="${[0.00000, 0.12200, 0.98425]}"/>
+    <xacro:property name="handle_xyz" value="${[0.05150, 1.03865, 1.00175]}"/>
+    <xacro:property name="button_xyz" value="${[0.05150, 0.97650, 1.00675]}"/>
+    <xacro:property name="pivot_xyz" value="${[0.05150, 1.07250, 0.97975]}"/>
+
+    <!-- ===================================================================
+         MEASUREMENT PROVENANCE / TODO
+         Below items support a future hinged (revolute) door + grasp plan.
+         The centres above are converted from the supplied mm data table;
+         items marked TODO still require physical/CAD measurement before
+         these simulation coordinates are used on the real robot.
+
+         (1) Hinge axis direction .......................... model +Z (SIM)
+             The articulated SDF uses a vertical axis and 0..90 deg limits.
+
+         (2) Hinge-to-handle grasp transform ............... TODO
+             The supplied pivot centre is a handle/lock assembly datum, not
+             the door hinge used by the articulated SDF.
+
+         (3) Handle grasp pose ............................. TODO
+             No local-frame orientation / approach direction recorded.
+
+         (4) Door close angle .............................. 0 deg    (DERIVED)
+             Door open limit (max angle) ................... TODO
+             Placeholder 1.57 rad (90 deg) ONLY, not measured.
+
+         (5) Arm TCP -> gripper transform .................. TODO
+             Belongs to RM65/gripper system; absent from cabinet data.
+         =================================================================== -->
+
+    <material name="${prefix}cabinet_gray">
+      <color rgba="0.55 0.58 0.62 1.0"/>
+    </material>
+    <material name="${prefix}door_gray">
+      <color rgba="0.72 0.74 0.77 1.0"/>
+    </material>
+    <material name="${prefix}detail_dark">
+      <color rgba="0.12 0.12 0.12 1.0"/>
+    </material>
+    <material name="${prefix}button_red">
+      <color rgba="0.8 0.05 0.05 1.0"/>
+    </material>
+
+    <link name="${prefix}base_link">
+      <!-- Gazebo's URDF-to-SDF converter drops links without inertial data,
+           even when the resulting model is static. Approximate the cabinet as
+           a 100 kg box (0.600 x 2.250 x 1.005 m in the source mesh axes). -->
+      <inertial>
+        <origin xyz="0.300 1.125 0.5025" rpy="0 0 0"/>
+        <mass value="100.0"/>
+        <inertia ixx="50.604375" ixy="0.0" ixz="0.0"
+                 iyy="11.416875" iyz="0.0" izz="45.187500"/>
+      </inertial>
+
+      <!-- Cabinet shell: the model datum and root geometry. -->
+      <visual name="cabinet_shell_visual">
+        <geometry>
+          <mesh filename="${mesh_root}/cabinet_shell.STL"
+                scale="${mesh_scale} ${mesh_scale} ${mesh_scale}"/>
+        </geometry>
+        <material name="${prefix}cabinet_gray"/>
+      </visual>
+      <collision name="cabinet_shell_collision">
+        <geometry>
+          <mesh filename="${mesh_root}/cabinet_shell.STL"
+                scale="${mesh_scale} ${mesh_scale} ${mesh_scale}"/>
+        </geometry>
+      </collision>
+
+      <!-- Closed door positioned over the cabinet's front opening. -->
+      <visual name="cabinet_door_visual">
+        <origin xyz="${door_mesh_xyz[0]} ${door_mesh_xyz[1]} ${door_mesh_xyz[2]}"
+                rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="${mesh_root}/cabinet_door_1.STL"
+                scale="${mesh_scale} ${mesh_scale} ${mesh_scale}"/>
+        </geometry>
+        <material name="${prefix}door_gray"/>
+      </visual>
+      <collision name="cabinet_door_collision">
+        <origin xyz="${door_mesh_xyz[0]} ${door_mesh_xyz[1]} ${door_mesh_xyz[2]}"
+                rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="${mesh_root}/cabinet_door_1.STL"
+                scale="${mesh_scale} ${mesh_scale} ${mesh_scale}"/>
+        </geometry>
+      </collision>
+
+      <!-- Pivot centre is supplied in cabinet coordinates. Its STL bounding
+           box centre is (10, 10, 22.5) mm. -->
+      <visual name="pivot_shaft_visual">
+        <origin xyz="${pivot_xyz[0] - 0.01000}
+                     ${pivot_xyz[1] - 0.01000}
+                     ${pivot_xyz[2] - 0.02250}"
+                rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="${mesh_root}/pivot_shaft.STL"
+                scale="${mesh_scale} ${mesh_scale} ${mesh_scale}"/>
+        </geometry>
+        <material name="${prefix}detail_dark"/>
+      </visual>
+
+      <!-- handle_xyz is already an absolute centre. The STL bounding-box
+           centre is (10.5, 46.25, 9.5) mm. -->
+      <visual name="handle_visual">
+        <origin xyz="${handle_xyz[0] - 0.01050}
+                     ${handle_xyz[1] - 0.04625}
+                     ${handle_xyz[2] - 0.00950}"
+                rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="${mesh_root}/handle.STL"
+                scale="${mesh_scale} ${mesh_scale} ${mesh_scale}"/>
+        </geometry>
+        <material name="${prefix}detail_dark"/>
+      </visual>
+
+      <!-- This single-link reference model is static, so its button is fixed.
+           button_xyz is the absolute centre; the articulated SDF attaches the
+           corresponding button to the moving door. -->
+      <visual name="button_visual">
+        <origin xyz="${button_xyz[0] - 0.00675}
+                     ${button_xyz[1] - 0.00675}
+                     ${button_xyz[2] - 0.00150}"
+                rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="${mesh_root}/button.STL"
+                scale="${mesh_scale} ${mesh_scale} ${mesh_scale}"/>
+        </geometry>
+        <material name="${prefix}button_red"/>
+      </visual>
+    </link>
+  </xacro:macro>
+
+</robot>
