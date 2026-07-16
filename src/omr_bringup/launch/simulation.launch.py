@@ -149,8 +149,8 @@ def generate_launch_description():
                     'robot_description': ParameterValue(
                         Command([
                             PathJoinSubstitution([FindExecutable(name='xacro')]), ' ',
-                            PathJoinSubstitution([FindPackageShare('rm65_moveit_config'),
-                                                  'urdf', 'rm65_moveit.urdf.xacro']),
+                            PathJoinSubstitution([FindPackageShare('omr_bringup'),
+                                                  'urdf', 'omr.urdf.xacro']),
                         ]),
                         value_type=str,
                     ),
@@ -158,7 +158,7 @@ def generate_launch_description():
                         Command([
                             PathJoinSubstitution([FindExecutable(name='xacro')]), ' ',
                             PathJoinSubstitution([FindPackageShare('rm65_moveit_config'),
-                                                  'config', 'rm65.srdf']),
+                                                  'config', 'rm65_full.srdf']),
                         ]),
                         value_type=str,
                     ),
@@ -170,7 +170,7 @@ def generate_launch_description():
                 PathJoinSubstitution([FindPackageShare('rm65_moveit_config'),
                                       'config', 'ompl_planning.yaml']),
                 PathJoinSubstitution([FindPackageShare('rm65_moveit_config'),
-                                      'config', 'controllers.yaml']),
+                                      'config', 'sim_controllers.yaml']),
             ],
             condition=IfCondition(launch_moveit),
             output='screen',

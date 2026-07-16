@@ -3,7 +3,6 @@ project(rm65_moveit_config VERSION 0.1.0 LANGUAGES CXX)
 
 find_package(ament_cmake REQUIRED)
 
-install(DIRECTORY launch/ DESTINATION share/${PROJECT_NAME}/launch)
 install(DIRECTORY config/ DESTINATION share/${PROJECT_NAME}/config)
 install(DIRECTORY urdf/ DESTINATION share/${PROJECT_NAME}/urdf)
 

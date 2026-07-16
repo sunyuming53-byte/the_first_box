@@ -272,34 +272,17 @@ PathJoinSubstitution([FindPackageShare('omr_bringup'), 'urdf', 'm65/m65.ros2_con
         ),
 
         # ── MoveIt2 move_group (persistent planning service) ─────────────
-        Node(
-            package='moveit_ros_move_group',
-            executable='move_group',
-            name='move_group',
-            parameters=[
-                {
-                    'robot_description': Command([
-                        PathJoinSubstitution([FindExecutable(name='xacro')]), ' ',
-                        PathJoinSubstitution([FindPackageShare('rm65_moveit_config'),
-                                              'urdf', 'rm65_moveit.urdf.xacro']),
-                    ]),
-                    'robot_description_semantic': Command([
-                        PathJoinSubstitution([FindExecutable(name='xacro')]), ' ',
-                        PathJoinSubstitution([FindPackageShare('rm65_moveit_config'),
-                                              'config', 'rm65.srdf']),
-                    ]),
-                    'use_sim_time': False,
-                    'publish_robot_description_semantic': True,
-                },
-                PathJoinSubstitution([FindPackageShare('rm65_moveit_config'),
-                                      'config', 'kinematics.yaml']),
-                PathJoinSubstitution([FindPackageShare('rm65_moveit_config'),
-                                      'config', 'ompl_planning.yaml']),
-                PathJoinSubstitution([FindPackageShare('rm65_moveit_config'),
-                                      'config', 'controllers.yaml']),
-            ],
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource([
+                PathJoinSubstitution([
+                    FindPackageShare('omr_bringup'), 'launch', 'move_group.launch.py',
+                ])
+            ]),
+            launch_arguments={
+                'use_rviz': 'false',
+                'standalone': 'false',
+            }.items(),
             condition=IfCondition(LaunchConfiguration('launch_moveit')),
-            output='screen',
         ),
 
         # ── Aggregate diagnostics for Foxglove /diagnostics panel ───────
