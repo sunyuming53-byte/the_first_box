@@ -1,0 +1,214 @@
+<?xml version="1.0"?>
+<!--
+  Articulated cabinet used by simulation.launch.py.
+
+  Coordinate convention (model frame, metres):
+    +Z: up
+    +X: right when facing the cabinet
+    -Y: out of the cabinet / toward a person facing the door
+
+  The source STL files use millimetres and CAD +Y as height. Each mesh visual
+  is therefore scaled by 0.001 and rotated +pi/2 about X. The cabinet shell is
+  fixed to the world while the door remains a dynamic revolute link.
+-->
+<sdf version="1.7">
+  <model name="omr_cabinet">
+    <self_collide>false</self_collide>
+    <allow_auto_disable>false</allow_auto_disable>
+
+    <link name="cabinet_shell">
+      <inertial>
+        <!-- Approximate 100 kg shell represented by its overall envelope. -->
+        <pose>0.300 -0.5025 1.125 0 0 0</pose>
+        <mass>100.0</mass>
+        <inertia>
+          <ixx>50.604375</ixx>
+          <ixy>0.0</ixy>
+          <ixz>0.0</ixz>
+          <iyy>45.187500</iyy>
+          <iyz>0.0</iyz>
+          <izz>11.416875</izz>
+        </inertia>
+      </inertial>
+
+      <visual name="cabinet_shell_visual">
+        <pose>0 0 0 1.57079632679 0 0</pose>
+        <geometry>
+          <mesh>
+            <uri>model://omr_bringup/urdf/environment/meshes/cabinet_shell.STL</uri>
+            <scale>0.001 0.001 0.001</scale>
+          </mesh>
+        </geometry>
+        <material>
+          <!-- Dark blue shell: intentionally high contrast during grasp tests. -->
+          <ambient>0.04 0.10 0.22 1.0</ambient>
+          <diffuse>0.08 0.24 0.52 1.0</diffuse>
+          <specular>0.20 0.30 0.45 1.0</specular>
+        </material>
+      </visual>
+
+      <!-- Five primitive collisions preserve the open front of the cabinet.
+           Dimensions are approximated from the shell STL's principal planes. -->
+      <collision name="shell_back_collision">
+        <pose>0.300 -0.015 1.125 0 0 0</pose>
+        <geometry><box><size>0.600 0.030 2.250</size></box></geometry>
+      </collision>
+      <collision name="shell_left_collision">
+        <pose>0.014 -0.5175 1.1645 0 0 0</pose>
+        <geometry><box><size>0.028 0.975 2.085</size></box></geometry>
+      </collision>
+      <collision name="shell_right_collision">
+        <pose>0.586 -0.5175 1.1645 0 0 0</pose>
+        <geometry><box><size>0.028 0.975 2.085</size></box></geometry>
+      </collision>
+      <collision name="shell_bottom_collision">
+        <pose>0.300 -0.5175 0.061 0 0 0</pose>
+        <geometry><box><size>0.600 1.005 0.122</size></box></geometry>
+      </collision>
+      <collision name="shell_top_collision">
+        <pose>0.300 -0.5175 2.2285 0 0 0</pose>
+        <geometry><box><size>0.600 1.005 0.043</size></box></geometry>
+      </collision>
+    </link>
+
+    <!-- Right-side hinge when viewed from the front. The link origin is the
+         lower hinge axis point; the closed door extends toward model -X. -->
+    <link name="cabinet_door">
+      <pose>0.600 -0.98425 0.122 0 0 0</pose>
+      <inertial>
+        <!-- Approximate 15 kg, 0.600 x 0.024 x 2.085 m door. -->
+        <pose>-0.300 -0.012 1.0425 0 0 0</pose>
+        <mass>15.0</mass>
+        <inertia>
+          <ixx>5.43475125</ixx>
+          <ixy>0.0</ixy>
+          <ixz>0.0</ixz>
+          <iyy>5.88403125</iyy>
+          <iyz>0.0</iyz>
+          <izz>0.45072000</izz>
+        </inertia>
+      </inertial>
+
+      <visual name="cabinet_door_visual">
+        <pose>-0.600 0 0 1.57079632679 0 0</pose>
+        <geometry>
+          <mesh>
+            <uri>model://omr_bringup/urdf/environment/meshes/cabinet_door_1.STL</uri>
+            <scale>0.001 0.001 0.001</scale>
+          </mesh>
+        </geometry>
+        <material>
+          <!-- Light gray door remains easy to distinguish from the shell. -->
+          <ambient>0.65 0.68 0.72 1.0</ambient>
+          <diffuse>0.88 0.90 0.94 1.0</diffuse>
+          <specular>0.35 0.35 0.35 1.0</specular>
+        </material>
+      </visual>
+
+      <collision name="cabinet_door_collision">
+        <pose>-0.300 -0.012 1.0425 0 0 0</pose>
+        <geometry><box><size>0.600 0.024 2.085</size></box></geometry>
+      </collision>
+
+      <!-- Handle placement in the door-link frame. The collision centre is
+           converted from the supplied assembly coordinates; adding the door
+           link pose gives model-frame centre (0.05150, -1.00175, 1.03865) m.
+           The +pi/2 X rotation maps the CAD mesh's long +Y axis to +Z. -->
+      <visual name="cabinet_handle_visual">
+        <pose>-0.55900 -0.00800 0.87040 1.57079632679 0 0</pose>
+        <geometry>
+          <mesh>
+            <uri>model://omr_bringup/urdf/environment/meshes/handle.STL</uri>
+            <scale>0.001 0.001 0.001</scale>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.75 0.42 0.01 1.0</ambient>
+          <diffuse>1.00 0.68 0.04 1.0</diffuse>
+          <specular>0.45 0.30 0.05 1.0</specular>
+        </material>
+      </visual>
+
+      <!-- A vertical cylinder is stable for contact and conservatively
+           approximates the handle's 21 x 19 x 92.5 mm visual envelope. -->
+      <collision name="cabinet_handle_collision">
+        <pose>-0.54850 -0.01750 0.91665 0 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.0105</radius>
+            <length>0.0925</length>
+          </cylinder>
+        </geometry>
+        <surface>
+          <friction>
+            <ode>
+              <mu>1.0</mu>
+              <mu2>1.0</mu2>
+            </ode>
+          </friction>
+        </surface>
+      </collision>
+
+      <!-- The button has its own supplied centre rather than being centred on
+           the handle. It belongs to cabinet_door and follows the joint. -->
+      <visual name="cabinet_button_visual">
+        <pose>-0.55525 -0.02100 0.84775 1.57079632679 0 0</pose>
+        <geometry>
+          <mesh>
+            <uri>model://omr_bringup/urdf/environment/meshes/button.STL</uri>
+            <scale>0.001 0.001 0.001</scale>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.55 0.01 0.01 1.0</ambient>
+          <diffuse>0.95 0.02 0.02 1.0</diffuse>
+          <specular>0.55 0.12 0.12 1.0</specular>
+        </material>
+      </visual>
+
+      <collision name="cabinet_button_collision">
+        <pose>-0.54850 -0.02250 0.85450 0 0 0</pose>
+        <geometry><box><size>0.0135 0.003 0.0135</size></box></geometry>
+      </collision>
+    </link>
+
+    <joint name="cabinet_world_fixed_joint" type="fixed">
+      <parent>world</parent>
+      <child>cabinet_shell</child>
+    </joint>
+
+    <joint name="cabinet_door_joint" type="revolute">
+      <parent>cabinet_shell</parent>
+      <child>cabinet_door</child>
+      <axis>
+        <!-- Positive rotation opens the right-hinged door outward. -->
+        <xyz expressed_in="__model__">0 0 1</xyz>
+        <limit>
+          <lower>0.0</lower>
+          <upper>1.57079632679</upper>
+          <effort>50.0</effort>
+          <velocity>1.0</velocity>
+        </limit>
+        <!-- Provisional values; replace with measured hinge behaviour. -->
+        <dynamics>
+          <damping>0.5</damping>
+          <friction>0.2</friction>
+        </dynamics>
+      </axis>
+    </joint>
+
+    <plugin filename="gz-sim-joint-state-publisher-system"
+            name="gz::sim::systems::JointStatePublisher">
+      <topic>/cabinet/joint_states</topic>
+      <joint_name>cabinet_door_joint</joint_name>
+    </plugin>
+
+    <!-- Diagnostic input for hinge physics tests. Publishing a Double torque
+         to /model/cabinet/joint/cabinet_door_joint/cmd_force opens or closes
+         the door; publish 0.0 after the test so no residual torque remains. -->
+    <plugin filename="gz-sim-apply-joint-force-system"
+            name="gz::sim::systems::ApplyJointForce">
+      <joint_name>cabinet_door_joint</joint_name>
+    </plugin>
+  </model>
+</sdf>

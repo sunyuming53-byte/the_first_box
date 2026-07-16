@@ -246,7 +246,7 @@ unconfigured → configuring → inactive → active → ...
 graph TD
     cm["dais_controller_manager 50Hz"]
     cm --> jsb["dais_joint_state_broadcaster"]
-    jsb --> topic["/dais/joint_states"]
+    jsb --> topic["/joint_states (joint_dais)"]
     cm --> jtc["dais_joint_trajectory_controller velocity-mode PID"]
     jtc --> hw["DaisHardware::write()"]
     hw --> motor["dais::Motor::setVelocity()"]
@@ -302,7 +302,7 @@ TaskOrchestrator (rclcpp::Node)
   └── Client layer (non-blocking)
         ├── ArmClient        → /arm_cm/follow_joint_trajectory (action)
         ├── GripperClient    → /gripper/follow_joint_trajectory (action)
-        ├── MotorClient      → /dais_cm/follow_joint_trajectory (stub)
+        ├── MotorClient      → /dais_joint_trajectory_controller/follow_joint_trajectory
         ├── BaseClient       → (stub — future mobile base)
         └── VisionClient     → RealSense + OpenCV object detection
 ```
@@ -397,7 +397,7 @@ graph TD
 | `launch/bringup.launch.py` | 主启动文件：RSP + CM + JSB + JTC + camera + calib |
 | `launch/calibration.launch.py` | 仅标定的启动文件 |
 | `config/realman_controllers.yaml` | JSB + JTC 参数（100 Hz，开环） |
-| `urdf/realman.urdf.xacro` | 主 URDF 入口（运动学 + ros2_control） |
+| `urdf/arm/realman.urdf.xacro` | 主 URDF 入口（运动学 + ros2_control） |
 | `urdf/realman.ros2_control.xacro` | ArmSystem 插件的 `<ros2_control>` 封装 |
 | `urdf/rm_65.urdf.xacro` | 上游提供的 RM65 运动学文件 |
 | `urdf/meshes/rm_65_arm/` | 用于可视化的 STL 网格文件 |

@@ -257,7 +257,7 @@ A parallel control loop for auxiliary motors (linear actuators) using Modbus RTU
 graph TD
     cm["dais_controller_manager 50Hz"]
     cm --> jsb["dais_joint_state_broadcaster"]
-    jsb --> topic["/dais/joint_states"]
+    jsb --> topic["/joint_states (joint_dais)"]
     cm --> jtc["dais_joint_trajectory_controller velocity-mode PID"]
     jtc --> hw["DaisHardware::write()"]
     hw --> motor["dais::Motor::setVelocity()"]
@@ -318,7 +318,7 @@ TaskOrchestrator (rclcpp::Node)
   └── Client layer (non-blocking)
         ├── ArmClient        → /arm_cm/follow_joint_trajectory (action)
         ├── GripperClient    → /gripper/follow_joint_trajectory (action)
-        ├── MotorClient      → /dais_cm/follow_joint_trajectory (stub)
+        ├── MotorClient      → /dais_joint_trajectory_controller/follow_joint_trajectory
         ├── BaseClient       → (stub — future mobile base)
         └── VisionClient     → RealSense + OpenCV object detection
 ```
@@ -421,7 +421,7 @@ robot system.
 | `launch/bringup.launch.py` | Main launch file: RSP + CM + JSB + JTC + camera + calib |
 | `launch/calibration.launch.py` | Calibration-only launch |
 | `config/realman_controllers.yaml` | JSB + JTC parameters (100 Hz, open-loop) |
-| `urdf/realman.urdf.xacro` | Main URDF entry (kinematics + ros2_control) |
+| `urdf/arm/realman.urdf.xacro` | Main URDF entry (kinematics + ros2_control) |
 | `urdf/realman.ros2_control.xacro` | `<ros2_control>` wrapper for ArmSystem plugin |
 | `urdf/rm_65.urdf.xacro` | Vendored upstream RM65 kinematics |
 | `urdf/meshes/rm_65_arm/` | STL mesh files for visualization |

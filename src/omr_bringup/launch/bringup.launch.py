@@ -30,6 +30,8 @@ def generate_launch_description():
                               description='Modbus slave ID for dais motor'),
         DeclareLaunchArgument('gear_ratio', default_value='1000',
                               description='Gear ratio for dais motor'),
+        DeclareLaunchArgument('screw_lead', default_value='0.01',
+                              description='Screw lead (m/rev) for dais linear rail'),
         DeclareLaunchArgument('launch_m65', default_value='false',
                                description='Launch M65 chassis driver (diff_drive_controller + M65BaseHardware)'),
         DeclareLaunchArgument('m65_serial_port', default_value='/dev/ttyBase',
@@ -65,7 +67,7 @@ def generate_launch_description():
             parameters=[{
                 'robot_description': Command([
                     PathJoinSubstitution([FindExecutable(name='xacro')]), ' ',
-                    PathJoinSubstitution([FindPackageShare('omr_bringup'), 'urdf', 'realman.urdf.xacro']), ' ',
+                    PathJoinSubstitution([FindPackageShare('omr_bringup'), 'urdf', 'arm', 'realman.urdf.xacro']), ' ',
                     'arm_ip:=', LaunchConfiguration('arm_ip'),
                 ]),
             }],
@@ -85,7 +87,7 @@ def generate_launch_description():
                 {
                     'robot_description': Command([
                         PathJoinSubstitution([FindExecutable(name='xacro')]), ' ',
-                        PathJoinSubstitution([FindPackageShare('omr_bringup'), 'urdf', 'realman.urdf.xacro']), ' ',
+                        PathJoinSubstitution([FindPackageShare('omr_bringup'), 'urdf', 'arm', 'realman.urdf.xacro']), ' ',
                         'arm_ip:=', LaunchConfiguration('arm_ip'),
                     ]),
                 },
@@ -123,6 +125,7 @@ def generate_launch_description():
                     ' baud_rate:=', LaunchConfiguration('baud_rate'),
                     ' slave_id:=', LaunchConfiguration('slave_id'),
                     ' gear_ratio:=', LaunchConfiguration('gear_ratio'),
+                    ' screw_lead:=', LaunchConfiguration('screw_lead'),
                 ]),
             }],
             condition=IfCondition(LaunchConfiguration('launch_dais')),
@@ -146,6 +149,7 @@ def generate_launch_description():
                         ' baud_rate:=', LaunchConfiguration('baud_rate'),
                         ' slave_id:=', LaunchConfiguration('slave_id'),
                         ' gear_ratio:=', LaunchConfiguration('gear_ratio'),
+                        ' screw_lead:=', LaunchConfiguration('screw_lead'),
                     ]),
                 },
             ],
@@ -157,7 +161,7 @@ def generate_launch_description():
         Node(
             package='controller_manager',
             executable='spawner',
-            arguments=['joint_state_broadcaster', '--controller-manager', '/dais_controller_manager'],
+            arguments=['dais_joint_state_broadcaster', '--controller-manager', '/dais_controller_manager'],
             condition=IfCondition(LaunchConfiguration('launch_dais')),
         ),
 
@@ -165,7 +169,7 @@ def generate_launch_description():
         Node(
             package='controller_manager',
             executable='spawner',
-            arguments=['joint_trajectory_controller', '--controller-manager', '/dais_controller_manager'],
+            arguments=['dais_joint_trajectory_controller', '--controller-manager', '/dais_controller_manager'],
             condition=IfCondition(LaunchConfiguration('launch_dais')),
         ),
 

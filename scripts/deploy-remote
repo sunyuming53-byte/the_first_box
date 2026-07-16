@@ -11,7 +11,7 @@ fi
 echo "=== Deploying to $1 ==="
 
 # Sync artifacts
-rsync -avz --delete \
+rsync -avzL --delete \
     -e "ssh -p 2022 -o StrictHostKeyChecking=no" \
     /ws/install/ "root@$1:/ws/install/"
 

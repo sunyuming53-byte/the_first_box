@@ -172,6 +172,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-humble-diagnostic-msgs \
     ros-humble-diagnostic-updater \
     ros-humble-foxglove-bridge \
+    ros-humble-controller-manager \
+    ros-humble-joint-state-broadcaster \
+    ros-humble-joint-trajectory-controller \
+    ros-humble-robot-state-publisher \
+    ros-humble-hardware-interface \
     ros-humble-moveit-ros-planning \
     ros-humble-moveit-planners-ompl \
     ros-humble-moveit-ros-move-group \
@@ -191,12 +196,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN mkdir -p /opt/realman-sdk/lib
 COPY src/omr_hardware/third_party/realman_arm/third_party/RM_API2/C/linux/linux_x86_c_vv1.1.5/libapi_c.so /opt/realman-sdk/lib/
 ENV LD_LIBRARY_PATH=/opt/realman-sdk/lib
+RUN echo 'LD_LIBRARY_PATH=/opt/realman-sdk/lib' >> /etc/environment
 
-RUN --mount=type=bind,source=src,target=/tmp/src,readonly \
-    apt-get update && \
-    rosdep update && \
-    rosdep install --from-paths /tmp/src --ignore-src -r -y --skip-keys realman_arm omr_hardware && \
-    rm -rf /var/lib/apt/lists/*
+# All dependencies already installed explicitly above; rosdep is skipped
+# because custom packages (omr_hardware, realman_arm) are not in rosdistro.
+# To check for missing deps, run in develop container:
+#   rosdep install --from-paths src --ignore-src -r -y --skip-keys realman_arm omr_hardware
 
 # oh-my-zsh + powerlevel10k + plugins for root (runtime container)
 RUN sh -c "$(curl -fsSL --retry 5 --retry-delay 10 https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended \
@@ -220,14 +225,22 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=apt-cache-dev \
     --mount=type=cache,target=/var/lib/apt,sharing=locked,id=apt-lib-dev \
     apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    ccache \
     cmake \
     gdb \
     wget gnupg \
     && rm -rf /var/lib/apt/lists/*
 
+# ccache: transparent compiler cache (symlink-based interception works for all cmake versions)
+ENV PATH=/usr/lib/ccache:$PATH \
+    CCACHE_DIR=/ccache \
+    CCACHE_BASEDIR=/ws \
+    CCACHE_MAXSIZE=5G
+
 # Non-root user matching typical host UID, with video (camera) and passwordless sudo
 RUN useradd -m -u 1000 -s /bin/zsh ubuntu && \
     mkdir -p /ws && chown ubuntu:ubuntu /ws && \
+    mkdir -p /ccache && chown ubuntu:ubuntu /ccache && \
     usermod -aG video ubuntu && \
     usermod -aG sudo ubuntu && \
     echo "ubuntu ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/ubuntu

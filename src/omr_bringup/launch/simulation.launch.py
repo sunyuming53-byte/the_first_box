@@ -11,15 +11,39 @@ from launch_ros.substitutions import FindPackageShare
 def generate_launch_description():
     gui = LaunchConfiguration('gui')
     launch_moveit = LaunchConfiguration('launch_moveit')
+    launch_cabinet = LaunchConfiguration('launch_cabinet')
+    cabinet_x = LaunchConfiguration('cabinet_x')
+    cabinet_y = LaunchConfiguration('cabinet_y')
+    cabinet_z = LaunchConfiguration('cabinet_z')
+    cabinet_roll = LaunchConfiguration('cabinet_roll')
+    cabinet_pitch = LaunchConfiguration('cabinet_pitch')
+    cabinet_yaw = LaunchConfiguration('cabinet_yaw')
 
     robot_description = Command([
         PathJoinSubstitution([FindExecutable(name='xacro')]), ' ',
         PathJoinSubstitution([FindPackageShare('omr_bringup'), 'urdf', 'sim_combined.urdf.xacro']),
     ])
 
+    cabinet_model = PathJoinSubstitution([
+        FindPackageShare('omr_bringup'), 'urdf', 'environment', 'cabinet.sdf'
+    ])
+
     return LaunchDescription([
         DeclareLaunchArgument('gui', default_value='true'),
         DeclareLaunchArgument('launch_moveit', default_value='true'),
+        DeclareLaunchArgument('launch_cabinet', default_value='true'),
+        # With yaw=-pi/2 and (x,y)=(1.60,-0.30), the corrected hinge is at
+        # world (0.61575,-0.900). Initial and swept collision clearance must
+        # be revalidated in Gazebo after geometry changes.
+        DeclareLaunchArgument('cabinet_x', default_value='1.60'),
+        DeclareLaunchArgument('cabinet_y', default_value='-0.30'),
+        DeclareLaunchArgument('cabinet_z', default_value='0.0'),
+        # cabinet.sdf normalizes the source CAD axes to Gazebo's Z-up frame.
+        DeclareLaunchArgument('cabinet_roll', default_value='0.0'),
+        DeclareLaunchArgument('cabinet_pitch', default_value='0.0'),
+        # Gazebo uses positive counter-clockwise yaw, so -pi/2 rotates the
+        # cabinet clockwise by 90 degrees in the world XY plane.
+        DeclareLaunchArgument('cabinet_yaw', default_value='-1.57079632679'),
 
         # Gazebo Fortress resource path for package:// → model:// resolution
         SetEnvironmentVariable('GZ_SIM_RESOURCE_PATH',
@@ -55,6 +79,37 @@ def generate_launch_description():
             executable='create',
             name='spawn_omr',
             arguments=['-topic', 'robot_description', '-name', 'omr', '-z', '0.075'],
+        ),
+
+        # ── Articulated cabinet as an independent Gazebo entity ──
+        Node(
+            package='ros_gz_sim',
+            executable='create',
+            name='spawn_cabinet',
+            arguments=[
+                '-file', cabinet_model,
+                '-name', 'cabinet',
+                '-x', cabinet_x,
+                '-y', cabinet_y,
+                '-z', cabinet_z,
+                '-R', cabinet_roll,
+                '-P', cabinet_pitch,
+                '-Y', cabinet_yaw,
+            ],
+            condition=IfCondition(launch_cabinet),
+        ),
+
+        # Keep the cabinet joint separate from the robot's /joint_states.
+        # This avoids presenting cabinet_door_joint as part of the MoveIt robot.
+        Node(
+            package='ros_gz_bridge',
+            executable='parameter_bridge',
+            name='cabinet_joint_state_bridge',
+            arguments=[
+                '/cabinet/joint_states@sensor_msgs/msg/JointState[gz.msgs.Model]',
+            ],
+            condition=IfCondition(launch_cabinet),
+            output='screen',
         ),
 
         # ── Camera bridge (Fortress → ROS2) ─────────────

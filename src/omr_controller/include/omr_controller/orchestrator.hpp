@@ -25,7 +25,7 @@ public:
     std::unique_ptr<ArmClient> arm_;
     std::unique_ptr<GripperClient> gripper_;
     std::unique_ptr<VisionClient> vision_;
-    std::unique_ptr<MotorClientStub> motor_;
+    std::unique_ptr<MotorClient> motor_;
     std::unique_ptr<BaseClientImpl> base_;
 
 private:

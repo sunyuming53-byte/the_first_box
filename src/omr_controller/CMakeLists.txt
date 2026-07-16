@@ -159,6 +159,9 @@ if(BUILD_TESTING)
     ament_add_gtest(motor_client_test test/test_main.cpp test/motor_client_test.cpp)
     target_link_libraries(motor_client_test ${PROJECT_NAME} ${OpenCV_LIBS} realsense2::realsense2)
 
+    ament_add_gtest(motor_client_impl_test test/test_main_ros.cpp test/motor_client_impl_test.cpp)
+    target_link_libraries(motor_client_impl_test ${PROJECT_NAME} ${OpenCV_LIBS} realsense2::realsense2)
+
     ament_add_gtest(base_client_test test/test_main_ros.cpp test/base_client_test.cpp)
     target_link_libraries(base_client_test ${PROJECT_NAME} ${OpenCV_LIBS} realsense2::realsense2)
 
