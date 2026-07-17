@@ -24,6 +24,39 @@ CallbackReturn ArmSystem::on_init(const hardware_interface::HardwareInfo& info) 
         return CallbackReturn::ERROR;
     }
 
+    // Reorder joint_names_ to match the SDK internal joint order.
+    // The SDK (libapi_c) returns joint positions in a fixed hardware-defined
+    // order that differs from the URDF.  For RM65 the SDK order is:
+    //   joint2, joint3, joint1, joint4, joint5, joint6
+    // We reorder here so that read()/write() index i maps directly to
+    // SDK index i, and controllers match by joint name.
+    if (dof_ == 6) {
+        static const std::array<const char*, 6> SDK_ORDER_RM65 = {"joint2", "joint3", "joint1",
+                                                                  "joint4", "joint5", "joint6"};
+        // Validate that the URDF provides all joints expected by this arm model
+        for (const auto& sdk_name : SDK_ORDER_RM65) {
+            bool found = false;
+            for (const auto& j : info.joints) {
+                if (j.name == sdk_name) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                RCLCPP_ERROR(rclcpp::get_logger("ArmSystem"),
+                             "URDF missing joint '%s' required by RM65 SDK order. "
+                             "URDF joint names must match joint1..joint6",
+                             sdk_name);
+                return CallbackReturn::ERROR;
+            }
+        }
+        std::vector<std::string> reordered(dof_);
+        for (int i = 0; i < dof_; ++i) {
+            reordered[i] = SDK_ORDER_RM65[i];
+        }
+        joint_names_ = reordered;
+    }
+
     // Parse arm config from ros2_control <param> tags in URDF
     arm_config_.ip = info.hardware_parameters.at("arm_ip");
     arm_config_.tcp_port = std::stoi(info.hardware_parameters.at("tcp_port"));
@@ -35,6 +68,10 @@ CallbackReturn ArmSystem::on_init(const hardware_interface::HardwareInfo& info) 
     hw_effort_.resize(dof_, 0.0);
     hw_position_cmd_.resize(dof_, 0.0);
     hw_position_cmd_prev_.resize(dof_, NAN);  // NAN = "no previous command"
+
+    // State polling throttle — SDK TCP commands are expensive.
+    // We cache joint_pos_ between reads and only re-poll every POLL_INTERVAL_MS.
+    last_poll_time_ = rclcpp::Time(0, 0, RCL_STEADY_TIME);
 
     RCLCPP_INFO(rclcpp::get_logger("ArmSystem"), "ArmSystem on_init: ip=%s port=%d dof=%d",
                 arm_config_.ip.c_str(), arm_config_.tcp_port, dof_);
@@ -54,16 +91,23 @@ CallbackReturn ArmSystem::on_configure(const rclcpp_lifecycle::State& /*previous
 }
 
 CallbackReturn ArmSystem::on_activate(const rclcpp_lifecycle::State& /*previous_state*/) {
-    if (!arm_ || !arm_->isConnected()) {
-        RCLCPP_ERROR(rclcpp::get_logger("ArmSystem"), "Not connected — cannot activate");
+    if (!arm_) {
+        RCLCPP_ERROR(rclcpp::get_logger("ArmSystem"), "Arm not initialized — cannot activate");
         return CallbackReturn::ERROR;
     }
-    // Initialize cached state with actual arm position
-    auto pos = arm_->jointPosition();
-    for (int i = 0; i < dof_ && i < static_cast<int>(pos.radians.size()); ++i) {
-        hw_position_[i] = pos.radians[i];
-        hw_position_cmd_[i] = pos.radians[i];
-        hw_position_cmd_prev_[i] = NAN;
+    // Trigger lazy TCP connection to the arm (ensureConnected is called internally
+    // on the first command; jointPosition() is the cheapest command available)
+    try {
+        auto pos = arm_->jointPosition();
+        for (int i = 0; i < dof_ && i < static_cast<int>(pos.radians.size()); ++i) {
+            hw_position_[i] = pos.radians[i];
+            hw_position_cmd_[i] = pos.radians[i];
+            hw_position_cmd_prev_[i] = NAN;
+        }
+    } catch (const rm::ArmError& e) {
+        RCLCPP_ERROR(rclcpp::get_logger("ArmSystem"), "Not connected — cannot activate: %s",
+                     e.what());
+        return CallbackReturn::ERROR;
     }
     RCLCPP_INFO(rclcpp::get_logger("ArmSystem"), "ArmSystem activated");
     return CallbackReturn::SUCCESS;
@@ -99,14 +143,30 @@ std::vector<hardware_interface::CommandInterface> ArmSystem::export_command_inte
 
 hardware_interface::return_type ArmSystem::read(const rclcpp::Time& /*time*/,
                                                 const rclcpp::Duration& /*period*/) {
-    if (!arm_ || !arm_->isConnected()) {
+    if (!arm_) {
         return hardware_interface::return_type::OK;
     }
+    if (!arm_->isConnected() && !arm_->ensureConnected()) {
+        return hardware_interface::return_type::OK;
+    }
+
+    auto now = rclcpp::Clock(RCL_STEADY_TIME).now();
+    if ((now - last_poll_time_).seconds() * 1000.0 < kPollIntervalMs) {
+        return hardware_interface::return_type::OK;
+    }
+    last_poll_time_ = now;
 
     try {
         auto pos = arm_->jointPosition();
         for (int i = 0; i < dof_ && i < static_cast<int>(pos.radians.size()); ++i) {
             hw_position_[i] = pos.radians[i];
+        }
+        static int tick = 0;
+        if (++tick % 200 == 0) {
+            RCLCPP_DEBUG(rclcpp::get_logger("ArmSystem"),
+                         "joints: [%.3f %.3f %.3f %.3f %.3f %.3f] rad", hw_position_[0],
+                         hw_position_[1], hw_position_[2], hw_position_[3], hw_position_[4],
+                         hw_position_[5]);
         }
         // Velocity and effort are not provided by the current SDK — leave as 0
     } catch (const rm::ArmError& e) {

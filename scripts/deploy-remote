@@ -17,6 +17,6 @@ rsync -avzL --delete \
 
 # Restart ROS2 nodes
 ssh -p 2022 -o StrictHostKeyChecking=no "root@$1" \
-    "supervisorctl restart arm_node calib_node"
+    "supervisorctl restart omrobot"
 
 echo "=== Deploy complete ==="

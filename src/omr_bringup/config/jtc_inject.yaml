@@ -1,0 +1,5 @@
+/controller_manager:
+  ros__parameters:
+    joint_trajectory_controller.joints: [joint1, joint2, joint3, joint4, joint5, joint6]
+    joint_trajectory_controller.command_interfaces: [position]
+    joint_trajectory_controller.state_interfaces: [position]

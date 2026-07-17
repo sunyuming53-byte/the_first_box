@@ -40,6 +40,9 @@ private:
     std::vector<double> hw_effort_;
     std::vector<double> hw_position_cmd_;
     std::vector<double> hw_position_cmd_prev_;
+
+    static constexpr double kPollIntervalMs = 50.0;
+    rclcpp::Time last_poll_time_;
 };
 
 }  // namespace omr_hardware

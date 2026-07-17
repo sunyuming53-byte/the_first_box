@@ -48,6 +48,7 @@ services:
       args:
         - HTTP_PROXY=${HTTP_PROXY:-}
         - HTTPS_PROXY=${HTTPS_PROXY:-}
+        - TEAM_SSH_PUB_KEY=${TEAM_SSH_PUB_KEY:-}
     privileged: true
     network_mode: host
     volumes:

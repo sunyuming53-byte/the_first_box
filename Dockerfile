@@ -163,6 +163,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     librealsense2-dev \
     libmodbus-dev \
     zsh curl git \
+    cmake \
     ros-humble-rmw-cyclonedds-cpp \
     ros-humble-rcl-interfaces \
     ros-humble-ament-cmake-test \
@@ -192,7 +193,26 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-humble-tf-transformations \
     ros-humble-xacro \
     ros-humble-diff-drive-controller \
+    ros-humble-realsense2-camera \
     && rm -rf /var/lib/apt/lists/*
+
+# Livox-SDK2 — C library required by livox_ros_driver2
+# Pin to a known-good ref for reproducible builds. Set to "master" for latest.
+ARG LIVOX_SDK2_REF=master
+RUN git clone --depth 1 --branch ${LIVOX_SDK2_REF} https://github.com/Livox-SDK/Livox-SDK2.git /tmp/Livox-SDK2 \
+    && mkdir /tmp/Livox-SDK2/build && cd /tmp/Livox-SDK2/build \
+    && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j$(nproc) && make install \
+    && cd / && rm -rf /tmp/Livox-SDK2 \
+    && ldconfig
+
+# livox_ros_driver2 — ROS2 Humble node for Livox Mid-360 / HAP
+ARG LIVOX_ROS_DRIVER2_REF=master
+RUN mkdir -p /ws_livox/src && \
+    git clone --depth 1 --branch ${LIVOX_ROS_DRIVER2_REF} https://github.com/Livox-SDK/livox_ros_driver2.git /ws_livox/src/livox_ros_driver2 && \
+    cd /ws_livox/src/livox_ros_driver2 && \
+    cp package_ROS2.xml package.xml && cp -rf launch_ROS2 launch
+RUN . /opt/ros/humble/setup.sh && cd /ws_livox && \
+    colcon build --cmake-args -DROS_EDITION=ROS2 -DDISTRO_ROS=humble
 
 # SDK runtime — libapi_c.so for arm control at runtime
 RUN mkdir -p /opt/realman-sdk/lib
@@ -230,6 +250,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=apt-cache-dev \
     ccache \
     cmake \
     gdb \
+    rsync \
     wget gnupg \
     && rm -rf /var/lib/apt/lists/*
 
@@ -302,7 +323,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN mkdir -p /root/.ssh && chmod 700 /root/.ssh
 COPY --from=omrobot-develop --chown=root:root \
     /home/ubuntu/.ssh/id_ed25519.pub /root/.ssh/authorized_keys
-RUN chmod 600 /root/.ssh/authorized_keys
+ARG TEAM_SSH_PUB_KEY
+RUN if [ -n "$TEAM_SSH_PUB_KEY" ]; then \
+      echo "$TEAM_SSH_PUB_KEY" >> /root/.ssh/authorized_keys; \
+    fi && \
+    chmod 600 /root/.ssh/authorized_keys
 
 # zsh as default shell for root (oh-my-zsh installed in base stage)
 RUN echo 'export ZSH="$HOME/.oh-my-zsh"' > /root/.zshrc && \

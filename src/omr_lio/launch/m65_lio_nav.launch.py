@@ -27,7 +27,7 @@ def generate_launch_description():
     use_sim_time = DeclareLaunchArgument('use_sim_time', default_value='false')
     map_yaml = DeclareLaunchArgument('map', default_value='')
     launch_livox = DeclareLaunchArgument(
-        'launch_livox_driver', default_value='true',
+        'launch_livox_driver', default_value='false',
         description='Launch livox_ros_driver2 alongside LIO'
     )
     launch_estopper = DeclareLaunchArgument(

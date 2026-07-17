@@ -1,5 +1,5 @@
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription, TimerAction
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.conditions import IfCondition
 from launch.substitutions import Command, FindExecutable, LaunchConfiguration, PathJoinSubstitution
@@ -49,7 +49,7 @@ def generate_launch_description():
         DeclareLaunchArgument('launch_moveit', default_value='false',
                                description='Launch MoveIt2 move_group as a persistent planning service'),
         DeclareLaunchArgument('launch_m65_lio', default_value='true',
-                               description='Launch LIO+Nav2 alongside M65 chassis'),
+                                description='Launch LIO+Nav2 alongside M65 chassis'),
         DeclareLaunchArgument('launch_foxglove', default_value='true',
                               description='Launch foxglove_bridge for browser visualization'),
         DeclareLaunchArgument('foxglove_address', default_value='0.0.0.0',
@@ -58,6 +58,8 @@ def generate_launch_description():
                               description='foxglove_bridge websocket port'),
         DeclareLaunchArgument('launch_diagnostics', default_value='true',
                               description='Launch aggregate robot diagnostics node'),
+        DeclareLaunchArgument('launch_remote_control', default_value='true',
+                              description='Launch remote_control service node for Foxglove teleop'),
 
         # ── robot_description from xacro ─────────────────────────
         Node(
@@ -105,10 +107,33 @@ def generate_launch_description():
         ),
 
         # ── joint_trajectory_controller spawner ──────────────────
-        Node(
-            package='controller_manager',
-            executable='spawner',
-            arguments=['joint_trajectory_controller', '--controller-manager', '/controller_manager'],
+        # Humble JTC declares joints/command_interfaces/state_interfaces
+        # as read-only (generate_parameter_library).  YAML auto-load
+        # can't populate them; ros2 param load injects them before spawn.
+        TimerAction(
+            period=3.0,
+            actions=[
+                ExecuteProcess(
+                    cmd=['ros2', 'param', 'load', '/controller_manager',
+                         PathJoinSubstitution([
+                             FindPackageShare('omr_bringup'),
+                             'config', 'jtc_inject.yaml',
+                         ])],
+                    output='screen',
+                ),
+            ],
+            condition=IfCondition(LaunchConfiguration('launch_arm')),
+        ),
+        TimerAction(
+            period=5.0,
+            actions=[
+                ExecuteProcess(
+                    cmd=['ros2', 'run', 'controller_manager', 'spawner',
+                         'joint_trajectory_controller',
+                         '-c', '/controller_manager'],
+                    output='screen',
+                ),
+            ],
             condition=IfCondition(LaunchConfiguration('launch_arm')),
         ),
 
@@ -128,6 +153,7 @@ def generate_launch_description():
                     ' screw_lead:=', LaunchConfiguration('screw_lead'),
                 ]),
             }],
+            remappings=[('/robot_description', '/robot_description_dais')],
             condition=IfCondition(LaunchConfiguration('launch_dais')),
         ),
 
@@ -189,6 +215,7 @@ def generate_launch_description():
                     ' encoder_cpr:=', LaunchConfiguration('encoder_cpr'),
                 ]),
             }],
+            remappings=[('/robot_description', '/robot_description_m65')],
             condition=IfCondition(LaunchConfiguration('launch_m65')),
         ),
 
@@ -300,6 +327,15 @@ PathJoinSubstitution([FindPackageShare('omr_bringup'), 'urdf', 'm65/m65.ros2_con
                     LaunchConfiguration('launch_door_trajectory'), value_type=bool),
             }],
             condition=IfCondition(LaunchConfiguration('launch_diagnostics')),
+            output='screen',
+        ),
+
+        # ── Remote control service node (Foxglove teleop) ─────────────────
+        Node(
+            package='omr_controller',
+            executable='remote_control',
+            name='remote_control',
+            condition=IfCondition(LaunchConfiguration('launch_remote_control')),
             output='screen',
         ),
 

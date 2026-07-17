@@ -4,6 +4,10 @@ set -e
 source /opt/ros/humble/setup.bash
 export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 
+if [ -f /ws_livox/install/setup.bash ]; then
+    source /ws_livox/install/setup.bash
+fi
+
 if [ -f /ws/install/setup.bash ]; then
     source /ws/install/setup.bash
     echo "Workspace sourced from /ws/install"
