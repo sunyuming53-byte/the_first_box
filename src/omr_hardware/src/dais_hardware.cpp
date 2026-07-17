@@ -107,12 +107,24 @@ hardware_interface::return_type DaisHardware::read(const rclcpp::Time& /*time*/,
     hw_position_state_ = s.position_rad * screw_lead_m_ / (2.0 * M_PI);
     hw_velocity_state_ = s.velocity_rpm * screw_lead_m_ / 60.0;  // rpm → m/s (via screw lead)
 
+    if (s.comm_error || s.fault_code != 0) {
+        static rclcpp::Clock clock(RCL_ROS_TIME);
+        RCLCPP_ERROR_THROTTLE(rclcpp::get_logger("DaisHardware"), clock, 2000,
+                              "Dais motor error: fault=0x%04X comm_error=%d", s.fault_code,
+                              static_cast<int>(s.comm_error));
+    }
+
     return hardware_interface::return_type::OK;
 }
 
 hardware_interface::return_type DaisHardware::write(const rclcpp::Time& /*time*/,
                                                     const rclcpp::Duration& /*period*/) {
     if (!motor_ || !motor_->is_connected()) {
+        return hardware_interface::return_type::OK;
+    }
+
+    // Drive fault latches inside dais::Motor (zeros cmd + disables servo).
+    if (motor_->has_error()) {
         return hardware_interface::return_type::OK;
     }
 
