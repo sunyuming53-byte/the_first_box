@@ -274,6 +274,79 @@ ros2 control list_hardware_interfaces
 ros2 control list_controllers
 ```
 
+#### Controller bringup 一致性检查（只读）
+
+仅在操作者已安全启动所需真机 bringup 后执行以下命令。这些命令只查询状态，不发送轨迹、
+Action 目标或速度命令。
+
+```bash
+# 确认每个 manager 都读取了与自身节点名匹配的参数根键。
+ros2 param get /controller_manager update_rate
+ros2 param get /dais_controller_manager update_rate
+ros2 param get /m65_controller_manager update_rate
+
+# 下列控制器都应处于 active 状态。
+ros2 control list_controllers -c /controller_manager
+ros2 control list_controllers -c /dais_controller_manager
+ros2 control list_controllers -c /m65_controller_manager
+
+# 检查上层接口和节点名称唯一性。
+ros2 action list -t | sort
+ros2 topic info /joint_states -v
+ros2 node list | sort | uniq -d
+
+# 在有限时间窗口内只读采样；也可按 Ctrl+C 提前结束。
+timeout 10s ros2 topic echo /joint_states --field name
+```
+
+如果环境未安装可选的 `ros2controlcli`，因而没有 `ros2 control` 子命令，请改用以下等价的
+只读服务。增加该可选运行时依赖由 Issue #48 跟踪，不属于本次控制器命名修复范围。
+
+```bash
+ros2 service call /controller_manager/list_controllers \
+  controller_manager_msgs/srv/ListControllers "{}"
+ros2 service call /dais_controller_manager/list_controllers \
+  controller_manager_msgs/srv/ListControllers "{}"
+ros2 service call /m65_controller_manager/list_controllers \
+  controller_manager_msgs/srv/ListControllers "{}"
+```
+
+预期控制器：
+
+| Manager | 状态广播器 | 命令控制器 |
+|---|---|---|
+| `/controller_manager` | `joint_state_broadcaster` | `joint_trajectory_controller` |
+| `/dais_controller_manager` | `dais_joint_state_broadcaster` | `dais_joint_trajectory_controller` |
+| `/m65_controller_manager` | `m65_joint_state_broadcaster` | `diff_drive_controller` |
+
+六个控制器都应为 `active`。Action 列表必须同时包含
+`/joint_trajectory_controller/follow_joint_trajectory` 和
+`/dais_joint_trajectory_controller/follow_joint_trajectory`。重复节点检查命令应无输出。
+
+三个状态广播器会有意向共享 `/joint_states` 分别发布相互交错的 `JointState` 消息。采样窗口
+内 `name` 字段的并集应包含 `joint1`～`joint6`、`joint_dais`、`left_wheel_joint` 和
+`right_wheel_joint`；不能假设单条消息同时包含所有子系统。`joint_dais` 的位置和速度单位为
+米、米每秒。
+
+仿真目前只实现 Arm 和 D-AIS ros2_control，不应期待 M65 controller。检查其共享的 Gazebo
+manager：
+
+```bash
+ros2 control list_controllers -c /controller_manager
+ros2 action list -t | sort
+ros2 topic info /joint_states -v
+ros2 node list | sort | uniq -d
+```
+
+仿真环境没有 `ros2controlcli` 时的等价命令为：
+
+```bash
+ros2 service call /controller_manager/list_controllers \
+  controller_manager_msgs/srv/ListControllers "{}"
+```
+
+Arm/D-AIS 四个控制器都应为 `active`，并暴露与真机相同的两个 Action 名称。
+
 ### GDB
 
 开发镜像已包含 GDB。调试特定可执行文件：

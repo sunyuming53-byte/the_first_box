@@ -35,6 +35,19 @@ endif()
 install(DIRECTORY worlds/ DESTINATION share/${PROJECT_NAME}/worlds)
 install(DIRECTORY foxglove/ DESTINATION share/${PROJECT_NAME}/foxglove)
 
+if(BUILD_TESTING)
+  find_package(ament_cmake_test REQUIRED)
+  find_package(Python3 REQUIRED COMPONENTS Interpreter)
+
+  ament_add_test(controller_bringup_config_test
+    COMMAND "${Python3_EXECUTABLE}"
+      "${CMAKE_CURRENT_SOURCE_DIR}/test/test_controller_bringup_config.py"
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+    TIMEOUT 30
+    GENERATE_RESULT_FOR_RETURN_CODE_ZERO
+  )
+endif()
+
 # Suppress "CMAKE_EXPORT_COMPILE_COMMANDS was not used by the project"
 set(CMAKE_EXPORT_COMPILE_COMMANDS ${CMAKE_EXPORT_COMPILE_COMMANDS})
 

@@ -249,7 +249,7 @@ PathJoinSubstitution([FindPackageShare('omr_bringup'), 'urdf', 'm65/m65.ros2_con
         Node(
             package='controller_manager',
             executable='spawner',
-            arguments=['joint_state_broadcaster', '--controller-manager', '/m65_controller_manager'],
+            arguments=['m65_joint_state_broadcaster', '--controller-manager', '/m65_controller_manager'],
             condition=IfCondition(LaunchConfiguration('launch_m65')),
         ),
 

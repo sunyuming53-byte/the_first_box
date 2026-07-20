@@ -1,8 +1,8 @@
-controller_manager:
+m65_controller_manager:
   ros__parameters:
     update_rate: 50
 
-    joint_state_broadcaster:
+    m65_joint_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster
 
     diff_drive_controller:

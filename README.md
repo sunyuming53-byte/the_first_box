@@ -213,7 +213,7 @@ flowchart TD
     %% M65 Chassis subsystem
     subgraph M65ROS2["ROS2 Control Loop — M65 Chassis"]
         M65CM["m65_controller_manager<br/><i>ros2_control_node @ /m65_controller_manager</i>"]
-        M65JSB["m65_joint_state_broadcaster<br/><i>→ /m65/joint_states</i>"]
+        M65JSB["m65_joint_state_broadcaster<br/><i>→ /joint_states</i>"]
         M65DDC["diff_drive_controller<br/><i>← cmd_vel (Twist)  → odom</i>"]
         M65HW["M65BaseHardware<br/><i>hardware_interface plugin (velocity cmd)</i>"]
     end
@@ -297,10 +297,16 @@ receives action goals →
 Note: `MotorClientImpl` is created by the orchestrator but is not registered in the BT blackboard.
 
 **M65 chassis data flow:** `M65BaseHardware.read()` → `m65::Chassis::read_state()` (encoder→rad)
-→ `/m65/joint_states`. The `diff_drive_controller` receives `cmd_vel` (Twist) → computes
+→ `/joint_states` (`left_wheel_joint`, `right_wheel_joint`). The `diff_drive_controller` receives
+`cmd_vel` (Twist) → computes
 per-wheel velocities → `M65BaseHardware.write()` → `m65::Chassis::set_velocity()` → serial → base.
 Note: `BaseClientImpl` is created in the orchestrator but not registered in the BT blackboard;
 no BT action node can currently command the M65 chassis.
+
+The Arm, D-AIS, and M65 state broadcasters intentionally publish separate `JointState` messages
+to the shared `/joint_states` topic. The messages are interleaved rather than merged, so validate
+the complete robot state by taking the union of joint names over a sampling window instead of
+expecting every joint in one message.
 
 **omr_lio data flow:** `LioNode` fuses Livox Mid-360 point cloud + built-in IMU via
 S-FAST_LIO (ESKF + ikd-Tree), publishing `/lio/odom` and TF `map→odom` for global

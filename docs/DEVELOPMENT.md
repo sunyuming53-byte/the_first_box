@@ -279,6 +279,82 @@ ros2 control list_hardware_interfaces
 ros2 control list_controllers
 ```
 
+#### Controller bringup consistency checks (read-only)
+
+Run these commands only after an operator has safely started the required hardware bringup. They
+inspect state and do not send trajectories, Action goals, or velocity commands.
+
+```bash
+# Confirm that each manager loaded its own parameter root.
+ros2 param get /controller_manager update_rate
+ros2 param get /dais_controller_manager update_rate
+ros2 param get /m65_controller_manager update_rate
+
+# Each listed controller should be active.
+ros2 control list_controllers -c /controller_manager
+ros2 control list_controllers -c /dais_controller_manager
+ros2 control list_controllers -c /m65_controller_manager
+
+# Check the upper-level interfaces and node-name uniqueness.
+ros2 action list -t | sort
+ros2 topic info /joint_states -v
+ros2 node list | sort | uniq -d
+
+# Observe a bounded sample without commanding hardware; Ctrl+C also stops it.
+timeout 10s ros2 topic echo /joint_states --field name
+```
+
+If `ros2 control` is unavailable because the optional `ros2controlcli` package is not installed,
+use the equivalent read-only services below. Adding that optional runtime dependency is tracked by
+Issue #48 and is outside this controller-naming fix.
+
+```bash
+ros2 service call /controller_manager/list_controllers \
+  controller_manager_msgs/srv/ListControllers "{}"
+ros2 service call /dais_controller_manager/list_controllers \
+  controller_manager_msgs/srv/ListControllers "{}"
+ros2 service call /m65_controller_manager/list_controllers \
+  controller_manager_msgs/srv/ListControllers "{}"
+```
+
+Expected controllers:
+
+| Manager | State broadcaster | Command controller |
+|---|---|---|
+| `/controller_manager` | `joint_state_broadcaster` | `joint_trajectory_controller` |
+| `/dais_controller_manager` | `dais_joint_state_broadcaster` | `dais_joint_trajectory_controller` |
+| `/m65_controller_manager` | `m65_joint_state_broadcaster` | `diff_drive_controller` |
+
+All six controllers should report `active`. The Action list must contain both
+`/joint_trajectory_controller/follow_joint_trajectory` and
+`/dais_joint_trajectory_controller/follow_joint_trajectory`. The duplicate-node command should
+produce no output.
+
+The three state broadcasters intentionally publish separate, interleaved messages to the shared
+`/joint_states` topic. Over the sampling window, the union of `name` entries should contain
+`joint1` through `joint6`, `joint_dais`, `left_wheel_joint`, and `right_wheel_joint`. Do not expect
+one `JointState` message to contain every subsystem. `joint_dais` position and velocity use metres
+and metres per second.
+
+For simulation, only Arm and D-AIS ros2_control are implemented. Check their shared Gazebo manager
+without expecting M65:
+
+```bash
+ros2 control list_controllers -c /controller_manager
+ros2 action list -t | sort
+ros2 topic info /joint_states -v
+ros2 node list | sort | uniq -d
+```
+
+The simulation fallback without `ros2controlcli` is:
+
+```bash
+ros2 service call /controller_manager/list_controllers \
+  controller_manager_msgs/srv/ListControllers "{}"
+```
+
+The four Arm/D-AIS controllers should be `active`, with the same two Action names as hardware.
+
 ### GDB
 
 The develop image includes GDB. To debug a specific executable:
