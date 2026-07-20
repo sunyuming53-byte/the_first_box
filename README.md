@@ -356,17 +356,36 @@ in their respective submodules, wrapped by `DaisHardware` and `M65BaseHardware` 
 ### Bringup
 
 ```bash
-# Start ros2_control pipeline (arm driver + controllers)
-ros2 launch omr_bringup bringup.launch.py arm_ip:=192.168.1.18
-
-# Start with camera + calibration
+# Default workflow: arm + D-AIS + M65/LIO + camera + diagnostics + remote control + Foxglove
 ros2 launch omr_bringup bringup.launch.py
 
-# Arm-only (no camera or calibration)
-ros2 launch omr_bringup bringup.launch.py launch_camera:=false launch_calib:=false
+# Arm-only workflow
+ros2 launch omr_bringup bringup.launch.py \
+    arm_ip:=192.168.1.18 \
+    launch_dais:=false \
+    launch_m65:=false \
+    launch_camera:=false \
+    launch_calib:=false \
+    launch_door_trajectory:=false \
+    launch_moveit:=false \
+    launch_m65_lio:=false \
+    launch_foxglove:=false \
+    launch_diagnostics:=false \
+    launch_remote_control:=false
 
-# Start dais motor driver alongside arm
-ros2 launch omr_bringup bringup.launch.py launch_dais:=true
+# Minimal hardware-free workflow (all optional nodes disabled)
+ros2 launch omr_bringup bringup.launch.py \
+    launch_arm:=false \
+    launch_dais:=false \
+    launch_m65:=false \
+    launch_camera:=false \
+    launch_calib:=false \
+    launch_door_trajectory:=false \
+    launch_moveit:=false \
+    launch_m65_lio:=false \
+    launch_foxglove:=false \
+    launch_diagnostics:=false \
+    launch_remote_control:=false
 
 # Configure dais motor hardware params
 ros2 launch omr_bringup bringup.launch.py \
@@ -385,6 +404,11 @@ ros2 launch omr_bringup bringup.launch.py \
     m65_serial_port:=/dev/ttyBase \
     m65_baud_rate:=115200
 ```
+
+The default values are `true` for arm, D-AIS, M65, LIO/Nav2, camera, diagnostics, and
+Foxglove. Calibration, MoveIt, and the deprecated door-trajectory orchestrator default
+to `false`. Pass every relevant switch explicitly in deployment scripts that require a
+smaller workflow.
 
 The bringup loads the RM65 URDF (kinematics + meshes), starts ros2_control_node with
 `joint_state_broadcaster` and `joint_trajectory_controller`, then publishes TF via

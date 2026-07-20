@@ -78,6 +78,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-humble-hardware-interface \
     ros-humble-pluginlib \
     ros-humble-controller-manager \
+    ros-humble-diff-drive-controller \
     ros-humble-joint-state-broadcaster \
     ros-humble-joint-trajectory-controller \
     ros-humble-robot-state-publisher \
@@ -93,6 +94,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-humble-diagnostic-msgs \
     ros-humble-diagnostic-updater \
     ros-humble-foxglove-bridge \
+    ros-humble-realsense2-camera \
+    ros-humble-ros2controlcli \
     ros-humble-moveit-ros-planning \
     ros-humble-moveit-planners-ompl \
     ros-humble-moveit-ros-move-group \
@@ -111,7 +114,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=apt-cache-dev --mount=type=cache,target=/var/lib/apt,sharing=locked,id=apt-lib-dev \
     wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc && \
     echo "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-19 main" > /etc/apt/sources.list.d/llvm.list && \
-    apt-get update && apt-get install -y --no-install-recommends clangd-19 clang-tidy-19 clang-format-19 libomp-19-dev && \
+    apt-get update && apt-get install -y --no-install-recommends clangd-19 clang-tidy-19 clang-format-19 && \
     ln -sf /usr/bin/clangd-19 /usr/bin/clangd && \
     ln -sf /usr/bin/clang-tidy-19 /usr/bin/clang-tidy && \
     ln -sf /usr/bin/clang-format-19 /usr/bin/clang-format && \
@@ -174,10 +177,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-humble-diagnostic-updater \
     ros-humble-foxglove-bridge \
     ros-humble-controller-manager \
+    ros-humble-hardware-interface \
     ros-humble-joint-state-broadcaster \
     ros-humble-joint-trajectory-controller \
     ros-humble-robot-state-publisher \
-    ros-humble-hardware-interface \
     ros-humble-moveit-ros-planning \
     ros-humble-moveit-planners-ompl \
     ros-humble-moveit-ros-move-group \
@@ -190,10 +193,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-humble-navigation2 \
     ros-humble-pcl-conversions \
     ros-humble-pcl-ros \
+    ros-humble-realsense2-camera \
+    ros-humble-ros2controlcli \
     ros-humble-tf-transformations \
     ros-humble-xacro \
     ros-humble-diff-drive-controller \
-    ros-humble-realsense2-camera \
     && rm -rf /var/lib/apt/lists/*
 
 # Livox-SDK2 — C library required by livox_ros_driver2
@@ -225,16 +229,9 @@ RUN echo 'LD_LIBRARY_PATH=/opt/realman-sdk/lib' >> /etc/environment
 # To check for missing deps, run in develop container:
 #   rosdep install --from-paths src --ignore-src -r -y --skip-keys realman_arm omr_hardware
 
-# oh-my-zsh + powerlevel10k + plugins for root (runtime container)
-RUN sh -c "$(curl -fsSL --retry 5 --retry-delay 10 https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended \
-    && git clone --depth=1 https://github.com/romkatv/powerlevel10k.git \
-        ${ZSH_CUSTOM:-/root/.oh-my-zsh/custom}/themes/powerlevel10k \
-    && git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting.git \
-        ${ZSH_CUSTOM:-/root/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting \
-    && git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions.git \
-        ${ZSH_CUSTOM:-/root/.oh-my-zsh/custom}/plugins/zsh-autosuggestions \
-    && test -f /root/.oh-my-zsh/oh-my-zsh.sh \
-    || (echo "ERROR: oh-my-zsh install failed (curl timeout?)" >&2 && false)
+# Reuse the development base's shell tooling instead of downloading the same
+# GitHub repositories a second time for the runtime image.
+COPY --from=omrobot-base-dev /root/.oh-my-zsh /root/.oh-my-zsh
 
 # =============================================================================
 # Stage 2 — Develop

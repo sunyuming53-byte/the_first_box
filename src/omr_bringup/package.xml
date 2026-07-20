@@ -10,12 +10,15 @@
   <exec_depend>omr_vision</exec_depend>
   <exec_depend>rclcpp</exec_depend>
   <exec_depend>controller_manager</exec_depend>
+  <exec_depend>diff_drive_controller</exec_depend>
   <exec_depend>joint_state_broadcaster</exec_depend>
   <exec_depend>joint_trajectory_controller</exec_depend>
   <exec_depend>robot_state_publisher</exec_depend>
   <exec_depend>xacro</exec_depend>
   <exec_depend>omr_lio</exec_depend>
+  <exec_depend>omr_controller</exec_depend>
   <exec_depend>foxglove_bridge</exec_depend>
+  <exec_depend>realsense2_camera</exec_depend>
   <test_depend>ament_cmake_test</test_depend>
   <export>
     <build_type>ament_cmake</build_type>

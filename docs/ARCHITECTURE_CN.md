@@ -408,13 +408,23 @@ graph TD
 arm_ip:=192.168.1.18          # 机械臂 IP 地址
 launch_arm:=true              # 启用机械臂控制
 launch_camera:=true           # 启用 RealSense 相机
-launch_calib:=true            # 启用标定节点
-launch_dais:=false            # 启用 D-AIS 电机控制
+launch_calib:=false           # 启用标定节点
+launch_dais:=true             # 启用 D-AIS 电机控制
+launch_m65:=true              # 启用 M65 底盘控制
+launch_door_trajectory:=false # 启用已弃用的 BT 任务运行时
+launch_moveit:=false          # 启用 MoveIt move_group
+launch_m65_lio:=true          # 启用 M65 LIO + Nav2
+launch_foxglove:=true         # 启用 Foxglove bridge
+launch_diagnostics:=true      # 启用聚合诊断
+launch_remote_control:=true   # 启用 Foxglove 遥控服务
 serial_port:=/dev/ttyRS485    # D-AIS 串口
 baud_rate:=57600              # D-AIS 波特率
 slave_id:=1                   # D-AIS Modbus 从站 ID
 gear_ratio:=1000              # D-AIS 减速比
 ```
+
+部署脚本如需仅机械臂或无硬件工作流，应显式设置所有相关 `launch_*` 开关。只关闭相机和
+标定并不会关闭默认启用的 D-AIS、M65/LIO、诊断、遥控服务和 Foxglove。
 
 ---
 

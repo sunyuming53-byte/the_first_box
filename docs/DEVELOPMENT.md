@@ -54,6 +54,9 @@ separate keeps the robot deployment small.
 docker compose build develop
 docker compose build runtime
 
+# Replace a running develop container after rebuilding its image
+docker compose up -d --force-recreate develop
+
 # Start develop shell (foreground, interactive)
 docker compose up develop
 
@@ -304,9 +307,9 @@ ros2 node list | sort | uniq -d
 timeout 10s ros2 topic echo /joint_states --field name
 ```
 
-If `ros2 control` is unavailable because the optional `ros2controlcli` package is not installed,
-use the equivalent read-only services below. Adding that optional runtime dependency is tracked by
-Issue #48 and is outside this controller-naming fix.
+The project Docker images install `ros2controlcli`, so `ros2 control` should be available after the
+images and containers have been rebuilt. In a custom or stale environment where it is unavailable,
+use the equivalent read-only services below.
 
 ```bash
 ros2 service call /controller_manager/list_controllers \
@@ -346,7 +349,7 @@ ros2 topic info /joint_states -v
 ros2 node list | sort | uniq -d
 ```
 
-The simulation fallback without `ros2controlcli` is:
+The simulation fallback for a custom environment without `ros2controlcli` is:
 
 ```bash
 ros2 service call /controller_manager/list_controllers \
@@ -556,7 +559,18 @@ verify by checking `src/omr_hardware/third_party/realman_arm/cmake/RealManSDKCon
 
 ```bash
 # Launch the pipeline (arm-only)
-ros2 launch omr_bringup bringup.launch.py arm_ip:=192.168.1.18 launch_camera:=false launch_calib:=false
+ros2 launch omr_bringup bringup.launch.py \
+  arm_ip:=192.168.1.18 \
+  launch_dais:=false \
+  launch_m65:=false \
+  launch_camera:=false \
+  launch_calib:=false \
+  launch_door_trajectory:=false \
+  launch_moveit:=false \
+  launch_m65_lio:=false \
+  launch_foxglove:=false \
+  launch_diagnostics:=false \
+  launch_remote_control:=false
 
 # In another terminal inside the container:
 ros2 topic echo /joint_states

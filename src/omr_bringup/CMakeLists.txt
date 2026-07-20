@@ -46,6 +46,21 @@ if(BUILD_TESTING)
     TIMEOUT 30
     GENERATE_RESULT_FOR_RETURN_CODE_ZERO
   )
+  ament_add_test(runtime_dependency_contract_test
+    COMMAND "${Python3_EXECUTABLE}"
+      "${CMAKE_CURRENT_SOURCE_DIR}/test/test_runtime_dependency_contract.py"
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+    TIMEOUT 30
+    GENERATE_RESULT_FOR_RETURN_CODE_ZERO
+  )
+
+  ament_add_test(bringup_smoke_test
+    COMMAND "${Python3_EXECUTABLE}"
+      "${CMAKE_CURRENT_SOURCE_DIR}/test/test_bringup_smoke.py"
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+    TIMEOUT 30
+    GENERATE_RESULT_FOR_RETURN_CODE_ZERO
+  )
 endif()
 
 # Suppress "CMAKE_EXPORT_COMPILE_COMMANDS was not used by the project"

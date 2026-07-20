@@ -52,6 +52,9 @@ graph TD
 docker compose build develop
 docker compose build runtime
 
+# 镜像重建后替换正在运行的开发容器
+docker compose up -d --force-recreate develop
+
 # 启动开发 Shell（前台、交互模式）
 docker compose up develop
 
@@ -299,8 +302,8 @@ ros2 node list | sort | uniq -d
 timeout 10s ros2 topic echo /joint_states --field name
 ```
 
-如果环境未安装可选的 `ros2controlcli`，因而没有 `ros2 control` 子命令，请改用以下等价的
-只读服务。增加该可选运行时依赖由 Issue #48 跟踪，不属于本次控制器命名修复范围。
+项目 Docker 镜像已安装 `ros2controlcli`；重建镜像和容器后应可直接使用 `ros2 control`。
+如自定义环境或旧容器中仍没有该子命令，请改用以下等价的只读服务。
 
 ```bash
 ros2 service call /controller_manager/list_controllers \
@@ -338,7 +341,7 @@ ros2 topic info /joint_states -v
 ros2 node list | sort | uniq -d
 ```
 
-仿真环境没有 `ros2controlcli` 时的等价命令为：
+自定义仿真环境没有 `ros2controlcli` 时的等价命令为：
 
 ```bash
 ros2 service call /controller_manager/list_controllers \
@@ -564,7 +567,18 @@ Dockerfile 中的 `COPY` 命令。`realman_arm` 中的 CMake 配置使用 glob �
 
 ```bash
 # 启动流水线（仅机械臂）
-ros2 launch omr_bringup bringup.launch.py arm_ip:=192.168.1.18 launch_camera:=false launch_calib:=false
+ros2 launch omr_bringup bringup.launch.py \
+  arm_ip:=192.168.1.18 \
+  launch_dais:=false \
+  launch_m65:=false \
+  launch_camera:=false \
+  launch_calib:=false \
+  launch_door_trajectory:=false \
+  launch_moveit:=false \
+  launch_m65_lio:=false \
+  launch_foxglove:=false \
+  launch_diagnostics:=false \
+  launch_remote_control:=false
 
 # 在容器内的另一个终端中：
 ros2 topic echo /joint_states

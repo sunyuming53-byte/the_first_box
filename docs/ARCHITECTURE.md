@@ -432,13 +432,24 @@ robot system.
 arm_ip:=192.168.1.18          # Arm IP address
 launch_arm:=true              # Enable arm control
 launch_camera:=true           # Enable RealSense camera
-launch_calib:=true            # Enable calibration node
-launch_dais:=false            # Enable D-AIS motor control
+launch_calib:=false           # Enable calibration node
+launch_dais:=true             # Enable D-AIS motor control
+launch_m65:=true              # Enable M65 base control
+launch_door_trajectory:=false # Enable deprecated BT task runtime
+launch_moveit:=false          # Enable MoveIt move_group
+launch_m65_lio:=true          # Enable M65 LIO + Nav2
+launch_foxglove:=true         # Enable Foxglove bridge
+launch_diagnostics:=true      # Enable aggregate diagnostics
+launch_remote_control:=true   # Enable Foxglove remote-control service
 serial_port:=/dev/ttyRS485    # D-AIS serial port
 baud_rate:=57600              # D-AIS baud rate
 slave_id:=1                   # D-AIS Modbus slave ID
 gear_ratio:=1000              # D-AIS gear ratio
 ```
+
+Deployment scripts should set every relevant `launch_*` switch explicitly when they need
+an arm-only or hardware-free workflow. Disabling camera and calibration alone does not
+disable the default D-AIS, M65/LIO, diagnostics, remote-control, or Foxglove components.
 
 ---
 
