@@ -58,6 +58,7 @@ RUN find /etc/apt/sources.list.d \( -name "*.list" -o -name "*.sources" \) -exec
 
 # System libraries (dev variants — headers + .so)
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    libboost-system-dev \
     libeigen3-dev \
     libmodbus-dev \
     libomp-dev \
@@ -162,6 +163,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends gnupg2 && \
 
 # Runtime .so only — no headers, no cmake configs
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    libboost-system-dev \
     libopencv-dev \
     librealsense2-dev \
     libmodbus-dev \

@@ -9,4 +9,4 @@
 	url = git@github.com:ChiefTechLabs/realman_arm.git
 [submodule "src/omr_hardware/third_party/photogate"]
 	path = src/omr_hardware/third_party/photogate
-	url = https://github.com/ChiefTechLabs/photogate.git
+	url = git@github.com:ChiefTechLabs/photogate.git

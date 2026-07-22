@@ -15,7 +15,8 @@ CallbackReturn PhotogateHardware::on_init(const hardware_interface::HardwareInfo
     }
 
     // Gate count is determined by how many joints are declared in URDF.
-    // Each joint: photogate_gate{N}_joint with state interfaces "blocked" and "pulse_count".
+    // Each joint: photogate_gate{N}_joint with state interfaces "position" (blocked 0/1)
+    // and "velocity" (pulse_count). Standard joint_state_broadcaster picks these up.
     gate_count_ = static_cast<int>(info.joints.size());
     if (gate_count_ == 0) {
         RCLCPP_ERROR(rclcpp::get_logger("PhotogateHardware"),
@@ -75,8 +76,10 @@ CallbackReturn PhotogateHardware::on_deactivate(const rclcpp_lifecycle::State& /
 std::vector<hardware_interface::StateInterface> PhotogateHardware::export_state_interfaces() {
     std::vector<hardware_interface::StateInterface> interfaces;
     for (int i = 0; i < gate_count_; ++i) {
-        interfaces.emplace_back(joint_names_[i], "blocked", &hw_blocked_[i]);
-        interfaces.emplace_back(joint_names_[i], "pulse_count", &hw_pulse_count_[i]);
+        interfaces.emplace_back(joint_names_[i], hardware_interface::HW_IF_POSITION,
+                                &hw_blocked_[i]);
+        interfaces.emplace_back(joint_names_[i], hardware_interface::HW_IF_VELOCITY,
+                                &hw_pulse_count_[i]);
     }
     return interfaces;
 }

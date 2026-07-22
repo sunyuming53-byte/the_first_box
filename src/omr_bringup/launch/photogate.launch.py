@@ -3,8 +3,10 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import Command, FindExecutable, LaunchConfiguration, \
+    PathJoinSubstitution
 from launch_ros.actions import Node
+from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description():
@@ -12,6 +14,16 @@ def generate_launch_description():
 
     serial_port = LaunchConfiguration("serial_port")
     gate_count = LaunchConfiguration("gate_count")
+
+    robot_description_content = Command([
+        PathJoinSubstitution([FindExecutable(name='xacro')]), ' ',
+        PathJoinSubstitution([
+            FindPackageShare('omr_bringup'), 'urdf', 'photogate',
+            'photogate.ros2_control.xacro'
+        ]),
+        ' serial_port:=', serial_port,
+        ' gate_count:=', gate_count,
+    ])
 
     return LaunchDescription(
         [
@@ -21,12 +33,9 @@ def generate_launch_description():
                 package="controller_manager",
                 executable="ros2_control_node",
                 parameters=[
-                    os.path.join(pkg_bringup, "config", "photogate_controllers.yaml"),
-                    os.path.join(
-                        pkg_bringup, "urdf", "photogate", "photogate.ros2_control.xacro"
-                    ),
-                    {"serial_port": serial_port},
-                    {"gate_count": gate_count},
+                    os.path.join(pkg_bringup, "config",
+                                 "photogate_controllers.yaml"),
+                    {"robot_description": robot_description_content},
                 ],
                 output="screen",
             ),
