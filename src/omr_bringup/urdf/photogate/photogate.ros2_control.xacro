@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<robot name="photogate_sensors" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:arg name="serial_port" default="/dev/ttyACM0"/>
+  <xacro:arg name="baud_rate"   default="115200"/>
+  <xacro:arg name="gate_count"  default="1"/>
+
+  <ros2_control name="Photogate" type="system">
+    <hardware>
+      <plugin>omr_hardware/PhotogateHardware</plugin>
+      <param name="serial_port">$(arg serial_port)</param>
+      <param name="baud_rate">$(arg baud_rate)</param>
+      <param name="gate_count">$(arg gate_count)</param>
+    </hardware>
+
+    <joint name="photogate_gate0_joint">
+      <state_interface name="blocked"/>
+      <state_interface name="pulse_count"/>
+    </joint>
+
+    <!-- Extend with additional gates as needed:
+    <joint name="photogate_gate1_joint">
+      <state_interface name="blocked"/>
+      <state_interface name="pulse_count"/>
+    </joint>
+    -->
+  </ros2_control>
+
+</robot>

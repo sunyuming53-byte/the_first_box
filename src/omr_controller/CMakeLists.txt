@@ -141,6 +141,9 @@ install(TARGETS calib_node collect_data compute_hand_eye process_poses run_pipel
     RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 ament_export_libraries(${PROJECT_NAME}_lib)
+add_executable(dais_positioning_node apps/dais_positioning_node.cpp)
+target_link_libraries(dais_positioning_node ${PROJECT_NAME}_lib)
+install(TARGETS dais_positioning_node RUNTIME DESTINATION lib/${PROJECT_NAME})
 ament_export_include_directories(include)
 
 if(BUILD_TESTING)

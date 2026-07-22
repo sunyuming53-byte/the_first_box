@@ -11,6 +11,7 @@ set(REALMAN_ARM_AS_SUBMODULE ON CACHE BOOL "" FORCE)
 add_subdirectory(third_party/realman_arm EXCLUDE_FROM_ALL)
 add_subdirectory(third_party/dais_motor EXCLUDE_FROM_ALL)
 add_subdirectory(third_party/m65_chassis EXCLUDE_FROM_ALL)
+add_subdirectory(third_party/photogate EXCLUDE_FROM_ALL)
 
 find_package(ament_cmake REQUIRED)
 find_package(hardware_interface REQUIRED)
@@ -21,6 +22,7 @@ add_library(${PROJECT_NAME} SHARED
     src/arm_system.cpp
     src/dais_hardware.cpp
     src/m65_hardware.cpp
+    src/photogate_hardware.cpp
 )
 target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -29,7 +31,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 ament_target_dependencies(${PROJECT_NAME} PUBLIC
     hardware_interface pluginlib rclcpp
 )
-target_link_libraries(${PROJECT_NAME} PUBLIC realman_arm dais_motor m65_chassis)
+target_link_libraries(${PROJECT_NAME} PUBLIC realman_arm dais_motor m65_chassis photogate)
 
 pluginlib_export_plugin_description_file(hardware_interface plugins.xml)
 
@@ -38,13 +40,14 @@ install(TARGETS ${PROJECT_NAME}
     ARCHIVE DESTINATION lib
 )
 # realman_arm is a submodule dependency needed by downstream calibration
-install(TARGETS realman_arm dais_motor m65_chassis
+install(TARGETS realman_arm dais_motor m65_chassis photogate
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
 )
 install(DIRECTORY include/ DESTINATION include)
 install(DIRECTORY third_party/realman_arm/include/ DESTINATION include/realman_arm)
 install(DIRECTORY third_party/m65_chassis/include/ DESTINATION include/m65)
+install(DIRECTORY third_party/photogate/include/ DESTINATION include/photogate)
 
 ament_export_libraries(${PROJECT_NAME})
 ament_export_include_directories(include)
