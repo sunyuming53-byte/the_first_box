@@ -32,3 +32,13 @@ target_link_libraries(camera_calib_test
     synthetic_board
     ${OpenCV_LIBS}
 )
+
+# ── white_label_test ──
+ament_add_gtest(white_label_test test_main.cpp white_label_test.cpp)
+target_include_directories(white_label_test PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include
+)
+target_link_libraries(white_label_test
+    omr_vision
+    ${OpenCV_LIBS}
+)

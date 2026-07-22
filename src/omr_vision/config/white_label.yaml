@@ -1,0 +1,20 @@
+# White rectangular label on popped-out door handle (meters / detection knobs).
+width_m: 0.020
+height_m: 0.0775
+binary_threshold: 180
+min_area_px: 400.0
+aspect_ratio_tol: 0.30
+min_rectangularity: 0.60
+min_content_score: 0.45
+use_clahe: true
+use_otsu: true
+use_multi_threshold: true
+# Scale gate (enabled when focal_length_px > 0, or auto from camera fy in pose/demo)
+# Near labels were rejected when z_min was too large / hi multiplier too tight.
+z_min_m: 0.12
+z_max_m: 2.00
+# Temporal confirm (used by detect_white_label demo): N nearby frames required
+confirm_frames: 3
+confirm_max_shift_px: 50.0
+max_reproj_error_px: 5.0
+pnp_method: ippe

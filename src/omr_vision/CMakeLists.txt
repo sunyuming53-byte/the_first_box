@@ -16,6 +16,7 @@ add_library(omr_vision SHARED
     src/camera/types.cpp
     src/capture.cpp
     src/calibration/camera_calib.cpp
+    src/detection/white_label.cpp
 )
 target_include_directories(omr_vision PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -30,13 +31,17 @@ target_link_libraries(omr_vision PUBLIC
 add_executable(calibrate_camera apps/calibrate_camera.cpp)
 target_link_libraries(calibrate_camera omr_vision)
 
+# ── Executable: detect_white_label (D435 live PnP demo) ──
+add_executable(detect_white_label apps/detect_white_label.cpp)
+target_link_libraries(detect_white_label omr_vision)
+
 # ── Install ──
 install(TARGETS omr_vision
     EXPORT omr_vision_targets
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
 )
-install(TARGETS calibrate_camera
+install(TARGETS calibrate_camera detect_white_label
     RUNTIME DESTINATION lib/${PROJECT_NAME}
 )
 install(EXPORT omr_vision_targets

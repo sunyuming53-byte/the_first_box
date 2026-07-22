@@ -20,6 +20,9 @@ public:
     // Block until an aligned RGB-D frame pair arrives.
     [[nodiscard]] auto next() -> std::optional<CameraFrame>;
 
+    // Color stream intrinsics (invariant across frames; for PnP on BGR images).
+    [[nodiscard]] auto color_intrinsics() const -> CameraIntrinsics;
+
     // Depth sensor intrinsics (invariant across frames).
     [[nodiscard]] auto depth_intrinsics() const -> CameraIntrinsics;
 

@@ -30,6 +30,7 @@ struct CameraIntrinsics {
 struct CameraFrame {
     cv::Mat color;  // (H, W) CV_8UC3, BGR
     cv::Mat depth;  // (H, W) CV_16UC1, mm, aligned to color
+    CameraIntrinsics color_intrinsics;
     CameraIntrinsics depth_intrinsics;
     int64_t frame_id{0};
 

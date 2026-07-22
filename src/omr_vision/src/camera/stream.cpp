@@ -68,6 +68,18 @@ public:
             std::memcpy(out.color.data, color_frame.get_data(),
                         static_cast<std::size_t>(w) * h * 3);
 
+            // ── color intrinsics (captured once from the first color frame) ──
+            if (!color_intrinsics_captured_) {
+                auto vsp = color_frame.get_profile().as<rs2::video_stream_profile>();
+                auto i = vsp.get_intrinsics();
+                color_intrinsics_.K =
+                    (cv::Mat_<double>(3, 3) << i.fx, 0.0, i.ppx, 0.0, i.fy, i.ppy, 0.0, 0.0, 1.0);
+                color_intrinsics_.dist_coeff = (cv::Mat_<double>(1, 5) << i.coeffs[0], i.coeffs[1],
+                                                i.coeffs[2], i.coeffs[3], i.coeffs[4]);
+                color_intrinsics_captured_ = true;
+            }
+            out.color_intrinsics = color_intrinsics_;
+
             // depth (16-bit mm, aligned)
             if (enable_depth_) {
                 auto depth_frame = aligned.get_depth_frame();
@@ -83,8 +95,8 @@ public:
                     out.depth.convertTo(out.depth, CV_16UC1, scale_to_mm);
                 }
 
-                // ── intrinsics (captured once from the first valid depth frame) ──
-                if (!intrinsics_captured_) {
+                // ── depth intrinsics (captured once from the first valid depth frame) ──
+                if (!depth_intrinsics_captured_) {
                     auto vsp = depth_frame.get_profile().as<rs2::video_stream_profile>();
                     auto i = vsp.get_intrinsics();
                     depth_intrinsics_.K = (cv::Mat_<double>(3, 3) << i.fx, 0.0, i.ppx, 0.0, i.fy,
@@ -92,7 +104,7 @@ public:
                     depth_intrinsics_.dist_coeff =
                         (cv::Mat_<double>(1, 5) << i.coeffs[0], i.coeffs[1], i.coeffs[2],
                          i.coeffs[3], i.coeffs[4]);
-                    intrinsics_captured_ = true;
+                    depth_intrinsics_captured_ = true;
                 }
                 out.depth_intrinsics = depth_intrinsics_;
             }
@@ -100,6 +112,8 @@ public:
             return out;
         }
     }
+
+    [[nodiscard]] auto color_intrinsics() const -> CameraIntrinsics { return color_intrinsics_; }
 
     [[nodiscard]] auto depth_intrinsics() const -> CameraIntrinsics { return depth_intrinsics_; }
 
@@ -122,8 +136,10 @@ private:
     float depth_scale_{0.001F};
     bool has_frames_{false};
     int64_t frame_counter_{0};
+    CameraIntrinsics color_intrinsics_;
     CameraIntrinsics depth_intrinsics_;
-    bool intrinsics_captured_{false};
+    bool color_intrinsics_captured_{false};
+    bool depth_intrinsics_captured_{false};
 };
 
 // ──────────────────────────────────────────────────────────────
@@ -138,6 +154,10 @@ CameraStream::CameraStream(CameraStream&&) noexcept = default;
 auto CameraStream::operator=(CameraStream&&) noexcept -> CameraStream& = default;
 
 auto CameraStream::next() -> std::optional<CameraFrame> { return impl_->next(); }
+
+auto CameraStream::color_intrinsics() const -> CameraIntrinsics {
+    return impl_->color_intrinsics();
+}
 
 auto CameraStream::depth_intrinsics() const -> CameraIntrinsics {
     return impl_->depth_intrinsics();
