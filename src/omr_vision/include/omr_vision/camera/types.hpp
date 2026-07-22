@@ -3,6 +3,7 @@
 #include <cstdint>
 
 #include <array>
+#include <string>
 
 #include <opencv2/core/mat.hpp>
 
@@ -13,6 +14,14 @@ struct CameraConfig {
     int height{720};
     int fps{30};
     bool enable_depth{true};
+
+    // RTSP streaming (GstStreamer → MediaMTX). Disabled by default.
+    bool streaming_enabled{false};
+    std::string streaming_url{"rtsp://127.0.0.1:8554/camera"};
+    int streaming_bitrate_kbps{2000};
+    // Must evenly divide CameraConfig::fps for accurate decimation
+    // (e.g. 15, 10, 6, 5 for 30 fps capture).
+    int streaming_fps{15};
 };
 
 struct CameraIntrinsics {

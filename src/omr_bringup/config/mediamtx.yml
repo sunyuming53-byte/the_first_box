@@ -1,0 +1,25 @@
+# MediaMTX configuration — OMRobot camera streaming relay
+# Receives H.264 RTSP push from omr_vision::camera::GstStreamer
+# Viewers connect via: rtsp://<host-ip>:8554/camera
+
+logLevel: info
+logDestinations: [stdout]
+
+rtspAddress: :8554
+rtmpAddress: :1935
+hlsAddress: :8888
+webrtcAddress: :8889
+
+api: yes
+apiAddress: :9997
+
+paths:
+  camera:
+    source: publisher
+    sourceProtocol: tcp
+    sourceOnDemand: no
+    # External viewers read-only — no auth required for LAN debugging
+    publishUser: ""
+    publishPass: ""
+    readUser: ""
+    readPass: ""

@@ -109,6 +109,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-humble-navigation2 \
     ros-humble-pcl-conversions \
     ros-humble-pcl-ros \
+    # GStreamer 1.0 — RTSP streaming (omr_vision)
+    libgstreamer1.0-dev \
+    libgstreamer-plugins-base1.0-dev \
+    gstreamer1.0-plugins-good \
+    gstreamer1.0-plugins-bad \
+    gstreamer1.0-plugins-ugly \
+    gstreamer1.0-libav \
+    gstreamer1.0-x \
+    libx264-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # clangd + clang-tidy + clang-format from LLVM apt repo (latest available for Jammy)
@@ -200,6 +209,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-humble-tf-transformations \
     ros-humble-xacro \
     ros-humble-diff-drive-controller \
+    # GStreamer 1.0 — RTSP streaming (omr_vision)
+    libgstreamer1.0-0 \
+    libgstreamer-plugins-base1.0-0 \
+    gstreamer1.0-plugins-good \
+    gstreamer1.0-plugins-bad \
+    gstreamer1.0-plugins-ugly \
+    gstreamer1.0-libav \
+    gstreamer1.0-x \
     && rm -rf /var/lib/apt/lists/*
 
 # Livox-SDK2 — C library required by livox_ros_driver2

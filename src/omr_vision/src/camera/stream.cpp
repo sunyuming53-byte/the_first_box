@@ -2,9 +2,12 @@
 
 #include <cstring>
 #include <exception>
+#include <iostream>
 
 #include <librealsense2/rs.hpp>
 #include <opencv2/core.hpp>
+
+#include "gst_streamer.hpp"
 
 namespace omr_vision::camera {
 
@@ -13,7 +16,23 @@ namespace omr_vision::camera {
 // ──────────────────────────────────────────────────────────────
 class CameraStream::Impl {
 public:
-    explicit Impl(const CameraConfig& cfg) : enable_depth_{cfg.enable_depth} {
+    explicit Impl(const CameraConfig& cfg)
+        : enable_depth_{cfg.enable_depth},
+          capture_fps_{cfg.fps},
+          streaming_fps_{cfg.streaming_fps} {
+        // Validate streaming_fps: default to capture fps if invalid, cap to capture fps.
+        // Note: streaming_fps must evenly divide capture_fps for accurate decimation
+        // (integer division truncation; e.g. 30/20=1 → streams every frame instead of ~20fps).
+        if (streaming_fps_ <= 0) streaming_fps_ = capture_fps_;
+        if (streaming_fps_ > capture_fps_) streaming_fps_ = capture_fps_;
+
+        if (cfg.streaming_enabled) {
+            gst_streamer_ = std::make_unique<GstStreamer>(
+                cfg.width, cfg.height, streaming_fps_, cfg.streaming_bitrate_kbps, cfg.streaming_url);
+            gst_streamer_->start();
+            std::cerr << "GStreamer streaming enabled → " << cfg.streaming_url << std::endl;
+        }
+
         config_.enable_stream(RS2_STREAM_COLOR, cfg.width, cfg.height, RS2_FORMAT_BGR8, cfg.fps);
         if (enable_depth_) {
             config_.enable_stream(RS2_STREAM_DEPTH, cfg.width, cfg.height, RS2_FORMAT_Z16, cfg.fps);
@@ -67,6 +86,13 @@ public:
             out.color = cv::Mat(h, w, CV_8UC3);
             std::memcpy(out.color.data, color_frame.get_data(),
                         static_cast<std::size_t>(w) * h * 3);
+
+            // ── streaming push (decimated) ──
+            if (gst_streamer_) {
+                if (out.frame_id % (capture_fps_ / streaming_fps_) == 0) {
+                    gst_streamer_->push(out.color);
+                }
+            }
 
             // ── color intrinsics (captured once from the first color frame) ──
             if (!color_intrinsics_captured_) {
@@ -135,11 +161,14 @@ private:
     bool enable_depth_{false};
     float depth_scale_{0.001F};
     bool has_frames_{false};
+    std::unique_ptr<GstStreamer> gst_streamer_;
     int64_t frame_counter_{0};
     CameraIntrinsics color_intrinsics_;
     CameraIntrinsics depth_intrinsics_;
     bool color_intrinsics_captured_{false};
     bool depth_intrinsics_captured_{false};
+    int capture_fps_{30};
+    int streaming_fps_{15};
 };
 
 // ──────────────────────────────────────────────────────────────

@@ -55,3 +55,13 @@ services:
       - /dev:/dev
     restart: unless-stopped
 
+  # MediaMTX RTSP/WebRTC streaming server — receives H.264 push from omr_vision CameraStream
+  # Access: rtsp://<host-ip>:8554/camera | API: http://<host-ip>:9997
+  # Ports (exposed via host network): 8554 (RTSP), 8889 (WebRTC), 8888 (HLS), 9997 (API)
+  mediamtx:
+    image: bluenviron/mediamtx:1.11.3-ffmpeg
+    network_mode: host
+    volumes:
+      - ./src/omr_bringup/config/mediamtx.yml:/mediamtx.yml:ro
+    restart: unless-stopped
+

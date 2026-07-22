@@ -10,9 +10,14 @@ find_package(ament_cmake REQUIRED)
 find_package(OpenCV REQUIRED COMPONENTS core imgproc imgcodecs highgui calib3d aruco objdetect)
 find_package(realsense2 REQUIRED)
 
+# GStreamer 1.0 — PRIVATE (GstStreamer is internal PIMPL, not exposed in public headers)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(GSTREAMER REQUIRED gstreamer-1.0 gstreamer-app-1.0)
+
 # ── Library ──
 add_library(omr_vision SHARED
     src/camera/stream.cpp
+    src/camera/gst_streamer.cpp
     src/camera/types.cpp
     src/capture.cpp
     src/calibration/camera_calib.cpp
@@ -25,6 +30,12 @@ target_include_directories(omr_vision PUBLIC
 target_link_libraries(omr_vision PUBLIC
     ${OpenCV_LIBS}
     realsense2::realsense2
+)
+target_include_directories(omr_vision PRIVATE
+    ${GSTREAMER_INCLUDE_DIRS}
+)
+target_link_libraries(omr_vision PRIVATE
+    ${GSTREAMER_LIBRARIES}
 )
 
 # ── Executable: calibrate_camera ──
