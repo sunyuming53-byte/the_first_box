@@ -38,12 +38,32 @@ target_link_libraries(${PROJECT_NAME} PUBLIC realman_arm dais_motor m65_chassis 
 
 pluginlib_export_plugin_description_file(hardware_interface plugins.xml)
 
+# ── rail_control: full guideway motion control (zero ROS deps) ──
+# Interlock + calibration FSM + velocity/position loops. Consumed by the
+# bring-up tool below and by omr_controller's GuidewayClient.
+add_library(rail_control SHARED src/rail_controller.cpp)
+target_include_directories(rail_control PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+)
+target_link_libraries(rail_control PUBLIC photogate dais_motor)
+
+# ── Hardware bring-up tools (serial, not ROS nodes) ──
+add_executable(rail_limit_homing_hw_test apps/rail_limit_homing_hw_test.cpp)
+target_link_libraries(rail_limit_homing_hw_test PRIVATE rail_control photogate)
+
 install(TARGETS ${PROJECT_NAME}
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
 )
+install(TARGETS rail_limit_homing_hw_test
+    RUNTIME DESTINATION lib/${PROJECT_NAME}
+)
+install(DIRECTORY config/
+    DESTINATION share/${PROJECT_NAME}/config
+)
 # realman_arm is a submodule dependency needed by downstream calibration
-install(TARGETS realman_arm dais_motor m65_chassis photogate
+install(TARGETS realman_arm dais_motor m65_chassis photogate rail_control
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
 )
@@ -52,7 +72,7 @@ install(DIRECTORY third_party/realman_arm/include/ DESTINATION include/realman_a
 install(DIRECTORY third_party/m65_chassis/include/ DESTINATION include/m65)
 install(DIRECTORY third_party/photogate/include/ DESTINATION include/photogate)
 
-ament_export_libraries(${PROJECT_NAME})
+ament_export_libraries(${PROJECT_NAME} rail_control)
 ament_export_include_directories(include)
 # ── Tests (gated behind BUILD_TESTING) ──
 if(BUILD_TESTING)

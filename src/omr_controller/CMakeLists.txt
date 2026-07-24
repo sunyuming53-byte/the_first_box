@@ -57,6 +57,7 @@ target_include_directories(${PROJECT_NAME}_lib PUBLIC
 find_package(omr_hardware REQUIRED)
 get_filename_component(_omr_hw_prefix "${omr_hardware_DIR}/../../.." ABSOLUTE)
 target_include_directories(${PROJECT_NAME}_lib PUBLIC
+    $<BUILD_INTERFACE:${_omr_hw_prefix}/include>
     $<BUILD_INTERFACE:${_omr_hw_prefix}/include/realman_arm>
 )
 find_library(_realman_arm_lib realman_arm
@@ -69,6 +70,13 @@ target_link_libraries(${PROJECT_NAME}_lib PUBLIC ${_realman_arm_lib})
 if(_api_c_lib)
   target_link_libraries(${PROJECT_NAME}_lib PUBLIC ${_api_c_lib})
 endif()
+
+# rail_control from omr_hardware (GuidewayClient backend; PIMPL header, so no
+# photogate/dais_motor headers are needed here)
+find_library(_rail_control_lib rail_control
+    PATHS "${_omr_hw_prefix}/lib" NO_DEFAULT_PATH
+)
+target_link_libraries(${PROJECT_NAME}_lib PUBLIC ${_rail_control_lib})
 
 ament_target_dependencies(${PROJECT_NAME}_lib PUBLIC
     ament_index_cpp
@@ -146,6 +154,12 @@ target_link_libraries(dais_positioning_node ${PROJECT_NAME}_lib)
 install(TARGETS dais_positioning_node RUNTIME DESTINATION lib/${PROJECT_NAME})
 ament_export_include_directories(include)
 
+# Manual hardware smoke for GuidewayClientImpl (NOT part of colcon test / CI).
+# Source lives under test/ but is an installable CLI, not a gtest.
+add_executable(guideway_client_hw_test test/guideway_client_hw_test.cpp)
+target_link_libraries(guideway_client_hw_test ${PROJECT_NAME}_lib)
+install(TARGETS guideway_client_hw_test RUNTIME DESTINATION lib/${PROJECT_NAME})
+
 if(BUILD_TESTING)
     find_package(ament_cmake_gtest REQUIRED)
 
@@ -204,6 +218,9 @@ if(BUILD_TESTING)
 
     ament_add_gtest(motor_client_test test/test_main.cpp test/motor_client_test.cpp)
     target_link_libraries(motor_client_test ${PROJECT_NAME}_lib ${OpenCV_LIBS} realsense2::realsense2)
+
+    ament_add_gtest(guideway_client_test test/test_main.cpp test/guideway_client_test.cpp)
+    target_link_libraries(guideway_client_test ${PROJECT_NAME}_lib ${OpenCV_LIBS} realsense2::realsense2)
 
     ament_add_gtest(motor_client_impl_test test/test_main_ros.cpp test/motor_client_impl_test.cpp)
     target_link_libraries(motor_client_impl_test ${PROJECT_NAME}_lib ${OpenCV_LIBS} realsense2::realsense2)

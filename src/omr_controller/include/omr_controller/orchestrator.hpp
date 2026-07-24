@@ -10,6 +10,7 @@
 #include "omr_controller/clients/arm_client.hpp"
 #include "omr_controller/clients/base_client.hpp"
 #include "omr_controller/clients/gripper_client.hpp"
+#include "omr_controller/clients/guideway_client.hpp"
 #include "omr_controller/clients/motor_client.hpp"
 #include "omr_controller/clients/vision_client.hpp"
 #include <diagnostic_updater/diagnostic_updater.hpp>
@@ -27,6 +28,7 @@ public:
     std::unique_ptr<VisionClient> vision_;
     std::unique_ptr<MotorClient> motor_;
     std::unique_ptr<BaseClientImpl> base_;
+    std::unique_ptr<GuidewayClient> guideway_;
 
 private:
     void tick();

@@ -7,5 +7,29 @@ task_orchestrator:
     motor_joint_name: "joint_dais"
     arm_jtc_action: "/arm_cm/follow_joint_trajectory"
     joint_state_topic: "/joint_states"
+    # Guideway (rail) client — values mirror omr_hardware/config/rail_photogate.yaml.
+    # Direct-serial client; must not run alongside DaisHardware/PhotogateHardware
+    # ros2_control plugins (same serial ports). Lazy connection.
+    guideway_photogate_port: "/dev/ttyACM0"
+    guideway_photogate_baud: 115200
+    guideway_gate_count: 3
+    guideway_lower_gate: 0
+    guideway_home_gate: 1
+    guideway_upper_gate: 2
+    guideway_motor_port: "/dev/ttyUSB0"
+    guideway_motor_baud: 57600
+    guideway_slave_id: 1
+    guideway_up_sign: -1
+    guideway_screw_lead_m: 0.01
+    guideway_watchdog_ms: 200.0
+    guideway_coarse_rpm: 150.0
+    guideway_fine_rpm: 3.0
+    guideway_backoff_rpm: 10.0
+    guideway_seek_timeout_s: 120.0
+    guideway_home_tol_rad: 0.05
+    guideway_return_timeout_s: 60.0
+    guideway_position_max_rpm: 60
+    guideway_position_accel_ms: 100
+    guideway_soft_limit_margin_m: 0.0
     color_lower_hsv: [0, 50, 50]
     color_upper_hsv: [10, 255, 255]

@@ -33,6 +33,39 @@ TaskOrchestrator::TaskOrchestrator(const rclcpp::NodeOptions& options)
                                                motorJointName);
     base_ = std::make_unique<BaseClientImpl>(node_handle_);
 
+    // Guideway (rail) client: direct-serial, lazy connection — no port is
+    // opened until the first guideway command. Must not run alongside the
+    // DaisHardware/PhotogateHardware ros2_control plugins (same serial ports).
+    GuidewayConfig gwCfg;
+    gwCfg.photogate_port =
+        declare_parameter<std::string>("guideway_photogate_port", gwCfg.photogate_port);
+    gwCfg.photogate_baud = declare_parameter<int>("guideway_photogate_baud", gwCfg.photogate_baud);
+    gwCfg.gate_count = declare_parameter<int>("guideway_gate_count", gwCfg.gate_count);
+    gwCfg.lower_gate = declare_parameter<int>("guideway_lower_gate", gwCfg.lower_gate);
+    gwCfg.home_gate = declare_parameter<int>("guideway_home_gate", gwCfg.home_gate);
+    gwCfg.upper_gate = declare_parameter<int>("guideway_upper_gate", gwCfg.upper_gate);
+    gwCfg.motor_port = declare_parameter<std::string>("guideway_motor_port", gwCfg.motor_port);
+    gwCfg.motor_baud = declare_parameter<int>("guideway_motor_baud", gwCfg.motor_baud);
+    gwCfg.slave_id = declare_parameter<int>("guideway_slave_id", gwCfg.slave_id);
+    gwCfg.up_sign = declare_parameter<int>("guideway_up_sign", gwCfg.up_sign);
+    gwCfg.screw_lead_m = declare_parameter<double>("guideway_screw_lead_m", gwCfg.screw_lead_m);
+    gwCfg.watchdog_ms = declare_parameter<double>("guideway_watchdog_ms", gwCfg.watchdog_ms);
+    gwCfg.coarse_rpm = declare_parameter<double>("guideway_coarse_rpm", gwCfg.coarse_rpm);
+    gwCfg.fine_rpm = declare_parameter<double>("guideway_fine_rpm", gwCfg.fine_rpm);
+    gwCfg.backoff_rpm = declare_parameter<double>("guideway_backoff_rpm", gwCfg.backoff_rpm);
+    gwCfg.seek_timeout_s =
+        declare_parameter<double>("guideway_seek_timeout_s", gwCfg.seek_timeout_s);
+    gwCfg.home_tol_rad = declare_parameter<double>("guideway_home_tol_rad", gwCfg.home_tol_rad);
+    gwCfg.return_timeout_s =
+        declare_parameter<double>("guideway_return_timeout_s", gwCfg.return_timeout_s);
+    gwCfg.position_max_rpm = static_cast<uint16_t>(
+        declare_parameter<int>("guideway_position_max_rpm", gwCfg.position_max_rpm));
+    gwCfg.position_accel_ms = static_cast<uint16_t>(
+        declare_parameter<int>("guideway_position_accel_ms", gwCfg.position_accel_ms));
+    gwCfg.soft_limit_margin_m =
+        declare_parameter<double>("guideway_soft_limit_margin_m", gwCfg.soft_limit_margin_m);
+    guideway_ = std::make_unique<GuidewayClientImpl>(gwCfg, get_logger());
+
     // State publisher
     state_pub_ = create_publisher<std_msgs::msg::String>("/task_state", 10);
 

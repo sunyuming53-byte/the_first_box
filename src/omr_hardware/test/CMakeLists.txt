@@ -2,3 +2,7 @@ find_package(ament_cmake_gtest REQUIRED)
 
 ament_add_gtest(test_dais_conversion test_dais_conversion.cpp)
 target_compile_features(test_dais_conversion PRIVATE cxx_std_23)
+
+ament_add_gtest(test_rail_config test_rail_config.cpp)
+target_compile_features(test_rail_config PRIVATE cxx_std_23)
+target_link_libraries(test_rail_config rail_control)

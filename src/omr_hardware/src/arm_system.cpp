@@ -146,7 +146,8 @@ hardware_interface::return_type ArmSystem::read(const rclcpp::Time& /*time*/,
     if (!arm_) {
         return hardware_interface::return_type::OK;
     }
-    if (!arm_->isConnected() && !arm_->ensureConnected()) {
+    // Lazy TCP connect lives inside Arm::Impl; public API only exposes isConnected().
+    if (!arm_->isConnected()) {
         return hardware_interface::return_type::OK;
     }
 

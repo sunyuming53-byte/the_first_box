@@ -1,0 +1,32 @@
+# Rail photogate mapping + calibration defaults for rail_limit_homing_hw_test.
+# Measured 2026-07-23: gate0=lower, gate1=home, gate2=upper.
+
+photogate_port: /dev/ttyACM0
+photogate_baud: 115200
+gate_count: 3
+
+lower_gate: 0
+home_gate: 1
+upper_gate: 2
+
+motor_port: /dev/ttyUSB0
+motor_baud: 57600
+slave_id: 1
+
+# -1 => motor position_rad decreasing is UP on the rail
+# (measured: upward ≈ negative angle, e.g. -360 deg)
+up_sign: -1
+screw_lead_m: 0.01
+
+watchdog_ms: 200
+coarse_rpm: 150
+fine_rpm: 3
+backoff_rpm: 10
+seek_timeout_s: 120
+home_tol_rad: 0.05
+return_timeout_s: 60
+position_max_rpm: 60
+position_accel_ms: 100
+
+# Extra margin (m) kept away from calibrated travel ends for position moves.
+soft_limit_margin_m: 0.0
