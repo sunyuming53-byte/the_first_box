@@ -14,6 +14,7 @@
 // positive = up. All methods are thread-safe.
 
 #include <memory>
+#include <mutex>
 
 #include "omr_hardware/rail_controller.hpp"
 #include <rclcpp/rclcpp.hpp>
@@ -121,6 +122,7 @@ private:
 
     rclcpp::Logger logger_;
     std::unique_ptr<omr_hardware::RailController> rail_;
+    std::mutex connect_mutex_;
 };
 
 }  // namespace omr_controller

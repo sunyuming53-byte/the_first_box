@@ -7,7 +7,7 @@
 // enforcing the limit interlock, so safety does not depend on the caller.
 //
 // The interlock / calibration state machine is ported unchanged from the
-// validated bring-up tool (apps/rail_limit_homing_hw_test.cpp).
+// validated bring-up tool (test/rail_limit_homing_hw_test.cpp).
 
 #include "omr_hardware/rail_controller.hpp"
 
@@ -488,7 +488,9 @@ private:
         }
         motor_->set_velocity_command(0.0);
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
-        motor_->disable();
+        if (!motor_->disable()) {
+            logf(RailLogLevel::WARN, "motor disable returned false — servo may still be active");
+        }
         enabled_ = false;
     }
 
@@ -527,9 +529,10 @@ private:
     }
 
     void enterFault(const char* why) {
-        if (safety_ != RailSafetyState::SAFETY_FAULT) {
-            logf(RailLogLevel::ERROR, "[SAFETY_FAULT] %s", why);
+        if (safety_ == RailSafetyState::SAFETY_FAULT) {
+            return;
         }
+        logf(RailLogLevel::ERROR, "[SAFETY_FAULT] %s", why);
         stopAndDisable();
         safety_ = RailSafetyState::SAFETY_FAULT;
         calib_.calibrated = false;
@@ -1182,6 +1185,12 @@ bool loadRailConfig(const std::string& path, RailControllerConfig& cfg, std::str
                 cfg.photogate_baud = std::stoi(val);
             } else if (key == "gate_count") {
                 cfg.gate_count = std::stoi(val);
+                if (cfg.gate_count <= 0) {
+                    if (error) {
+                        *error = "gate_count must be > 0, got " + val;
+                    }
+                    return false;
+                }
             } else if (key == "lower_gate") {
                 cfg.lower_gate = std::stoi(val);
             } else if (key == "home_gate") {

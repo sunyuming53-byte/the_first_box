@@ -58,10 +58,26 @@ TaskOrchestrator::TaskOrchestrator(const rclcpp::NodeOptions& options)
     gwCfg.home_tol_rad = declare_parameter<double>("guideway_home_tol_rad", gwCfg.home_tol_rad);
     gwCfg.return_timeout_s =
         declare_parameter<double>("guideway_return_timeout_s", gwCfg.return_timeout_s);
-    gwCfg.position_max_rpm = static_cast<uint16_t>(
-        declare_parameter<int>("guideway_position_max_rpm", gwCfg.position_max_rpm));
-    gwCfg.position_accel_ms = static_cast<uint16_t>(
-        declare_parameter<int>("guideway_position_accel_ms", gwCfg.position_accel_ms));
+    {
+        const int rpm_val =
+            declare_parameter<int>("guideway_position_max_rpm", gwCfg.position_max_rpm);
+        if (rpm_val < 0 || rpm_val > 65535) {
+            RCLCPP_ERROR(get_logger(),
+                         "guideway_position_max_rpm %d out of range [0, 65535]", rpm_val);
+            throw std::runtime_error("guideway_position_max_rpm out of range");
+        }
+        gwCfg.position_max_rpm = static_cast<uint16_t>(rpm_val);
+    }
+    {
+        const int accel_val =
+            declare_parameter<int>("guideway_position_accel_ms", gwCfg.position_accel_ms);
+        if (accel_val < 0 || accel_val > 65535) {
+            RCLCPP_ERROR(get_logger(),
+                         "guideway_position_accel_ms %d out of range [0, 65535]", accel_val);
+            throw std::runtime_error("guideway_position_accel_ms out of range");
+        }
+        gwCfg.position_accel_ms = static_cast<uint16_t>(accel_val);
+    }
     gwCfg.soft_limit_margin_m =
         declare_parameter<double>("guideway_soft_limit_margin_m", gwCfg.soft_limit_margin_m);
     guideway_ = std::make_unique<GuidewayClientImpl>(gwCfg, get_logger());

@@ -7,7 +7,8 @@ task_orchestrator:
     motor_joint_name: "joint_dais"
     arm_jtc_action: "/arm_cm/follow_joint_trajectory"
     joint_state_topic: "/joint_states"
-    # Guideway (rail) client — values mirror omr_hardware/config/rail_photogate.yaml.
+    # Guideway (rail) client — defaults mirror rail_photogate.yaml struct defaults;
+    # override per your hardware.
     # Direct-serial client; must not run alongside DaisHardware/PhotogateHardware
     # ros2_control plugins (same serial ports). Lazy connection.
     guideway_photogate_port: "/dev/ttyACM0"

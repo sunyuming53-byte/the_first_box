@@ -76,7 +76,11 @@ endif()
 find_library(_rail_control_lib rail_control
     PATHS "${_omr_hw_prefix}/lib" NO_DEFAULT_PATH
 )
-target_link_libraries(${PROJECT_NAME}_lib PUBLIC ${_rail_control_lib})
+if(_rail_control_lib)
+  target_link_libraries(${PROJECT_NAME}_lib PUBLIC ${_rail_control_lib})
+else()
+  message(FATAL_ERROR "rail_control library not found in ${_omr_hw_prefix}/lib")
+endif()
 
 ament_target_dependencies(${PROJECT_NAME}_lib PUBLIC
     ament_index_cpp
@@ -219,7 +223,7 @@ if(BUILD_TESTING)
     ament_add_gtest(motor_client_test test/test_main.cpp test/motor_client_test.cpp)
     target_link_libraries(motor_client_test ${PROJECT_NAME}_lib ${OpenCV_LIBS} realsense2::realsense2)
 
-    ament_add_gtest(guideway_client_test test/test_main.cpp test/guideway_client_test.cpp)
+    ament_add_gtest(guideway_client_test test/test_main_ros.cpp test/guideway_client_test.cpp)
     target_link_libraries(guideway_client_test ${PROJECT_NAME}_lib ${OpenCV_LIBS} realsense2::realsense2)
 
     ament_add_gtest(motor_client_impl_test test/test_main_ros.cpp test/motor_client_impl_test.cpp)

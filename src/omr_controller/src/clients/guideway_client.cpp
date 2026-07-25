@@ -29,6 +29,10 @@ bool GuidewayClientImpl::ensureConnected() {
     if (rail_->isConnected()) {
         return true;
     }
+    std::lock_guard<std::mutex> lk(connect_mutex_);
+    if (rail_->isConnected()) {
+        return true;
+    }
     return rail_->connect();
 }
 
@@ -97,6 +101,9 @@ bool GuidewayClientImpl::moveToRailAsync(double rail_m) {
 bool GuidewayClientImpl::motionDone() const { return rail_->status().motion_done; }
 
 bool GuidewayClientImpl::waitMotionDone(double timeout_s) {
+    if (!rail_->isConnected()) {
+        return false;
+    }
     return rail_->waitMotionDone(timeout_s);
 }
 

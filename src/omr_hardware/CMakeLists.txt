@@ -49,8 +49,8 @@ target_include_directories(rail_control PUBLIC
 target_link_libraries(rail_control PUBLIC photogate dais_motor)
 
 # ── Hardware bring-up tools (serial, not ROS nodes) ──
-add_executable(rail_limit_homing_hw_test apps/rail_limit_homing_hw_test.cpp)
-target_link_libraries(rail_limit_homing_hw_test PRIVATE rail_control photogate)
+add_executable(rail_limit_homing_hw_test test/rail_limit_homing_hw_test.cpp)
+target_link_libraries(rail_limit_homing_hw_test PRIVATE rail_control)
 
 install(TARGETS ${PROJECT_NAME}
     LIBRARY DESTINATION lib
