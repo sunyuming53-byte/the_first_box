@@ -56,7 +56,7 @@ struct RailControllerConfig {
     double screw_lead_m = 0.01;
     // safety & motion profile
     double watchdog_ms = 200.0;
-    double coarse_rpm = 15.0;
+    double coarse_rpm = 150.0;
     double fine_rpm = 3.0;
     double backoff_rpm = 10.0;
     double seek_timeout_s = 120.0;
